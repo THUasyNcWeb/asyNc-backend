@@ -10,4 +10,7 @@ from . import views
 
 urlpatterns = [
     path('index/', views.index),
+    path('all_news/', views.news_response),
+    path('login/', views.user_login),
+    path('register/', views.user_register),
 ]
