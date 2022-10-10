@@ -13,4 +13,5 @@ urlpatterns = [
     path('all_news/', views.news_response),
     path('login/', views.user_login),
     path('register/', views.user_register),
+    path('modify_password/', views.user_modify_password),
 ]

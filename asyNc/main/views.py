@@ -1,10 +1,13 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import hashlib, json
 
 # Create your views here.
 
 
 # This funtion is for testing only, please delete this funcion before deploying.
+@csrf_exempt
 def index(request):
     # return index page
     # return HttpResponse("Hello World")
@@ -17,6 +20,7 @@ def index(request):
     return JsonResponse({"code": 200, "data": "Hello World"})
 
 #user login
+@csrf_exempt
 def user_login(request):
     """
     request:
@@ -36,8 +40,12 @@ def user_login(request):
     }
     """
     if request.method == "POST":
-        user_name = request.POST["user_name"]
-        password = request.POST["password"]
+        try:
+            request_data = json.loads(request.body.decode())
+        except Exception as e:
+            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+        user_name = request_data["user_name"]
+        password = request_data["password"]
         response_msg = {
             "code": 0,
             "message": "SUCCESS",
@@ -47,11 +55,12 @@ def user_login(request):
                 "token": "SECRET_TOKEN"
             }
         }
-        return JsonResponse({"code": 200, "data": response_msg})
+        return JsonResponse(response_msg, status = 200)
     
-    return JsonResponse({"code": 400, "data": {"code": 4, "message": "WRONG_PASSWORD", "data": {}}})
+    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
 
 #user register
+@csrf_exempt
 def user_register(request):
     """
     request:
@@ -71,8 +80,12 @@ def user_register(request):
     }
     """
     if request.method == "POST":
-        user_name = request.POST["user_name"]
-        password = request.POST["password"]
+        try:
+            request_data = json.loads(request.body.decode())
+        except Exception as e:
+            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+        user_name = request_data["user_name"]
+        password = request_data["password"]
         response_msg = {
             "code": 0,
             "message": "SUCCESS",
@@ -82,11 +95,12 @@ def user_register(request):
                 "token": "SECRET_TOKEN"
             }
         }
-        return JsonResponse({"code": 200, "data": response_msg})
+        return JsonResponse(response_msg, status = 200)
     
-    return JsonResponse({"code": 400, "data": {"code": 1, "message": "USER_NAME_CONFLICT", "data": {}}})
+    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
 
-# return a new
+# return a news list
+@csrf_exempt
 def news_response(request):
     """
     response:
@@ -109,7 +123,7 @@ def news_response(request):
     """
     if request.method == "GET":
         token = request.META.get("HTTP_AUTHORIZATION")
-        print("token :", token)
+        # print("token :", token) # delete this before deploy
         newses = []
         news = {
             "title":"A good titile is all you need.",
@@ -125,4 +139,26 @@ def news_response(request):
     else:
         print("Any thing new?")
 
-    return JsonResponse({"code": 400, "data": {"mes": "String"}})
+    
+    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+
+# modify a user's password 
+@csrf_exempt
+def user_modify_password(request):
+    """
+    request:
+    {
+    "user_name": "Alice",
+    "old_password": "Bob19937",
+    "new_password": "Carol48271"
+    }
+    """
+    try:
+        token = request.META.get("HTTP_AUTHORIZATION")
+    except Exception as e:
+        return JsonResponse({"code": 1000, "message": "NOT_FOUND", "data": {}}, status = 401)
+    try:
+        request_data = json.loads(request.body.decode())
+    except Exception as e:
+        return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+    return JsonResponse({"code": 0, "message": "SUCCESS", "data": {}}, status=200)

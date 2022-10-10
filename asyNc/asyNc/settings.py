@@ -133,3 +133,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ]
 }
+
+
+# Try to deal with domain name distrust problem, inspired by Zheng YouJie
+
+CSRF_TRUSTED_ORIGINS = ['http://localhost:8000','http://localhost:8080']
