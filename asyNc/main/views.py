@@ -36,8 +36,8 @@ def user_login(request):
     }
     """
     if request.method == "POST":
-        user_name = newses.POST["user_name"]
-        password = newses.POST["password"]
+        user_name = request.POST["user_name"]
+        password = request.POST["password"]
         response_msg = {
             "code": 0,
             "message": "SUCCESS",
@@ -71,8 +71,8 @@ def user_register(request):
     }
     """
     if request.method == "POST":
-        user_name = newses.POST["user_name"]
-        password = newses.POST["password"]
+        user_name = request.POST["user_name"]
+        password = request.POST["password"]
         response_msg = {
             "code": 0,
             "message": "SUCCESS",
@@ -112,11 +112,12 @@ def news_response(request):
         print("token :", token)
         newses = []
         news = {
-            "title":"String",
-            "url":"String",
-            "category":"String",
+            "title":"A good titile is all you need.",
+            "url":"a.good.titile.is.all.you.need",
+            "category":"tutorial",
             "priority":1,
         }
+        newses.append(news)
         newses.append(news)
         return JsonResponse({"code": 200, "data": newses})
     elif request.method == "POST":
