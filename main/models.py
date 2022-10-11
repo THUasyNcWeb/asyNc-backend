@@ -19,7 +19,7 @@ class news(models.Model):
 
 class user_basic_info(models.Model):
     id = AutoField(primary_key = True)
-    user_name = CharField(max_length = 12)
+    user_name = CharField(max_length = 12, unique=True)
     password = CharField(max_length = 18)
     # register_date = DateTimeField(auto_now_add=True)
     def __str__(self):

@@ -3,6 +3,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from . import tools
 import json
+import time
 
 # Create your views here.
 
@@ -55,7 +56,7 @@ def user_login(request):
                 "data": {
                     "id": 1,
                     "user_name": user_name,
-                    "token": user_name # transient measures, need to be changed.
+                    "token": tools.create_token(user_name)
                 }
             }
         else:
@@ -125,7 +126,7 @@ def user_register(request):
                 "data": {
                     "id": 1,
                     "user_name": user_name,
-                    "token": user_name # transient measures, need to be changed.
+                    "token": tools.create_token(user_name)
                 }
             }
         return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
@@ -151,8 +152,12 @@ def news_response(request):
     }
     """
     if request.method == "GET":
-        token = request.META.get("HTTP_AUTHORIZATION")
-        # print("token :", token) # delete this before deploy
+        # do not check token until news recommendation is online.
+        # encoded_token = request.META.get("HTTP_AUTHORIZATION")
+        # token = tools.decode_token(encoded_token)
+        # if token_expired(token):
+        #     pass
+
         newses = []
         news = {
             "title": "Breaking News",
@@ -163,10 +168,6 @@ def news_response(request):
         }
         newses.append(news)
         return JsonResponse({"code": 0, "message": "SUCCESS", "data": newses}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
-    elif request.method == "POST":
-        print("Not Right.")
-    else:
-        print("Any thing new?")
 
     
     return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
@@ -182,20 +183,24 @@ def user_modify_password(request):
         "new_password": "Carol48271"
     }
     """
-
     if request.method == "POST":
         try:
-            token = request.META.get("HTTP_AUTHORIZATION")
+            encoded_token = request.META.get("HTTP_AUTHORIZATION")
+            token = tools.decode_token(encoded_token)
+            if tools.token_expired(token):
+                return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
         except Exception as e:
-            return JsonResponse({"code": 1000, "message": "NOT_FOUND", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
+            return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
         try:
             request_data = json.loads(request.body.decode())
+            user_name = request_data["user_name"]
+            old_password = request_data["old_password"]
+            new_password = request_data["new_password"]
         except Exception as e:
             return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
         
-        user_name = request_data["user_name"]
-        old_password = request_data["old_password"]
-        new_password = request_data["new_password"]
+        # if not user_name == token["user_name"]:
+        #     return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
             
         if not old_password == "Bob19937": # should use md5
             status_code = 400
