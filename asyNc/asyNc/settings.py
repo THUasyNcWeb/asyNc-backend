@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 
 from pathlib import Path
 
+# Avoid redirecting to https
+SECURE_SSL_REDIRECT = False
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -31,6 +34,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'sslserver',# https support
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -138,7 +142,12 @@ REST_FRAMEWORK = {
 
 # Try to deal with domain name distrust problem, by Zheng YouJie
 
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000','https://localhost:8080']
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:8000',
+    'http://localhost:8080',
+    'http://localhost:8000',
+]
 
 CORS_ALLOW_CREDENTIALS = True  # 允许携带Cookie
 CORS_ORIGIN_ALLOW_ALL = True

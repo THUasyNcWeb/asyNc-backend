@@ -10,4 +10,13 @@ pip install django
 pip install djangorestframework
 pip install django-filter
 pip install django-cors-headers
+pip install django-sslserver
+```
+### run
+```
+python asyNc/manage.py runserver
+```
+### run sslserver
+```
+python asyNc/manage.py runsslserver
 ```
