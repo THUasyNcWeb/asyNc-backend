@@ -11,6 +11,7 @@ pip install djangorestframework
 pip install django-filter
 pip install django-cors-headers
 pip install django-sslserver
+pip install psycopg2-binary
 ```
 ### run
 ```
