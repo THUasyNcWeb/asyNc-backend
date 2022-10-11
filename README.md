@@ -1,0 +1,13 @@
+# asyNc-backend
+
+本仓库为2022-2023秋季学期软件工程课程新闻搜索系统项目子模块
+
+项目父模块为[asyNc-web]([asyNc / asyNc-web · GitLab (secoder.net)](https://gitlab.secoder.net/asyNc/asyNc-web))
+
+### setting up env:
+```
+pip install django
+pip install djangorestframework
+pip install django-filter
+pip install django-cors-headers
+```

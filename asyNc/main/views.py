@@ -17,7 +17,7 @@ def index(request):
         pass
     else:
         print("Any thing new?")
-    return JsonResponse({"code": 200, "data": "Hello World"}, status = 200)
+    return JsonResponse({"code": 200, "data": "Hello World"}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
 
 #user login
 @csrf_exempt
@@ -43,7 +43,7 @@ def user_login(request):
         try:
             request_data = json.loads(request.body.decode())
         except Exception as e:
-            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
         user_name = request_data["user_name"]
         password = request_data["password"]
         if user_name == "Alice" and password == "Bob19937": # should use md5
@@ -64,9 +64,9 @@ def user_login(request):
                 "message": "WRONG_PASSWORD",
                 "data": {}
             }
-        return JsonResponse(response_msg, status = status_code)
+        return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
     
-    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
 
 #user register
 @csrf_exempt
@@ -92,7 +92,7 @@ def user_register(request):
         try:
             request_data = json.loads(request.body.decode())
         except Exception as e:
-            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
         user_name = request_data["user_name"]
         password = request_data["password"]
         if user_name == "Alice":
@@ -127,8 +127,8 @@ def user_register(request):
                     "token": user_name # transient measures, need to be changed.
                 }
             }
-        return JsonResponse(response_msg, status = status_code)
-    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+        return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
+    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
 
 # return a news list
 @csrf_exempt
@@ -161,14 +161,14 @@ def news_response(request):
             "picture_url": "https://breaking.news/picture.png"
         }
         newses.append(news)
-        return JsonResponse({"code": 0, "message": "SUCCESS", "data": newses}, status = 200)
+        return JsonResponse({"code": 0, "message": "SUCCESS", "data": newses}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
     elif request.method == "POST":
         print("Not Right.")
     else:
         print("Any thing new?")
 
     
-    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
 
 # modify a user's password 
 @csrf_exempt
@@ -186,11 +186,11 @@ def user_modify_password(request):
         try:
             token = request.META.get("HTTP_AUTHORIZATION")
         except Exception as e:
-            return JsonResponse({"code": 1000, "message": "NOT_FOUND", "data": {}}, status = 401)
+            return JsonResponse({"code": 1000, "message": "NOT_FOUND", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
         try:
             request_data = json.loads(request.body.decode())
         except Exception as e:
-            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
         
         user_name = request_data["user_name"]
         old_password = request_data["old_password"]
@@ -213,5 +213,5 @@ def user_modify_password(request):
         else:
             status_code = 200
             response_msg = {"code": 0, "message": "SUCCESS", "data": {}}
-        return JsonResponse(response_msg, status = status_code)
-    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500)
+        return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
+    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
