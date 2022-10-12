@@ -60,7 +60,7 @@ def user_login(request):
                     "data": {}
                 }
             else:
-                if user.password == password: # should use md5
+                if user.password == tools.md5(password):
                     status_code = 200
                     response_msg = {
                         "code": 0,
@@ -127,7 +127,7 @@ def user_register(request):
         else:
             user = user_basic_info.objects.filter(user_name = user_name).first()
             if not user: # user name not existed yet.
-                user = user_basic_info(user_name = user_name, password = password)# should use md5
+                user = user_basic_info(user_name = user_name, password = tools.md5(password))
                 try:
                     user.full_clean()
                     user.save()
