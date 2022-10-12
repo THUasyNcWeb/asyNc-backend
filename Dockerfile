@@ -13,6 +13,8 @@ RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 COPY . $HOME
 
-EXPOSE 8000
+EXPOSE 80
 
-CMD ["python3", "manage.py", "runsslserver"]
+ENV PYTHONUNBUFFERED=true
+
+CMD ["/bin/sh", "run.sh"]
