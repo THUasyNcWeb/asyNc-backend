@@ -1,12 +1,12 @@
-from itertools import count
-from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse
+"""
+    views.py in django frame work
+"""
+import json
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from . import tools
-from .models import *
-from .responses import *
-import json
-import time
+from .models import UserBasicInfo
+from .responses import internal_error_response, unauthorized_response
 
 # Create your views here.
 
@@ -14,15 +14,17 @@ import time
 # This funtion is for testing only, please delete this funcion before deploying.
 @csrf_exempt
 def index(request):
-    # return index page
-    # return HttpResponse("Hello World")
+    """
+    This funtion is for testing only, please delete this funcion before deploying.
+    Always return code 200
+    """
     if request.method == "GET":
         pass
     elif request.method == "POST":
         pass
     else:
         print("Any thing new?")
-    return JsonResponse({"code": 200, "data": "Hello World"}, 
+    return JsonResponse({"code": 200, "data": "Hello World"},
     status = 200, headers = {'Access-Control-Allow-Origin':'*'})
 
 #user login
@@ -50,10 +52,10 @@ def user_login(request):
             request_data = json.loads(request.body.decode())
             user_name = request_data["user_name"]
             password = request_data["password"]
-        except Exception as e:
+        except Exception as error:
             return internal_error_response()
         try:
-            user = user_basic_info.objects.filter(user_name = user_name).first()
+            user = UserBasicInfo.objects.filter(user_name = user_name).first()
             if not user: # user name not existed yet.
                 status_code = 400
                 response_msg = {
@@ -82,7 +84,7 @@ def user_login(request):
                     }
             return JsonResponse(response_msg, status = status_code, 
             headers = {'Access-Control-Allow-Origin':'*'})
-        except Exception as e:
+        except Exception as error:
             return internal_error_response()
     return internal_error_response()
 
@@ -109,18 +111,18 @@ def user_register(request):
     if request.method == "POST":
         try:
             request_data = json.loads(request.body.decode())
-        except Exception as e:
+        except Exception as error:
             return internal_error_response()
         user_name = request_data["user_name"]
         password = request_data["password"]
-        if not type(user_name) == str: # format check.
+        if not isinstance(user_name, str): # format check.
             status_code = 400
             response_msg = {
                 "code": 2,
                 "message": "INVALID_USER_NAME_FORMAT",
                 "data": {}
             }
-        elif not type(password) == str: # format check.
+        elif not isinstance(password, str): # format check.
             status_code = 400
             response_msg = {
                 "code": 3,
@@ -128,9 +130,9 @@ def user_register(request):
                 "data": {}
             }
         else:
-            user = user_basic_info.objects.filter(user_name = user_name).first()
+            user = UserBasicInfo.objects.filter(user_name = user_name).first()
             if not user: # user name not existed yet.
-                user = user_basic_info(user_name = user_name, password = tools.md5(password))
+                user = UserBasicInfo(user_name = user_name, password = tools.md5(password))
                 try:
                     user.full_clean()
                     user.save()
@@ -144,7 +146,7 @@ def user_register(request):
                             "token": tools.create_token(user_name)
                         }
                     }
-                except Exception as e:
+                except Exception as error:
                     return internal_error_response()
             else: # user name already existed.
                 status_code = 400
@@ -177,12 +179,12 @@ def news_response(request):
     }
     """
     if request.method == "GET":
-        # do not check token until news recommendation is online.
         """
-        encoded_token = request.META.get("HTTP_AUTHORIZATION")
-        token = tools.decode_token(encoded_token)
-        if token_expired(token):
-            # return 401
+            do not check token until news recommendation is online:
+            encoded_token = request.META.get("HTTP_AUTHORIZATION")
+            token = tools.decode_token(encoded_token)
+            if token_expired(token):
+                # return 401
         """
         newses = []
         news = {
@@ -214,21 +216,21 @@ def user_modify_password(request):
             token = tools.decode_token(encoded_token)
             if tools.token_expired(token):
                 return unauthorized_response()
-        except Exception as e:
+        except Exception as error:
             return unauthorized_response()
         try:
             request_data = json.loads(request.body.decode())
             user_name = request_data["user_name"]
             old_password = request_data["old_password"]
             new_password = request_data["new_password"]
-        except Exception as e:
+        except Exception as error:
             return internal_error_response()
         
         if not user_name == token["user_name"]:
             return unauthorized_response()
 
         try:
-            user = user_basic_info.objects.filter(user_name = user_name).first()
+            user = UserBasicInfo.objects.filter(user_name = user_name).first()
             if not user: # user name not existed yet.
                 status_code = 400
                 response_msg = {
@@ -244,7 +246,7 @@ def user_modify_password(request):
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
-                elif not type(new_password) == str:
+                elif not isinstance(new_password, str):
                     status_code = 400
                     response_msg = {
                         "code": 3,
@@ -255,7 +257,6 @@ def user_modify_password(request):
                     user.password = tools.md5(new_password)
                     user.full_clean()
                     user.save()
-
                     status_code = 200
                     response_msg = {
                         "code": 0, 
@@ -265,6 +266,6 @@ def user_modify_password(request):
                     }
             return JsonResponse(response_msg, status = status_code, 
             headers = {'Access-Control-Allow-Origin':'*'})
-        except Exception as e:
+        except Exception as error:
             return internal_error_response()
     return internal_error_response()
