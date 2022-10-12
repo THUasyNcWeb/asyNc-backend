@@ -371,6 +371,14 @@ def keyword_search(request):
         if token_expired(token):
             # return 401
         """
+        try:
+            encoded_token = request.META.get("HTTP_AUTHORIZATION")
+            token = tools.decode_token(encoded_token)
+            if tools.token_expired(token):
+                return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
+        except Exception as e:
+            return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
+        
         key_word = request.POST.get("keyword")
         es = elastic_search()
         all_news = es.search(key_words=key_word)
