@@ -291,7 +291,16 @@ class elastic_search(object):
                 }
             },
             "from":start,
-            "size":size,     
+            "size":size,
+            # highthlight keyword in results
+            "highlight":{
+                "pre_tags": ['<span class="keyWord">'],
+                "post_tags": ['</span>'],
+                "fields":{
+                    "title": {},
+                    "content": {}
+                }
+            }      
                  
         }
         response = self.client.search(index="tencent_news", body=query_json)
