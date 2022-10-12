@@ -161,7 +161,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
 ]
 
-CORS_ALLOW_CREDENTIALS = True  # 允许携带Cookie
+CORS_ALLOW_CREDENTIALS = True  # Allow Cookie
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = (
     '*'

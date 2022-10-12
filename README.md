@@ -31,6 +31,10 @@ CREATE USER django WITH PASSWORD 'SUPER_SECRET_PASSWORD';
 CREATE DATABASE django OWNER django;
 GRANT ALL PRIVILEGES ON DATABASE django TO django;
 ```
+### if you need to start postgresql manually:
+```
+pg_ctl start -D $PGDATA -l $PGLOG
+```
 ### migrate
 ```
 python manage.py migrate

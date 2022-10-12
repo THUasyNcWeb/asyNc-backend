@@ -22,7 +22,8 @@ def index(request):
         pass
     else:
         print("Any thing new?")
-    return JsonResponse({"code": 200, "data": "Hello World"}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
+    return JsonResponse({"code": 200, "data": "Hello World"}, 
+    status = 200, headers = {'Access-Control-Allow-Origin':'*'})
 
 #user login
 @csrf_exempt
@@ -79,7 +80,8 @@ def user_login(request):
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
-            return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
+            return JsonResponse(response_msg, status = status_code, 
+            headers = {'Access-Control-Allow-Origin':'*'})
         except Exception as e:
             return internal_error_response()
     return internal_error_response()
@@ -151,7 +153,8 @@ def user_register(request):
                     "message": "USER_NAME_CONFLICT",
                     "data": {}
                 }
-        return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
+        return JsonResponse(response_msg, status = status_code, 
+        headers = {'Access-Control-Allow-Origin':'*'})
     return internal_error_response()
 
 # return a news list
@@ -190,9 +193,8 @@ def news_response(request):
             "picture_url": "https://breaking.news/picture.png"
         }
         newses.append(news)
-        return JsonResponse({"code": 0, "message": "SUCCESS", "data": newses}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
-
-    
+        return JsonResponse({"code": 0, "message": "SUCCESS", "data": newses}, 
+        status = 200, headers = {'Access-Control-Allow-Origin':'*'})    
     return internal_error_response()
 
 # modify a user's password 
@@ -222,8 +224,9 @@ def user_modify_password(request):
         except Exception as e:
             return internal_error_response()
         
-        # if not user_name == token["user_name"]:
-        #     return unauthorized_response()
+        if not user_name == token["user_name"]:
+            return unauthorized_response()
+
         try:
             user = user_basic_info.objects.filter(user_name = user_name).first()
             if not user: # user name not existed yet.
@@ -260,26 +263,8 @@ def user_modify_password(request):
                         "SUCCESS", 
                         "data": {}
                     }
-            return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
+            return JsonResponse(response_msg, status = status_code, 
+            headers = {'Access-Control-Allow-Origin':'*'})
         except Exception as e:
             return internal_error_response()
-
-        # if not old_password == "Bob19937": # should use md5
-        #     status_code = 400
-        #     response_msg = {
-        #         "code": 4,
-        #         "message": "WRONG_PASSWORD",
-        #         "data": {}
-        #     }
-        # elif not type(new_password) == str: # should use md5
-        #     status_code = 400
-        #     response_msg = {
-        #         "code": 3,
-        #         "message": "INVALID_PASSWORD_FORMAT",
-        #         "data": {}
-        #     }
-        # else:
-        #     status_code = 200
-        #     response_msg = {"code": 0, "message": "SUCCESS", "data": {}}
-        # return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
     return internal_error_response()
