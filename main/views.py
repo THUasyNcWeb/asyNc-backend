@@ -1,7 +1,9 @@
+from itertools import count
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from . import tools
+from .models import *
 import json
 import time
 
@@ -97,14 +99,7 @@ def user_register(request):
             return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
         user_name = request_data["user_name"]
         password = request_data["password"]
-        if user_name == "Alice":
-            status_code = 400
-            response_msg = {
-                "code": 1,
-                "message": "USER_NAME_CONFLICT",
-                "data": {}
-            }
-        elif not type(user_name) == str:
+        if not type(user_name) == str:
             status_code = 400
             response_msg = {
                 "code": 2,
@@ -119,16 +114,31 @@ def user_register(request):
                 "data": {}
             }
         else:
-            status_code = 200
-            response_msg = {
-                "code": 0,
-                "message": "SUCCESS",
-                "data": {
-                    "id": 1,
-                    "user_name": user_name,
-                    "token": tools.create_token(user_name)
+            user = user_basic_info.objects.filter(user_name = user_name).first()
+            if not user:
+                user = user_basic_info(user_name = user_name, password = password)
+                try:
+                    user.full_clean()
+                    user.save()
+                    status_code = 200
+                    response_msg = {
+                        "code": 0,
+                        "message": "SUCCESS",
+                        "data": {
+                            "id": 1,
+                            "user_name": user_name,
+                            "token": tools.create_token(user_name)
+                        }
+                    }
+                except:
+                    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+            else:
+                status_code = 400
+                response_msg = {
+                    "code": 1,
+                    "message": "USER_NAME_CONFLICT",
+                    "data": {}
                 }
-            }
         return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
     return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
 

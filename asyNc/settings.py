@@ -80,14 +80,16 @@ WSGI_APPLICATION = 'asyNc.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
+with open("config/config.json","r",encoding="utf-8") as f:
+    config = json.load(f)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'django',
-        'USER':'django',
-        'PASSWORD':'gd8ezFgQlVFexhy3',
-        'HOST':'asyNc-db.asyNc.secoder.local',
-        'PORT':'5432',
+        'NAME': config['database'],
+        'USER':config['username'],
+        'PASSWORD':config['password'],
+        'HOST':config['hostname'],
+        'PORT':config['port'],
     }
 }
 # DATABASES = {

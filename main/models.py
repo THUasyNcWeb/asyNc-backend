@@ -1,4 +1,5 @@
 from django.db import models
+from django.forms import ModelForm
 from django.db.models import AutoField, CharField, URLField, DateTimeField, TextField, ForeignKey, IntegerField
 from django.contrib.postgres.fields import JSONField, ArrayField
 
@@ -16,6 +17,8 @@ class news(models.Model):
     content = TextField()
     first_img_url = URLField(max_length = 200)
     pub_time = DateTimeField()
+    class Meta:
+        db_table = "news"
 
 class user_basic_info(models.Model):
     id = AutoField(primary_key = True)
@@ -24,14 +27,20 @@ class user_basic_info(models.Model):
     # register_date = DateTimeField(auto_now_add=True)
     def __str__(self):
         return self.name
+    class Meta:
+        db_table = "user_basic_info"
 
 class search_history(models.Model):
     id = AutoField(primary_key = True)
     user = ForeignKey(user_basic_info, on_delete = models.CASCADE)
     content = CharField(max_length = 38)
+    class Meta:
+        db_table = "search_history"
 
 class user_preference(models.Model):
     id = AutoField(primary_key = True)
     user = ForeignKey(user_basic_info, on_delete = models.CASCADE)
     word = CharField(max_length = 10)
     num = IntegerField(default = 0)
+    class Meta:
+        db_table = "user_preference"
