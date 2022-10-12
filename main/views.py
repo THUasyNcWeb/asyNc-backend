@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from . import tools
 from .models import UserBasicInfo
 from .responses import internal_error_response, unauthorized_response
+from elasticsearch import Elasticsearch
 
 # Create your views here.
 
@@ -268,4 +269,116 @@ def user_modify_password(request):
             headers = {'Access-Control-Allow-Origin':'*'})
         except Exception as error:
             return internal_error_response()
-    return internal_error_response()
+
+# Keyword search
+class elastic_search(object):
+    """
+    class for keyword search
+    """
+    def __init__(self):
+        self.client = Elasticsearch(hosts=["localhost"])
+        
+    def search(self,key_words,sorted_by="_score",operator="or", start=0, size=10):
+        """
+        Args:
+            key_words (str): keywords to search (support multi keywords, just put them together and separated by ',')
+            sorted_by (str, optional): sorting method "_score": sorted by similarity; "create_date":sorted by create_date. "Defaults to "_score".
+            operator (str, optional): "and": results must contain all keywords. "or":results must contain at least one keyword Defaults to "or".
+            start (int, optional): result start from ... . Defaults to 0.
+            size (int, optional): the size of response. Defaults to 10.
+
+        Returns:
+            json:
+            {
+                'total': { 'value': 57, 'relation': 'eq' },
+                'max_score': 4.4793386,
+                'hits': [
+                    {
+                    '_index': 'tencent_news',
+                    '_type': '_doc',
+                    '_id': 'https://new.qq.com/rain/a/20221008A000U100',
+                    '_score': 4.4793386,
+                    '_source': { 'title': '', 'create_date': '2022-10-08T00:00:00', 'news_url': '', 'first_img_url': '', 'content': '国庆假日期间，...', 'tags': ['国庆'] },
+                    'highlight': { 'content': ['<span class="keyWord">国庆</span>假日期间，.....'] }
+                    },
+                    .....
+                ]
+            }
+            'hits' has all results (index from start to start+size)
+        """
+        query_json = {
+            # "_source": "title", only show title(for debug)
+            "query":
+            {
+                "bool":
+                {
+                    "must":[
+                        {
+                            "multi_match":
+                            {
+                                "query":key_words,
+                                "operator": operator,
+                                "fields":["title","tags","content"]
+                            }
+                        },
+                    ]
+                }
+            },
+            "sort":{
+                sorted_by:
+                {
+                    # desc: Descending ; asc: Ascending;
+                    "order":"desc"       
+                }
+            },
+            "from":start,
+            "size":size,
+            # highthlight keyword in results
+            "highlight":{
+                "pre_tags": ['<span class="keyWord">'],
+                "post_tags": ['</span>'],
+                "fields":{
+                    "title": {},
+                    "content": {}
+                }
+            }      
+                 
+        }
+        response = self.client.search(index="tencent_news", body=query_json)
+        return response["hits"]
+
+@csrf_exempt
+def keyword_search(request):
+    
+    if request.method == "POST":
+        """
+        encoded_token = request.META.get("HTTP_AUTHORIZATION")
+        token = tools.decode_token(encoded_token)
+        if token_expired(token):
+            # return 401
+        """
+        try:
+            encoded_token = request.META.get("HTTP_AUTHORIZATION")
+            token = tools.decode_token(encoded_token)
+            if tools.token_expired(token):
+                return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
+        except Exception as e:
+            return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
+        
+        key_word = request.POST.get("keyword")
+        es = elastic_search()
+        all_news = es.search(key_words=key_word)
+        news = []
+        for new in all_news["hits"]:
+            data = new["_source"]
+            piece_new = {
+                "title": data['title'],
+                "url": data['news_url'],
+                "category": data['tags'][0],
+                "priority": 1,
+                "picture_url": data['first_img_url']
+            }
+            news += [piece_new]
+        return JsonResponse({"code": 0, "message": "SUCCESS", "data": news}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
+    
+    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})

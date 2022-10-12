@@ -18,6 +18,9 @@ pip install django-cors-headers
 pip install django-sslserver
 pip install psycopg2-binary
 pip install pyJWT
+pip install elasticsearch==7.13.1
+pip install elasticsearch-dsl==7.4.0
+
 ```
 ### install PostgreSQL
 ```
