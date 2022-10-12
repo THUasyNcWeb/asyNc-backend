@@ -263,7 +263,23 @@ class elastic_search(object):
             size (int, optional): the size of response. Defaults to 10.
 
         Returns:
-            _type_: _description_
+            json:
+            {
+                'total': { 'value': 57, 'relation': 'eq' },
+                'max_score': 4.4793386,
+                'hits': [
+                    {
+                    '_index': 'tencent_news',
+                    '_type': '_doc',
+                    '_id': 'https://new.qq.com/rain/a/20221008A000U100',
+                    '_score': 4.4793386,
+                    '_source': { 'title': '', 'create_date': '2022-10-08T00:00:00', 'news_url': '', 'first_img_url': '', 'content': '国庆假日期间，...', 'tags': ['国庆'] },
+                    'highlight': { 'content': ['<span class="keyWord">国庆</span>假日期间，.....'] }
+                    },
+                    .....
+                ]
+            }
+            'hits' has all results (index from start to start+size)
         """
         query_json = {
             # "_source": "title", only show title(for debug)
@@ -304,4 +320,4 @@ class elastic_search(object):
                  
         }
         response = self.client.search(index="tencent_news", body=query_json)
-        return response
+        return response["hits"]
