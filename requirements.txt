@@ -1,0 +1,7 @@
+django
+djangorestframework
+django-filter
+django-cors-headers
+django-sslserver
+psycopg2-binary
+pyJWT
