@@ -11,13 +11,13 @@ Python 3.9
 ```
 ### setting up env:
 ```
-pip install django
-pip install djangorestframework
-pip install django-filter
-pip install django-cors-headers
-pip install django-sslserver
-pip install psycopg2-binary
-pip install pyJWT
+pip install django==4.1.1
+pip install djangorestframework==3.14.0
+pip install django-filter==22.1
+pip install django-cors-headers==3.13.0
+pip install django-sslserver==0.22
+pip install psycopg2-binary==2.9.4
+pip install pyJWT==2.5.0
 pip install elasticsearch==7.13.1
 pip install elasticsearch-dsl==7.4.0
 
