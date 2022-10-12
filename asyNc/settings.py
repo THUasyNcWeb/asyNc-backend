@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
+import json
+
+# Avoid redirecting to https
+SECURE_SSL_REDIRECT = False
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,6 +35,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'sslserver',# https support
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -75,13 +80,24 @@ WSGI_APPLICATION = 'asyNc.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
-
+with open("config/config.json","r",encoding="utf-8") as f:
+    config = json.load(f)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': config['database'],
+        'USER':config['username'],
+        'PASSWORD':config['password'],
+        'HOST':config['hostname'],
+        'PORT':config['port'],
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 
 # Password validation
@@ -138,7 +154,12 @@ REST_FRAMEWORK = {
 
 # Try to deal with domain name distrust problem, by Zheng YouJie
 
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000','https://localhost:8080']
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:8000',
+    'http://localhost:8080',
+    'http://localhost:8000',
+]
 
 CORS_ALLOW_CREDENTIALS = True  # 允许携带Cookie
 CORS_ORIGIN_ALLOW_ALL = True
