@@ -1,5 +1,5 @@
 {
-    "hostname": "127.0.0.1",
+    "hostname": "121.37.105.47",
     "port": 5432,
     "username": "django",
     "password": "SUPER_SECRET_PASSWORD",

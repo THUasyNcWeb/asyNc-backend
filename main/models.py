@@ -1,12 +1,18 @@
+"""
+Models for db.
+"""
 from django.db import models
-from django.forms import ModelForm
-from django.db.models import AutoField, CharField, URLField, DateTimeField, TextField, ForeignKey, IntegerField
-from django.contrib.postgres.fields import JSONField, ArrayField
+from django.db.models import AutoField, CharField, URLField, DateTimeField
+from django.db.models import TextField, ForeignKey, IntegerField
+from django.contrib.postgres.fields import ArrayField
 
 # Create your models here.
 
-class news(models.Model):
-    id = AutoField(primary_key=True, db_index=True)
+class News(models.Model):
+    """
+        model for news
+    """
+    id = AutoField(primary_key = True, db_index = True)
     news_url = URLField(max_length = 200)
     media = CharField(max_length = 20)
     category = CharField(models.CharField(max_length = 10), max_length = 5)
@@ -18,29 +24,50 @@ class news(models.Model):
     first_img_url = URLField(max_length = 200)
     pub_time = DateTimeField()
     class Meta:
+        """
+            set table name in db
+        """
         db_table = "news"
 
-class user_basic_info(models.Model):
+class UserBasicInfo(models.Model):
+    """
+        model for user
+    """
     id = AutoField(primary_key = True)
     user_name = CharField(max_length = 12, unique=True)
     password = CharField(max_length = 40)
     # register_date = DateTimeField(auto_now_add=True)
     def __str__(self):
-        return self.name
+        return str(self.user_name)
     class Meta:
+        """
+            set table name in db
+        """
         db_table = "user_basic_info"
 
-class search_history(models.Model):
+class SearchHistory(models.Model):
+    """
+        model for search history
+    """
     id = AutoField(primary_key = True)
-    user = ForeignKey(user_basic_info, on_delete = models.CASCADE)
+    user = ForeignKey(UserBasicInfo, on_delete = models.CASCADE)
     content = CharField(max_length = 38)
     class Meta:
+        """
+            set table name in db
+        """
         db_table = "search_history"
 
-class user_preference(models.Model):
+class UserPreference(models.Model):
+    """
+        model for user preference
+    """
     id = AutoField(primary_key = True)
-    user = ForeignKey(user_basic_info, on_delete = models.CASCADE)
+    user = ForeignKey(UserBasicInfo, on_delete = models.CASCADE)
     word = CharField(max_length = 10)
     num = IntegerField(default = 0)
     class Meta:
+        """
+            set table name in db
+        """
         db_table = "user_preference"
