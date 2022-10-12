@@ -360,3 +360,31 @@ class elastic_search(object):
         }
         response = self.client.search(index="tencent_news", body=query_json)
         return response["hits"]
+
+@csrf_exempt
+def keyword_search(request):
+    
+    if request.method == "POST":
+        """
+        encoded_token = request.META.get("HTTP_AUTHORIZATION")
+        token = tools.decode_token(encoded_token)
+        if token_expired(token):
+            # return 401
+        """
+        key_word = request.POST.get("keyword")
+        es = elastic_search()
+        all_news = es.search(key_words=key_word)
+        news = []
+        for new in all_news["hits"]:
+            data = new["_source"]
+            piece_new = {
+                "title": data['title'],
+                "url": data['news_url'],
+                "category": data['tags'][0],
+                "priority": 1,
+                "picture_url": data['first_img_url']
+            }
+            news += [piece_new]
+        return JsonResponse({"code": 0, "message": "SUCCESS", "data": news}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
+    
+    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
