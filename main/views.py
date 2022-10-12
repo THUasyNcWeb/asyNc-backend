@@ -46,30 +46,41 @@ def user_login(request):
     if request.method == "POST":
         try:
             request_data = json.loads(request.body.decode())
+            user_name = request_data["user_name"]
+            password = request_data["password"]
         except Exception as e:
             return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
-        user_name = request_data["user_name"]
-        password = request_data["password"]
-        if user_name == "Alice" and password == "Bob19937": # should use md5
-            status_code = 200
-            response_msg = {
-                "code": 0,
-                "message": "SUCCESS",
-                "data": {
-                    "id": 1,
-                    "user_name": user_name,
-                    "token": tools.create_token(user_name)
+        try:
+            user = user_basic_info.objects.filter(user_name = user_name).first()
+            if not user: # user name not existed yet.
+                status_code = 400
+                response_msg = {
+                    "code": 4,
+                    "message": "WRONG_PASSWORD",
+                    "data": {}
                 }
-            }
-        else:
-            status_code = 400
-            response_msg = {
-                "code": 4,
-                "message": "WRONG_PASSWORD",
-                "data": {}
-            }
-        return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
-    
+            else:
+                if user.password == password: # should use md5
+                    status_code = 200
+                    response_msg = {
+                        "code": 0,
+                        "message": "SUCCESS",
+                        "data": {
+                            "id": 1,
+                            "user_name": user_name,
+                            "token": tools.create_token(user_name)
+                        }
+                    }
+                else:
+                    status_code = 400
+                    response_msg = {
+                        "code": 4,
+                        "message": "WRONG_PASSWORD",
+                        "data": {}
+                    }
+            return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
+        except Exception as e:
+            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
     return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
 
 #user register
@@ -99,14 +110,14 @@ def user_register(request):
             return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
         user_name = request_data["user_name"]
         password = request_data["password"]
-        if not type(user_name) == str:
+        if not type(user_name) == str: # format check.
             status_code = 400
             response_msg = {
                 "code": 2,
                 "message": "INVALID_USER_NAME_FORMAT",
                 "data": {}
             }
-        elif not type(password) == str:
+        elif not type(password) == str: # format check.
             status_code = 400
             response_msg = {
                 "code": 3,
@@ -115,8 +126,8 @@ def user_register(request):
             }
         else:
             user = user_basic_info.objects.filter(user_name = user_name).first()
-            if not user:
-                user = user_basic_info(user_name = user_name, password = password)
+            if not user: # user name not existed yet.
+                user = user_basic_info(user_name = user_name, password = password)# should use md5
                 try:
                     user.full_clean()
                     user.save()
@@ -130,9 +141,9 @@ def user_register(request):
                             "token": tools.create_token(user_name)
                         }
                     }
-                except:
+                except Exception as e:
                     return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
-            else:
+            else: # user name already existed.
                 status_code = 400
                 response_msg = {
                     "code": 1,
@@ -163,11 +174,12 @@ def news_response(request):
     """
     if request.method == "GET":
         # do not check token until news recommendation is online.
-        # encoded_token = request.META.get("HTTP_AUTHORIZATION")
-        # token = tools.decode_token(encoded_token)
-        # if token_expired(token):
-        #     pass
-
+        """
+        encoded_token = request.META.get("HTTP_AUTHORIZATION")
+        token = tools.decode_token(encoded_token)
+        if token_expired(token):
+            # return 401
+        """
         newses = []
         news = {
             "title": "Breaking News",

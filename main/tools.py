@@ -13,6 +13,7 @@ def md5(string):
     """
     md5_calculator = hashlib.md5()
     md5_calculator.update(string.encode(encoding='UTF-8'))
+    print(md5_calculator.hexdigest())
     return md5_calculator.hexdigest()
 
 def create_token(user_name):
