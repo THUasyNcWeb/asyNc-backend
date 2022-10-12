@@ -4,6 +4,11 @@
 
 项目父模块为[asyNc-web]([asyNc / asyNc-web · GitLab (secoder.net)](https://gitlab.secoder.net/asyNc/asyNc-web))
 
+### environment:
+```
+Ubuntu 22.04.1 LTS
+Python 3.9
+```
 ### setting up env:
 ```
 pip install django
@@ -13,6 +18,22 @@ pip install django-cors-headers
 pip install django-sslserver
 pip install psycopg2-binary
 pip install pyJWT
+```
+### install PostgreSQL
+```
+sudo apt install postgresql
+```
+### config PostgreSQL for testing
+```
+sudo su postgres
+psql
+CREATE USER django WITH PASSWORD 'SUPER_SECRET_PASSWORD';
+CREATE DATABASE django OWNER django;
+GRANT ALL PRIVILEGES ON DATABASE django TO django;
+```
+### migrate
+```
+python manage.py migrate
 ```
 ### run
 ```
