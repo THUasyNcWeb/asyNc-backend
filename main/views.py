@@ -4,6 +4,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from . import tools
 from .models import *
+from .responses import *
 import json
 import time
 
@@ -49,7 +50,7 @@ def user_login(request):
             user_name = request_data["user_name"]
             password = request_data["password"]
         except Exception as e:
-            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+            return internal_error_response()
         try:
             user = user_basic_info.objects.filter(user_name = user_name).first()
             if not user: # user name not existed yet.
@@ -80,8 +81,8 @@ def user_login(request):
                     }
             return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
         except Exception as e:
-            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
-    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+            return internal_error_response()
+    return internal_error_response()
 
 #user register
 @csrf_exempt
@@ -107,7 +108,7 @@ def user_register(request):
         try:
             request_data = json.loads(request.body.decode())
         except Exception as e:
-            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+            return internal_error_response()
         user_name = request_data["user_name"]
         password = request_data["password"]
         if not type(user_name) == str: # format check.
@@ -142,7 +143,7 @@ def user_register(request):
                         }
                     }
                 except Exception as e:
-                    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+                    return internal_error_response()
             else: # user name already existed.
                 status_code = 400
                 response_msg = {
@@ -151,7 +152,7 @@ def user_register(request):
                     "data": {}
                 }
         return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
-    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+    return internal_error_response()
 
 # return a news list
 @csrf_exempt
@@ -192,7 +193,7 @@ def news_response(request):
         return JsonResponse({"code": 0, "message": "SUCCESS", "data": newses}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
 
     
-    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+    return internal_error_response()
 
 # modify a user's password 
 @csrf_exempt
@@ -210,19 +211,19 @@ def user_modify_password(request):
             encoded_token = request.META.get("HTTP_AUTHORIZATION")
             token = tools.decode_token(encoded_token)
             if tools.token_expired(token):
-                return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
+                return unauthorized_response()
         except Exception as e:
-            return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
+            return unauthorized_response()
         try:
             request_data = json.loads(request.body.decode())
             user_name = request_data["user_name"]
             old_password = request_data["old_password"]
             new_password = request_data["new_password"]
         except Exception as e:
-            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+            return internal_error_response()
         
         # if not user_name == token["user_name"]:
-        #     return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
+        #     return unauthorized_response()
         try:
             user = user_basic_info.objects.filter(user_name = user_name).first()
             if not user: # user name not existed yet.
@@ -261,7 +262,7 @@ def user_modify_password(request):
                     }
             return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
         except Exception as e:
-            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+            return internal_error_response()
 
         # if not old_password == "Bob19937": # should use md5
         #     status_code = 400
@@ -281,4 +282,4 @@ def user_modify_password(request):
         #     status_code = 200
         #     response_msg = {"code": 0, "message": "SUCCESS", "data": {}}
         # return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
-    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+    return internal_error_response()
