@@ -3,9 +3,7 @@ urls.py for main
 created by sxx
 2022.10.5
 """
-
-from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
 from . import views
 
 urlpatterns = [

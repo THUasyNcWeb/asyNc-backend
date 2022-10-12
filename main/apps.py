@@ -1,3 +1,6 @@
+"""
+    apps.py in django frame work
+"""
 from django.apps import AppConfig
 
 
