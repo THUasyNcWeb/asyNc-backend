@@ -60,7 +60,7 @@ def user_login(request):
                     "data": {}
                 }
             else:
-                if user.password == password: # should use md5
+                if user.password == tools.md5(password):
                     status_code = 200
                     response_msg = {
                         "code": 0,
@@ -127,7 +127,7 @@ def user_register(request):
         else:
             user = user_basic_info.objects.filter(user_name = user_name).first()
             if not user: # user name not existed yet.
-                user = user_basic_info(user_name = user_name, password = password)# should use md5
+                user = user_basic_info(user_name = user_name, password = tools.md5(password))
                 try:
                     user.full_clean()
                     user.save()
@@ -223,23 +223,62 @@ def user_modify_password(request):
         
         # if not user_name == token["user_name"]:
         #     return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
-            
-        if not old_password == "Bob19937": # should use md5
-            status_code = 400
-            response_msg = {
-                "code": 4,
-                "message": "WRONG_PASSWORD",
-                "data": {}
-            }
-        elif not type(new_password) == str: # should use md5
-            status_code = 400
-            response_msg = {
-                "code": 3,
-                "message": "INVALID_PASSWORD_FORMAT",
-                "data": {}
-            }
-        else:
-            status_code = 200
-            response_msg = {"code": 0, "message": "SUCCESS", "data": {}}
-        return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
+        try:
+            user = user_basic_info.objects.filter(user_name = user_name).first()
+            if not user: # user name not existed yet.
+                status_code = 400
+                response_msg = {
+                    "code": 4,
+                    "message": "WRONG_PASSWORD",
+                    "data": {}
+                }
+            else:
+                if not tools.md5(old_password) == user.password:
+                    status_code = 400
+                    response_msg = {
+                        "code": 4,
+                        "message": "WRONG_PASSWORD",
+                        "data": {}
+                    }
+                elif not type(new_password) == str:
+                    status_code = 400
+                    response_msg = {
+                        "code": 3,
+                        "message": "INVALID_PASSWORD_FORMAT",
+                        "data": {}
+                    }
+                else:
+                    user.password = tools.md5(new_password)
+                    user.full_clean()
+                    user.save()
+
+                    status_code = 200
+                    response_msg = {
+                        "code": 0, 
+                        "message": 
+                        "SUCCESS", 
+                        "data": {}
+                    }
+            return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
+        except Exception as e:
+            return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+
+        # if not old_password == "Bob19937": # should use md5
+        #     status_code = 400
+        #     response_msg = {
+        #         "code": 4,
+        #         "message": "WRONG_PASSWORD",
+        #         "data": {}
+        #     }
+        # elif not type(new_password) == str: # should use md5
+        #     status_code = 400
+        #     response_msg = {
+        #         "code": 3,
+        #         "message": "INVALID_PASSWORD_FORMAT",
+        #         "data": {}
+        #     }
+        # else:
+        #     status_code = 200
+        #     response_msg = {"code": 0, "message": "SUCCESS", "data": {}}
+        # return JsonResponse(response_msg, status = status_code, headers = {'Access-Control-Allow-Origin':'*'})
     return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})

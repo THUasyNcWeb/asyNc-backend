@@ -13,8 +13,9 @@ def md5(string):
     """
     md5_calculator = hashlib.md5()
     md5_calculator.update(string.encode(encoding='UTF-8'))
-    print(md5_calculator.hexdigest())
-    return md5_calculator.hexdigest()
+    print(str(md5_calculator.hexdigest()))
+    print(str(md5_calculator.hexdigest()))
+    return str(md5_calculator.hexdigest())
 
 def create_token(user_name):
     return "Bearer " + jwt.encode({"user_name": user_name, "expire_time": time.time() + expire_time}, secret_key, algorithm="HS256")
