@@ -226,7 +226,7 @@ def user_modify_password(request):
             new_password = request_data["new_password"]
         except Exception as error:
             return internal_error_response()
-        
+
         if not user_name == token["user_name"]:
             return unauthorized_response()
 
@@ -277,7 +277,6 @@ class elastic_search(object):
     """
     def __init__(self):
         self.client = Elasticsearch(hosts=["localhost"])
-        
     def search(self,key_words,sorted_by="_score",operator="or", start=0, size=10):
         """
         Args:
@@ -341,22 +340,14 @@ class elastic_search(object):
                     "title": {},
                     "content": {}
                 }
-            }      
-                 
+            }
         }
         response = self.client.search(index="tencent_news", body=query_json)
         return response["hits"]
 
 @csrf_exempt
 def keyword_search(request):
-    
     if request.method == "POST":
-        """
-        encoded_token = request.META.get("HTTP_AUTHORIZATION")
-        token = tools.decode_token(encoded_token)
-        if token_expired(token):
-            # return 401
-        """
         try:
             encoded_token = request.META.get("HTTP_AUTHORIZATION")
             token = tools.decode_token(encoded_token)
@@ -364,7 +355,6 @@ def keyword_search(request):
                 return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
         except Exception as e:
             return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
-        
         key_word = request.POST.get("keyword")
         es = elastic_search()
         all_news = es.search(key_words=key_word)
@@ -380,5 +370,4 @@ def keyword_search(request):
             }
             news += [piece_new]
         return JsonResponse({"code": 0, "message": "SUCCESS", "data": news}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
-    
     return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
