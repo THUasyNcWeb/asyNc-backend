@@ -83,7 +83,7 @@ def user_login(request):
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
-            return JsonResponse(response_msg, status = status_code, 
+            return JsonResponse(response_msg, status = status_code,
             headers = {'Access-Control-Allow-Origin':'*'})
         except Exception as error:
             return internal_error_response()
@@ -156,7 +156,7 @@ def user_register(request):
                     "message": "USER_NAME_CONFLICT",
                     "data": {}
                 }
-        return JsonResponse(response_msg, status = status_code, 
+        return JsonResponse(response_msg, status = status_code,
         headers = {'Access-Control-Allow-Origin':'*'})
     return internal_error_response()
 
@@ -180,13 +180,11 @@ def news_response(request):
     }
     """
     if request.method == "GET":
-        """
-            do not check token until news recommendation is online:
-            encoded_token = request.META.get("HTTP_AUTHORIZATION")
-            token = tools.decode_token(encoded_token)
-            if token_expired(token):
-                # return 401
-        """
+        # Do not check token until news recommendation is online:
+        # encoded_token = request.META.get("HTTP_AUTHORIZATION")
+        # token = tools.decode_token(encoded_token)
+        # if token_expired(token):
+        #  return 401
         newses = []
         news = {
             "title": "Breaking News",
@@ -196,11 +194,11 @@ def news_response(request):
             "picture_url": "https://breaking.news/picture.png"
         }
         newses.append(news)
-        return JsonResponse({"code": 0, "message": "SUCCESS", "data": newses}, 
-        status = 200, headers = {'Access-Control-Allow-Origin':'*'})    
+        return JsonResponse({"code": 0, "message": "SUCCESS", "data": newses},
+        status = 200, headers = {'Access-Control-Allow-Origin':'*'})
     return internal_error_response()
 
-# modify a user's password 
+# modify a user's password
 @csrf_exempt
 def user_modify_password(request):
     """
@@ -260,12 +258,12 @@ def user_modify_password(request):
                     user.save()
                     status_code = 200
                     response_msg = {
-                        "code": 0, 
-                        "message": 
-                        "SUCCESS", 
+                        "code": 0,
+                        "message":
+                        "SUCCESS",
                         "data": {}
                     }
-            return JsonResponse(response_msg, status = status_code, 
+            return JsonResponse(response_msg, status = status_code,
             headers = {'Access-Control-Allow-Origin':'*'})
         except Exception as error:
             return internal_error_response()
@@ -280,9 +278,12 @@ class elastic_search(object):
     def search(self,key_words,sorted_by="_score",operator="or", start=0, size=10):
         """
         Args:
-            key_words (str): keywords to search (support multi keywords, just put them together and separated by ',')
-            sorted_by (str, optional): sorting method "_score": sorted by similarity; "create_date":sorted by create_date. "Defaults to "_score".
-            operator (str, optional): "and": results must contain all keywords. "or":results must contain at least one keyword Defaults to "or".
+            key_words (str): keywords to search (support multi keywords,
+            just put them together and separated by ',')
+            sorted_by (str, optional): sorting method "_score": sorted by similarity;
+            "create_date":sorted by create_date. "Defaults to "_score".
+            operator (str, optional): "and": results must contain all keywords.
+            "or":results must contain at least one keyword Defaults to "or".
             start (int, optional): result start from ... . Defaults to 0.
             size (int, optional): the size of response. Defaults to 10.
 
@@ -297,7 +298,8 @@ class elastic_search(object):
                     '_type': '_doc',
                     '_id': 'https://new.qq.com/rain/a/20221008A000U100',
                     '_score': 4.4793386,
-                    '_source': { 'title': '', 'create_date': '2022-10-08T00:00:00', 'news_url': '', 'first_img_url': '', 'content': '国庆假日期间，...', 'tags': ['国庆'] },
+                    '_source': { 'title': '', 'create_date': '2022-10-08T00:00:00', 'news_url': '',
+                    'first_img_url': '', 'content': '国庆假日期间，...', 'tags': ['国庆'] },
                     'highlight': { 'content': ['<span class="keyWord">国庆</span>假日期间，.....'] }
                     },
                     .....
@@ -327,7 +329,7 @@ class elastic_search(object):
                 sorted_by:
                 {
                     # desc: Descending ; asc: Ascending;
-                    "order":"desc"       
+                    "order":"desc"
                 }
             },
             "from":start,
@@ -352,9 +354,9 @@ def keyword_search(request):
             encoded_token = request.META.get("HTTP_AUTHORIZATION")
             token = tools.decode_token(encoded_token)
             if tools.token_expired(token):
-                return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
-        except Exception as e:
-            return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
+                return unauthorized_response()
+        except Exception as error:
+            return unauthorized_response()
         key_word = request.POST.get("keyword")
         es = elastic_search()
         all_news = es.search(key_words=key_word)
@@ -369,5 +371,6 @@ def keyword_search(request):
                 "picture_url": data['first_img_url']
             }
             news += [piece_new]
-        return JsonResponse({"code": 0, "message": "SUCCESS", "data": news}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
-    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+        return JsonResponse({"code": 0, "message": "SUCCESS", "data": news},
+        status = 200, headers = {'Access-Control-Allow-Origin':'*'})
+    return internal_error_response()
