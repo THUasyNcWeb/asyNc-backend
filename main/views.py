@@ -25,10 +25,17 @@ def index(request):
         pass
     else:
         print("Any thing new?")
-    return JsonResponse({"code": 200, "data": "Hello World"},
-    status = 200, headers = {'Access-Control-Allow-Origin':'*'})
+    return JsonResponse(
+        {
+            "code": 200,
+            "data": "Hello World"
+        },
+        status=200,
+        headers={'Access-Control-Allow-Origin': '*'}
+    )
 
-#user login
+
+# user login
 @csrf_exempt
 def user_login(request):
     """
@@ -56,8 +63,8 @@ def user_login(request):
         except Exception as error:
             return internal_error_response()
         try:
-            user = UserBasicInfo.objects.filter(user_name = user_name).first()
-            if not user: # user name not existed yet.
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if not user:  # user name not existed yet.
                 status_code = 400
                 response_msg = {
                     "code": 4,
@@ -83,13 +90,17 @@ def user_login(request):
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
-            return JsonResponse(response_msg, status = status_code,
-            headers = {'Access-Control-Allow-Origin':'*'})
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
         except Exception as error:
             return internal_error_response()
     return internal_error_response()
 
-#user register
+
+# user register
 @csrf_exempt
 def user_register(request):
     """
@@ -116,14 +127,14 @@ def user_register(request):
             return internal_error_response()
         user_name = request_data["user_name"]
         password = request_data["password"]
-        if not isinstance(user_name, str): # format check.
+        if not isinstance(user_name, str):  # format check.
             status_code = 400
             response_msg = {
                 "code": 2,
                 "message": "INVALID_USER_NAME_FORMAT",
                 "data": {}
             }
-        elif not isinstance(password, str): # format check.
+        elif not isinstance(password, str):  # format check.
             status_code = 400
             response_msg = {
                 "code": 3,
@@ -131,9 +142,9 @@ def user_register(request):
                 "data": {}
             }
         else:
-            user = UserBasicInfo.objects.filter(user_name = user_name).first()
-            if not user: # user name not existed yet.
-                user = UserBasicInfo(user_name = user_name, password = tools.md5(password))
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if not user:  # user name not existed yet.
+                user = UserBasicInfo(user_name=user_name, password=tools.md5(password))
                 try:
                     user.full_clean()
                     user.save()
@@ -149,16 +160,20 @@ def user_register(request):
                     }
                 except Exception as error:
                     return internal_error_response()
-            else: # user name already existed.
+            else:  # user name already existed.
                 status_code = 400
                 response_msg = {
                     "code": 1,
                     "message": "USER_NAME_CONFLICT",
                     "data": {}
                 }
-        return JsonResponse(response_msg, status = status_code,
-        headers = {'Access-Control-Allow-Origin':'*'})
+        return JsonResponse(
+            response_msg,
+            status=status_code,
+            headers={'Access-Control-Allow-Origin':'*'}
+        )
     return internal_error_response()
+
 
 # return a news list
 @csrf_exempt
@@ -194,9 +209,13 @@ def news_response(request):
             "picture_url": "https://breaking.news/picture.png"
         }
         newses.append(news)
-        return JsonResponse({"code": 0, "message": "SUCCESS", "data": newses},
-        status = 200, headers = {'Access-Control-Allow-Origin':'*'})
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": newses},
+            status=200,
+            headers={'Access-Control-Allow-Origin': '*'}
+        )
     return internal_error_response()
+
 
 # modify a user's password
 @csrf_exempt
@@ -229,8 +248,8 @@ def user_modify_password(request):
             return unauthorized_response()
 
         try:
-            user = UserBasicInfo.objects.filter(user_name = user_name).first()
-            if not user: # user name not existed yet.
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if not user:  # user name not existed yet.
                 status_code = 400
                 response_msg = {
                     "code": 4,
@@ -263,10 +282,14 @@ def user_modify_password(request):
                         "SUCCESS",
                         "data": {}
                     }
-            return JsonResponse(response_msg, status = status_code,
-            headers = {'Access-Control-Allow-Origin':'*'})
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
         except Exception as error:
             return internal_error_response()
+
 
 # Keyword search
 class elastic_search(object):
@@ -275,6 +298,7 @@ class elastic_search(object):
     """
     def __init__(self):
         self.client = Elasticsearch(hosts=["localhost"])
+
     def search(self,key_words,sorted_by="_score",operator="or", start=0, size=10):
         """
         Args:
@@ -347,6 +371,7 @@ class elastic_search(object):
         response = self.client.search(index="tencent_news", body=query_json)
         return response["hits"]
 
+
 @csrf_exempt
 def keyword_search(request):
     if request.method == "POST":
@@ -371,6 +396,9 @@ def keyword_search(request):
                 "picture_url": data['first_img_url']
             }
             news += [piece_new]
-        return JsonResponse({"code": 0, "message": "SUCCESS", "data": news},
-        status = 200, headers = {'Access-Control-Allow-Origin':'*'})
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": news},
+            status=200,
+            headers={'Access-Control-Allow-Origin':'*'}
+        )
     return internal_error_response()
