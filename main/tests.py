@@ -66,3 +66,20 @@ class ToolsTests(TestCase):
                     algorithms=["HS256"]
                 )["user_name"]
             )
+
+    def test_tools_token_expired(self):
+        """
+            test token expired function in tools
+        """
+        title = "Test"
+        content = "test token expired function in tools"
+
+        user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
+
+        for user_name in user_name_list:
+            expired_token = {"user_name": user_name,"EXPIRE_TIME": time.time() - 1}
+            self.assertEqual(token_expired(expired_token), True)
+
+        for user_name in user_name_list:
+            unexpired_token = {"user_name": user_name,"EXPIRE_TIME": time.time() + 1}
+            self.assertEqual(token_expired(unexpired_token), False)
