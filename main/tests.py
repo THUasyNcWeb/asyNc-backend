@@ -18,7 +18,7 @@ class ToolsTests(TestCase):
         """
             set up a test set
         """
-        pass
+        self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
 
     def test_tools_md5(self):
         """
@@ -40,8 +40,7 @@ class ToolsTests(TestCase):
         title = "Test"
         content = "test create token function in tools"
 
-        user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
-        for user_name in user_name_list:
+        for user_name in self.user_name_list:
             self.assertEqual(
                 type(create_token(user_name)),
                 str
@@ -54,9 +53,7 @@ class ToolsTests(TestCase):
         title = "Test"
         content = "test decode token function in tools"
 
-        user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
-
-        for user_name in user_name_list:
+        for user_name in self.user_name_list:
             encoded_token = create_token(user_name)
             self.assertEqual(
                 user_name,
@@ -74,12 +71,33 @@ class ToolsTests(TestCase):
         title = "Test"
         content = "test token expired function in tools"
 
-        user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
-
-        for user_name in user_name_list:
+        for user_name in self.user_name_list:
             expired_token = {"user_name": user_name,"EXPIRE_TIME": time.time() - 1}
             self.assertEqual(token_expired(expired_token), True)
 
-        for user_name in user_name_list:
+        for user_name in self.user_name_list:
             unexpired_token = {"user_name": user_name,"EXPIRE_TIME": time.time() + 1}
             self.assertEqual(token_expired(unexpired_token), False)
+
+
+class ViewsTests(TestCase):
+    """
+        test functions in tools
+    """
+
+    def setUp(self):
+        """
+            set up a test set
+        """
+
+        Alice = UserBasicInfo.objects.create(user_name="Alice", password=md5("Alice"))
+
+    def test_index(self):
+        """
+            test token expired function in tools
+        """
+        title = "Test"
+        content = "test index page in views"
+
+        response = self.client.post('/index/', data=None, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
