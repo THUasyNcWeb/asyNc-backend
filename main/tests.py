@@ -138,3 +138,27 @@ class ViewsTests(TestCase):
         response = self.client.post('/login/', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)  
         
+    def test_user_register(self):
+        """
+            test user register
+        """
+        requests= {
+            "user_name": "Bob",
+            "password": "Bob19937"
+        }
+        response = self.client.post('/register/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 200) 
+    
+    def test_name_conflict(self):
+        """
+            test name conflict when registring
+        """
+        
+        requests= {
+            "user_name": "Alice",
+            "password": "Bob19937"
+        }
+        response = self.client.post('/register/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        
+        
