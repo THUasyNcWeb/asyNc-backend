@@ -2,6 +2,7 @@
     test.py in django frame work
 """
 import time
+from urllib import request
 from django.test import TestCase, Client
 from .models import *
 from .tools import *
@@ -101,3 +102,39 @@ class ViewsTests(TestCase):
 
         response = self.client.post('/index/', data=None, content_type="application/json")
         self.assertEqual(response.status_code, 200)
+
+    def test_login(self):
+        """
+            test user login
+        """
+        requests = {
+            "user_name": "Alice",
+            "password": "Alice"
+        }
+        
+        response = self.client.post('/login/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+    
+    def test_wrong_password(self):
+        """
+            test login with wrong password
+        """
+        requests = {
+            "user_name": "Alice",
+            "password": "666"
+        }
+        
+        response = self.client.post('/login/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+    
+    def test_no_user(self):
+        """
+            test user does not exist
+        """
+        requests = {
+            "user_name": "Bob",
+            "password": "666"
+        }
+        response = self.client.post('/login/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 400)  
+        
