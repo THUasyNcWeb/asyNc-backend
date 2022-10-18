@@ -50,3 +50,9 @@ python asyNc/manage.py runserver
 ```
 python asyNc/manage.py runsslserver
 ```
+## About pylint
+> configure file at .pylintrc
+
+> should be replaced by pylint-django afterwards
+## About pycodestyle
+> configure file at .pycodestyle
