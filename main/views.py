@@ -4,10 +4,10 @@
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from elasticsearch import Elasticsearch
 from . import tools
 from .models import UserBasicInfo
 from .responses import internal_error_response, unauthorized_response
-from elasticsearch import Elasticsearch
 
 # Create your views here.
 
@@ -61,6 +61,7 @@ def user_login(request):
             user_name = request_data["user_name"]
             password = request_data["password"]
         except Exception as error:
+            print(error)
             return internal_error_response()
         try:
             user = UserBasicInfo.objects.filter(user_name=user_name).first()
@@ -96,6 +97,7 @@ def user_login(request):
                 headers={'Access-Control-Allow-Origin': '*'}
             )
         except Exception as error:
+            print(error)
             return internal_error_response()
     return internal_error_response()
 
@@ -124,6 +126,7 @@ def user_register(request):
         try:
             request_data = json.loads(request.body.decode())
         except Exception as error:
+            print(error)
             return internal_error_response()
         user_name = request_data["user_name"]
         password = request_data["password"]
@@ -159,6 +162,7 @@ def user_register(request):
                         }
                     }
                 except Exception as error:
+                    print(error)
                     return internal_error_response()
             else:  # user name already existed.
                 status_code = 400
@@ -235,6 +239,7 @@ def user_modify_password(request):
             if tools.token_expired(token):
                 return unauthorized_response()
         except Exception as error:
+            print(error)
             return unauthorized_response()
         try:
             request_data = json.loads(request.body.decode())
@@ -242,6 +247,7 @@ def user_modify_password(request):
             old_password = request_data["old_password"]
             new_password = request_data["new_password"]
         except Exception as error:
+            print(error)
             return internal_error_response()
 
         if not user_name == token["user_name"]:
@@ -288,11 +294,13 @@ def user_modify_password(request):
                 headers={'Access-Control-Allow-Origin':'*'}
             )
         except Exception as error:
+            print(error)
             return internal_error_response()
+    return internal_error_response()
 
 
 # Keyword search
-class elastic_search(object):
+class ElasticSearch():
     """
     class for keyword search
     """
@@ -374,6 +382,9 @@ class elastic_search(object):
 
 @csrf_exempt
 def keyword_search(request):
+    """
+        keyword_search
+    """
     if request.method == "POST":
         try:
             encoded_token = request.META.get("HTTP_AUTHORIZATION")
@@ -381,10 +392,11 @@ def keyword_search(request):
             if tools.token_expired(token):
                 return unauthorized_response()
         except Exception as error:
+            print(error)
             return unauthorized_response()
         key_word = request.POST.get("keyword")
-        es = elastic_search()
-        all_news = es.search(key_words=key_word)
+        elastic_search = ElasticSearch()
+        all_news = elastic_search.search(key_words=key_word)
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
