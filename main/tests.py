@@ -46,3 +46,23 @@ class ToolsTests(TestCase):
                 type(create_token(user_name)),
                 str
             )
+
+    def test_tools_decode_token(self):
+        """
+            test decode token function in tools
+        """
+        title = "Test"
+        content = "test decode token function in tools"
+
+        user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
+
+        for user_name in user_name_list:
+            encoded_token = create_token(user_name)
+            self.assertEqual(
+                user_name,
+                jwt.decode(
+                    encoded_token.replace("Bearer ",""),
+                    SECRET_KEY,
+                    algorithms=["HS256"]
+                )["user_name"]
+            )
