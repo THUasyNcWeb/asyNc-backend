@@ -33,6 +33,7 @@ psql
 CREATE USER django WITH PASSWORD 'SUPER_SECRET_PASSWORD';
 CREATE DATABASE django OWNER django;
 GRANT ALL PRIVILEGES ON DATABASE django TO django;
+alter user django createdb;
 ```
 ### if you need to start postgresql service manually:
 ```
@@ -54,11 +55,17 @@ python asyNc/manage.py runsslserver
 ## About pytest 
 ### installation
 > pip install pytest-django==4.5.2
+### configuration
+> configure file at pytest.ini
+### usage
+> pytest
 ## About pylint
 ### installation
 > sudo apt-get install pylint
 ### configuration
 > configure file at .pylintrc
+### usage
+> pylint
 ### future work
 > should be replaced by pylint-django afterwards
 ## About pycodestyle
@@ -66,3 +73,5 @@ python asyNc/manage.py runsslserver
 > sudo apt install pycodestyle
 ### configuration
 > configure file at .pycodestyle
+### usage
+> pycodestyle main --config=.pycodestyle
