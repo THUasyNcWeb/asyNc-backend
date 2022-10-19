@@ -310,3 +310,19 @@ class ViewsTests(TestCase):
             response = self.client.post('/modify_password/', data=requests, content_type="application/json",HTTP_AUTHORIZATION=encoded_token)
             
             self.assertEqual(response.status_code, 401)
+            
+    def test_modify_user_not_exist(self):
+        for i in range(5):
+            user_name = self.user_name_list[i]+"new"
+            old_password = self.user_password[i]
+            new_password = self.user_password[i]+"new"
+            
+            requests={
+                "user_name": user_name,
+                "old_password": old_password,
+                "new_password": new_password
+            }
+            encoded_token = create_token(self.user_name_list[i])
+            response = self.client.post('/modify_password/', data=requests, content_type="application/json",HTTP_AUTHORIZATION=encoded_token)
+            
+            self.assertEqual(response.status_code, 401)
