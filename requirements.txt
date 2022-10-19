@@ -5,8 +5,8 @@ django-cors-headers
 django-sslserver
 psycopg2-binary
 pyJWT
+pytest-django
 elasticsearch==7.13.1
 elasticsearch-dsl==7.4.0
-
 
 gunicorn

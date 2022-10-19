@@ -2,7 +2,7 @@
 
 # Files or directories to be skipped. They should be base names, not
 # paths.
-ignore=main/migrations
+ignore=tests.py, main/migrations
 
 
 [MESSAGES CONTROL]
@@ -17,4 +17,4 @@ ignore=main/migrations
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
 
-disable=too-few-public-methods, import-error, too-many-arguments, broad-except, too-many-return-statements, no-member
+disable=too-few-public-methods, import-error, too-many-arguments, broad-except, too-many-return-statements, no-member, wildcard-import
