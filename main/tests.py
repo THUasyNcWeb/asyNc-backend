@@ -201,3 +201,10 @@ class ViewsTests(TestCase):
 
         response = self.client.post('/register/', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)
+
+    def test_news_response_with_wrong_response_method(self):
+        """
+            test news response with post method
+        """
+        response = self.client.post('/all_news/', data=None, content_type="application/json")
+        self.assertEqual(response.status_code, 500)
