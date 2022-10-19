@@ -2,6 +2,7 @@
     test.py in django frame work
 """
 import time
+import json
 from urllib import request
 from django.test import TestCase, Client
 from .models import *
@@ -266,3 +267,7 @@ class ViewsTests(TestCase):
         for i in range(5):
             response = self.client.get('/all_news/', data=None, content_type="application/json")
             self.assertEqual(response.status_code, 200)
+            news_list = json.loads(response.content)["data"]
+            self.assertEqual(type(news_list), list)
+            for news in news_list:
+                self.assertEqual(type(news), dict)
