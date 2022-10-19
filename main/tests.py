@@ -2,6 +2,7 @@
     test.py in django frame work
 """
 import time
+import json
 from urllib import request
 from django.test import TestCase, Client
 from .models import *
@@ -124,6 +125,31 @@ class ViewsTests(TestCase):
             response = self.client.get('/login/', data=requests, content_type="application/json")
             self.assertEqual(response.status_code, 500)
 
+    def test_login_with_wrong_data_type(self):
+        """
+            test user login with wrong data type
+        """
+        requests = {
+            "user_name": "Carol",
+            "password": 123456
+        }
+        response = self.client.post('/login/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+
+        requests = {
+            "user_name": 666.66,
+            "password": "password"
+        }
+        response = self.client.post('/login/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+
+        requests = {
+            "username": "Alice",
+            "PassWord": "Alice"
+        }
+        response = self.client.post('/login/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 500)
+
     def test_login(self):
         """
             test user login
@@ -165,6 +191,31 @@ class ViewsTests(TestCase):
 
         response = self.client.post('/login/', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)
+
+    def test_register_with_wrong_data_type(self):
+        """
+            test user register with wrong data type
+        """
+        requests = {
+            "user_name": "Carol6654",
+            "password": 123456
+        }
+        response = self.client.post('/register/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+
+        requests = {
+            "user_name": 666.66,
+            "password": "password"
+        }
+        response = self.client.post('/register/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+
+        requests = {
+            "username": "Alice",
+            "PassWord": "Alice"
+        }
+        response = self.client.post('/register/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 500)
 
     def test_register_with_wrong_response_method(self):
         """
@@ -208,3 +259,15 @@ class ViewsTests(TestCase):
         """
         response = self.client.post('/all_news/', data=None, content_type="application/json")
         self.assertEqual(response.status_code, 500)
+
+    def test_news_response(self):
+        """
+            test news response
+        """
+        for i in range(5):
+            response = self.client.get('/all_news/', data=None, content_type="application/json")
+            self.assertEqual(response.status_code, 200)
+            news_list = json.loads(response.content)["data"]
+            self.assertEqual(type(news_list), list)
+            for news in news_list:
+                self.assertEqual(type(news), dict)
