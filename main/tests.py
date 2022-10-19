@@ -124,6 +124,31 @@ class ViewsTests(TestCase):
             response = self.client.get('/login/', data=requests, content_type="application/json")
             self.assertEqual(response.status_code, 500)
 
+    def test_login_with_wrong_data_type(self):
+        """
+            test user login with wrong data type
+        """
+        requests = {
+            "user_name": "Carol",
+            "password": 123456
+        }
+        response = self.client.post('/login/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 500)
+
+        requests = {
+            "user_name": 666.66,
+            "password": "password"
+        }
+        response = self.client.post('/login/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 500)
+
+        requests = {
+            "username": "Alice",
+            "PassWord": "Alice"
+        }
+        response = self.client.post('/login/', data=requests, content_type="application/json")
+        self.assertEqual(response.status_code, 500)
+
     def test_login(self):
         """
             test user login
