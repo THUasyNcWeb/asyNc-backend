@@ -91,7 +91,12 @@ class ViewsTests(TestCase):
             set up a test set
         """
 
-        Alice = UserBasicInfo.objects.create(user_name="Alice", password=md5("Alice"))
+        self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
+        self.user_password = ["Alcie", "password", "123456", "密码", "パスワード"]
+        for i in range(5):
+            user_name = self.user_name_list[i]
+            password = self.user_password[i]
+            UserBasicInfo.objects.create(user_name=user_name, password=md5(password))
 
     def test_index(self):
         """
@@ -107,58 +112,63 @@ class ViewsTests(TestCase):
         """
             test user login
         """
-        requests = {
-            "user_name": "Alice",
-            "password": "Alice"
-        }
-        
-        response = self.client.post('/login/', data=requests, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-    
+        for i in range(5):
+            user_name = self.user_name_list[i]
+            password = self.user_password[i]
+
+            requests = {
+                "user_name": user_name,
+                "password": password
+            }
+
+            response = self.client.post('/login/', data=requests, content_type="application/json")
+            self.assertEqual(response.status_code, 200)
+
     def test_wrong_password(self):
         """
             test login with wrong password
         """
-        requests = {
-            "user_name": "Alice",
-            "password": "666"
-        }
-        
-        response = self.client.post('/login/', data=requests, content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-    
+        for i in range(5):
+            user_name = self.user_name_list[i]
+            requests = {
+                "user_name": user_name,
+                "password": "Not_A_Pass"
+            }
+
+            response = self.client.post('/login/', data=requests, content_type="application/json")
+            self.assertEqual(response.status_code, 400)
+
     def test_no_user(self):
         """
             test user does not exist
         """
         requests = {
-            "user_name": "Bob",
+            "user_name": "User_Not_Exist",
             "password": "666"
         }
+
         response = self.client.post('/login/', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)  
-        
+
     def test_user_register(self):
         """
             test user register
         """
         requests= {
-            "user_name": "Bob",
+            "user_name": "Bob19937",
             "password": "Bob19937"
         }
         response = self.client.post('/register/', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 200) 
-    
+
     def test_name_conflict(self):
         """
             test name conflict when registring
         """
-        
+
         requests= {
             "user_name": "Alice",
             "password": "Bob19937"
         }
         response = self.client.post('/register/', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)
-        
-        
