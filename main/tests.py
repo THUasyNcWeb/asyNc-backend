@@ -271,3 +271,24 @@ class ViewsTests(TestCase):
             self.assertEqual(type(news_list), list)
             for news in news_list:
                 self.assertEqual(type(news), dict)
+
+    def test_user_modify_password(self):
+        """
+            test user modify password
+        """
+        for i in range(5):
+            user_name = self.user_name_list[i]
+            old_password = self.user_password[i]
+            new_password = self.user_password[i]+"new"
+            
+            requests={
+                "user_name": user_name,
+                "old_password": old_password,
+                "new_password": new_password
+            }
+            
+            encoded_token = create_token(user_name)
+            response = self.client.post('/modify_password/', data=requests, content_type="application/json",HTTP_AUTHORIZATION=encoded_token)
+            
+            self.assertEqual(response.status_code, 200)
+    
