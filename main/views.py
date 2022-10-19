@@ -60,6 +60,18 @@ def user_login(request):
             request_data = json.loads(request.body.decode())
             user_name = request_data["user_name"]
             password = request_data["password"]
+            if not (isinstance(user_name, str) and isinstance(password, str)):
+                status_code = 400
+                response_msg = {
+                    "code": 4,
+                    "message": "WRONG_PASSWORD",
+                    "data": {}
+                }
+                return JsonResponse(
+                    response_msg,
+                    status=status_code,
+                    headers={'Access-Control-Allow-Origin': '*'}
+                )
         except Exception as error:
             print(error)
             return internal_error_response()
@@ -125,11 +137,11 @@ def user_register(request):
     if request.method == "POST":
         try:
             request_data = json.loads(request.body.decode())
+            user_name = request_data["user_name"]
+            password = request_data["password"]
         except Exception as error:
             print(error)
             return internal_error_response()
-        user_name = request_data["user_name"]
-        password = request_data["password"]
         if not isinstance(user_name, str):  # format check.
             status_code = 400
             response_msg = {
