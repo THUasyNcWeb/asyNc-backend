@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from . import tools
-from .models import UserBasicInfo
+from .models import UserBasicInfo, News
 from .responses import internal_error_response, unauthorized_response
 
 # Create your views here.
@@ -209,6 +209,14 @@ def news_response(request):
             }
         ]
     }
+    news template:
+    {
+        "title": "Breaking News",
+        "url": "https://breaking.news",
+        "category": "breaking",
+        "priority": 1,
+        "picture_url": "https://breaking.news/picture.png"
+    }
     """
     if request.method == "GET":
         # Do not check token until news recommendation is online:
@@ -216,17 +224,19 @@ def news_response(request):
         # token = tools.decode_token(encoded_token)
         # if token_expired(token):
         #  return 401
-        newses = []
-        news = {
-            "title": "Breaking News",
-            "url": "https://breaking.news",
-            "category": "breaking",
-            "priority": 1,
-            "picture_url": "https://breaking.news/picture.png"
-        }
-        newses.append(news)
+        news_list = []
+        for news in News.objects.all().order_by("-pub_time")[0:20]:
+            news_list.append(
+                {
+                    "title": news.title,
+                    "url": news.news_url,
+                    "category": news.category,
+                    "priority": 1,
+                    "picture_url": news.first_img_url
+                }
+            )
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": newses},
+            {"code": 0, "message": "SUCCESS", "data": news_list},
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
