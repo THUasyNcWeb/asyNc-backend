@@ -42,7 +42,7 @@ style-test:
   before_script:
     - pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt coverage pytest pycodestyle pylint
   script:
-    - pycodestyle main
+    - pycodestyle main --config=.pycodestyle
     - PYCODESTYLE_RET=$?
     - pylint main
     - PYLINT_RET=$?

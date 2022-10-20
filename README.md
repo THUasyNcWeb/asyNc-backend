@@ -4,6 +4,7 @@
 
 项目父模块为[asyNc-web]([asyNc / asyNc-web · GitLab (secoder.net)](https://gitlab.secoder.net/asyNc/asyNc-web))
 
+# Quick Start
 ### environment:
 ```
 Ubuntu 22.04.1 LTS
@@ -20,7 +21,6 @@ pip install psycopg2-binary==2.9.4
 pip install pyJWT==2.5.0
 pip install elasticsearch==7.13.1
 pip install elasticsearch-dsl==7.4.0
-
 ```
 ### install PostgreSQL
 ```
@@ -33,6 +33,7 @@ psql
 CREATE USER django WITH PASSWORD 'SUPER_SECRET_PASSWORD';
 CREATE DATABASE django OWNER django;
 GRANT ALL PRIVILEGES ON DATABASE django TO django;
+alter user django createdb;
 ```
 ### if you need to start postgresql service manually:
 ```
@@ -50,3 +51,27 @@ python asyNc/manage.py runserver
 ```
 python asyNc/manage.py runsslserver
 ```
+# Testing
+## About pytest 
+### installation
+> pip install pytest-django==4.5.2
+### configuration
+> configure file at pytest.ini
+### usage
+> pytest
+## About pylint
+### installation
+> sudo apt-get install pylint
+### configuration
+> configure file at .pylintrc
+### usage
+> pylint
+### future work
+> should be replaced by pylint-django afterwards
+## About pycodestyle
+### installation
+> sudo apt install pycodestyle
+### configuration
+> configure file at .pycodestyle
+### usage
+> pycodestyle main --config=.pycodestyle

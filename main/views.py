@@ -4,10 +4,10 @@
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from . import tools
-from .models import UserBasicInfo
-from .responses import internal_error_response, unauthorized_response
 from elasticsearch import Elasticsearch
+from . import tools
+from .models import UserBasicInfo, News
+from .responses import internal_error_response, unauthorized_response
 
 # Create your views here.
 
@@ -25,10 +25,17 @@ def index(request):
         pass
     else:
         print("Any thing new?")
-    return JsonResponse({"code": 200, "data": "Hello World"},
-    status = 200, headers = {'Access-Control-Allow-Origin':'*'})
+    return JsonResponse(
+        {
+            "code": 200,
+            "data": "Hello World"
+        },
+        status=200,
+        headers={'Access-Control-Allow-Origin': '*'}
+    )
 
-#user login
+
+# user login
 @csrf_exempt
 def user_login(request):
     """
@@ -53,11 +60,24 @@ def user_login(request):
             request_data = json.loads(request.body.decode())
             user_name = request_data["user_name"]
             password = request_data["password"]
+            if not (isinstance(user_name, str) and isinstance(password, str)):
+                status_code = 400
+                response_msg = {
+                    "code": 4,
+                    "message": "WRONG_PASSWORD",
+                    "data": {}
+                }
+                return JsonResponse(
+                    response_msg,
+                    status=status_code,
+                    headers={'Access-Control-Allow-Origin': '*'}
+                )
         except Exception as error:
+            print(error)
             return internal_error_response()
         try:
-            user = UserBasicInfo.objects.filter(user_name = user_name).first()
-            if not user: # user name not existed yet.
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if not user:  # user name not existed yet.
                 status_code = 400
                 response_msg = {
                     "code": 4,
@@ -83,13 +103,18 @@ def user_login(request):
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
-            return JsonResponse(response_msg, status = status_code, 
-            headers = {'Access-Control-Allow-Origin':'*'})
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
         except Exception as error:
+            print(error)
             return internal_error_response()
     return internal_error_response()
 
-#user register
+
+# user register
 @csrf_exempt
 def user_register(request):
     """
@@ -112,18 +137,19 @@ def user_register(request):
     if request.method == "POST":
         try:
             request_data = json.loads(request.body.decode())
+            user_name = request_data["user_name"]
+            password = request_data["password"]
         except Exception as error:
+            print(error)
             return internal_error_response()
-        user_name = request_data["user_name"]
-        password = request_data["password"]
-        if not isinstance(user_name, str): # format check.
+        if not isinstance(user_name, str):  # format check.
             status_code = 400
             response_msg = {
                 "code": 2,
                 "message": "INVALID_USER_NAME_FORMAT",
                 "data": {}
             }
-        elif not isinstance(password, str): # format check.
+        elif not isinstance(password, str):  # format check.
             status_code = 400
             response_msg = {
                 "code": 3,
@@ -131,9 +157,9 @@ def user_register(request):
                 "data": {}
             }
         else:
-            user = UserBasicInfo.objects.filter(user_name = user_name).first()
-            if not user: # user name not existed yet.
-                user = UserBasicInfo(user_name = user_name, password = tools.md5(password))
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if not user:  # user name not existed yet.
+                user = UserBasicInfo(user_name=user_name, password=tools.md5(password))
                 try:
                     user.full_clean()
                     user.save()
@@ -148,17 +174,22 @@ def user_register(request):
                         }
                     }
                 except Exception as error:
+                    print(error)
                     return internal_error_response()
-            else: # user name already existed.
+            else:  # user name already existed.
                 status_code = 400
                 response_msg = {
                     "code": 1,
                     "message": "USER_NAME_CONFLICT",
                     "data": {}
                 }
-        return JsonResponse(response_msg, status = status_code, 
-        headers = {'Access-Control-Allow-Origin':'*'})
+        return JsonResponse(
+            response_msg,
+            status=status_code,
+            headers={'Access-Control-Allow-Origin':'*'}
+        )
     return internal_error_response()
+
 
 # return a news list
 @csrf_exempt
@@ -178,29 +209,41 @@ def news_response(request):
             }
         ]
     }
+    news template:
+    {
+        "title": "Breaking News",
+        "url": "https://breaking.news",
+        "category": "breaking",
+        "priority": 1,
+        "picture_url": "https://breaking.news/picture.png"
+    }
     """
     if request.method == "GET":
-        """
-            do not check token until news recommendation is online:
-            encoded_token = request.META.get("HTTP_AUTHORIZATION")
-            token = tools.decode_token(encoded_token)
-            if token_expired(token):
-                # return 401
-        """
-        newses = []
-        news = {
-            "title": "Breaking News",
-            "url": "https://breaking.news",
-            "category": "breaking",
-            "priority": 1,
-            "picture_url": "https://breaking.news/picture.png"
-        }
-        newses.append(news)
-        return JsonResponse({"code": 0, "message": "SUCCESS", "data": newses}, 
-        status = 200, headers = {'Access-Control-Allow-Origin':'*'})    
+        # Do not check token until news recommendation is online:
+        # encoded_token = request.META.get("HTTP_AUTHORIZATION")
+        # token = tools.decode_token(encoded_token)
+        # if token_expired(token):
+        #  return 401
+        news_list = []
+        for news in News.objects.all().order_by("-pub_time")[0:20]:
+            news_list.append(
+                {
+                    "title": news.title,
+                    "url": news.news_url,
+                    "category": news.category,
+                    "priority": 1,
+                    "picture_url": news.first_img_url
+                }
+            )
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": news_list},
+            status=200,
+            headers={'Access-Control-Allow-Origin': '*'}
+        )
     return internal_error_response()
 
-# modify a user's password 
+
+# modify a user's password
 @csrf_exempt
 def user_modify_password(request):
     """
@@ -218,6 +261,7 @@ def user_modify_password(request):
             if tools.token_expired(token):
                 return unauthorized_response()
         except Exception as error:
+            print(error)
             return unauthorized_response()
         try:
             request_data = json.loads(request.body.decode())
@@ -225,14 +269,15 @@ def user_modify_password(request):
             old_password = request_data["old_password"]
             new_password = request_data["new_password"]
         except Exception as error:
+            print(error)
             return internal_error_response()
-        
+
         if not user_name == token["user_name"]:
             return unauthorized_response()
 
         try:
-            user = UserBasicInfo.objects.filter(user_name = user_name).first()
-            if not user: # user name not existed yet.
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if not user:  # user name not existed yet.
                 status_code = 400
                 response_msg = {
                     "code": 4,
@@ -260,30 +305,39 @@ def user_modify_password(request):
                     user.save()
                     status_code = 200
                     response_msg = {
-                        "code": 0, 
-                        "message": 
-                        "SUCCESS", 
+                        "code": 0,
+                        "message":
+                        "SUCCESS",
                         "data": {}
                     }
-            return JsonResponse(response_msg, status = status_code, 
-            headers = {'Access-Control-Allow-Origin':'*'})
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
         except Exception as error:
+            print(error)
             return internal_error_response()
+    return internal_error_response()
+
 
 # Keyword search
-class elastic_search(object):
+class ElasticSearch():
     """
     class for keyword search
     """
     def __init__(self):
         self.client = Elasticsearch(hosts=["localhost"])
-        
+
     def search(self,key_words,sorted_by="_score",operator="or", start=0, size=10):
         """
         Args:
-            key_words (str): keywords to search (support multi keywords, just put them together and separated by ',')
-            sorted_by (str, optional): sorting method "_score": sorted by similarity; "create_date":sorted by create_date. "Defaults to "_score".
-            operator (str, optional): "and": results must contain all keywords. "or":results must contain at least one keyword Defaults to "or".
+            key_words (str): keywords to search (support multi keywords,
+            just put them together and separated by ',')
+            sorted_by (str, optional): sorting method "_score": sorted by similarity;
+            "create_date":sorted by create_date. "Defaults to "_score".
+            operator (str, optional): "and": results must contain all keywords.
+            "or":results must contain at least one keyword Defaults to "or".
             start (int, optional): result start from ... . Defaults to 0.
             size (int, optional): the size of response. Defaults to 10.
 
@@ -298,7 +352,8 @@ class elastic_search(object):
                     '_type': '_doc',
                     '_id': 'https://new.qq.com/rain/a/20221008A000U100',
                     '_score': 4.4793386,
-                    '_source': { 'title': '', 'create_date': '2022-10-08T00:00:00', 'news_url': '', 'first_img_url': '', 'content': '国庆假日期间，...', 'tags': ['国庆'] },
+                    '_source': { 'title': '', 'create_date': '2022-10-08T00:00:00', 'news_url': '',
+                    'first_img_url': '', 'content': '国庆假日期间，...', 'tags': ['国庆'] },
                     'highlight': { 'content': ['<span class="keyWord">国庆</span>假日期间，.....'] }
                     },
                     .....
@@ -328,7 +383,7 @@ class elastic_search(object):
                 sorted_by:
                 {
                     # desc: Descending ; asc: Ascending;
-                    "order":"desc"       
+                    "order":"desc"
                 }
             },
             "from":start,
@@ -341,33 +396,29 @@ class elastic_search(object):
                     "title": {},
                     "content": {}
                 }
-            }      
-                 
+            }
         }
         response = self.client.search(index="tencent_news", body=query_json)
         return response["hits"]
 
+
 @csrf_exempt
 def keyword_search(request):
-    
+    """
+        keyword_search
+    """
     if request.method == "POST":
-        """
-        encoded_token = request.META.get("HTTP_AUTHORIZATION")
-        token = tools.decode_token(encoded_token)
-        if token_expired(token):
-            # return 401
-        """
         try:
             encoded_token = request.META.get("HTTP_AUTHORIZATION")
             token = tools.decode_token(encoded_token)
             if tools.token_expired(token):
-                return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
-        except Exception as e:
-            return JsonResponse({"code": 1001, "message": "UNAUTHORIZED", "data": {}}, status = 401, headers = {'Access-Control-Allow-Origin':'*'})
-        
+                return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
         key_word = request.POST.get("keyword")
-        es = elastic_search()
-        all_news = es.search(key_words=key_word)
+        elastic_search = ElasticSearch()
+        all_news = elastic_search.search(key_words=key_word)
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
@@ -379,6 +430,9 @@ def keyword_search(request):
                 "picture_url": data['first_img_url']
             }
             news += [piece_new]
-        return JsonResponse({"code": 0, "message": "SUCCESS", "data": news}, status = 200, headers = {'Access-Control-Allow-Origin':'*'})
-    
-    return JsonResponse({"code": 1003, "message": "INTERNAL_ERROR", "data": {}}, status = 500, headers = {'Access-Control-Allow-Origin':'*'})
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": news},
+            status=200,
+            headers={'Access-Control-Allow-Origin':'*'}
+        )
+    return internal_error_response()
