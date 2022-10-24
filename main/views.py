@@ -91,9 +91,9 @@ def user_login(request):
                         "code": 0,
                         "message": "SUCCESS",
                         "data": {
-                            "id": 1,
+                            "id": user.id,
                             "user_name": user_name,
-                            "token": tools.create_token(user_name)
+                            "token": tools.create_token(user_id=user.id, user_name=user.user_name)
                         }
                     }
                 else:
@@ -168,9 +168,9 @@ def user_register(request):
                         "code": 0,
                         "message": "SUCCESS",
                         "data": {
-                            "id": 1,
+                            "id": user.id,
                             "user_name": user_name,
-                            "token": tools.create_token(user_name)
+                            "token": tools.create_token(user_id=user.id, user_name=user.user_name)
                         }
                     }
                 except Exception as error:

@@ -10,24 +10,35 @@ import jwt
 EXPIRE_TIME = 7 * 86400  # 30s for testing. 7 days for deploy.
 SECRET_KEY = "A good coder is all you need."
 
+TOKEN_WHITE_LIST = {}  # storage alive token for each user
+"""
+token_white_list = {
+    userid:["token 1","token 2"]
+}
+"""
+
 
 # return md5 of a string
 def md5(string):
     """
-    input: str
-    output: md5(str)
+        input: str
+        output: md5(str)
     """
     md5_calculator = hashlib.md5()
     md5_calculator.update(string.encode(encoding='UTF-8'))
     return str(md5_calculator.hexdigest())
 
 
-def create_token(user_name):
+def create_token(user_name, user_id=0):
     """
         create a jwt token for a user
     """
     return "Bearer " + jwt.encode(
-        {"user_name": user_name,"EXPIRE_TIME": time.time() + EXPIRE_TIME},
+        {
+            "id":user_id,
+            "user_name": user_name,
+            "EXPIRE_TIME": time.time() + EXPIRE_TIME
+        },
         SECRET_KEY,
         algorithm="HS256"
     )
@@ -51,3 +62,16 @@ def token_expired(token):
     if token["EXPIRE_TIME"] < time.time():
         return True
     return False
+
+
+def add_token_to_white_list(user_id, encoded_token):
+    """
+        add user's token to white list
+    """
+    if user_id not in TOKEN_WHITE_LIST:
+        TOKEN_WHITE_LIST[user_id] = []
+    while len(TOKEN_WHITE_LIST[user_id]):  # pop all expired token
+        if token_expired(decode_token(TOKEN_WHITE_LIST[user_id][0])):
+            TOKEN_WHITE_LIST[user_id].pop(0)
+    if encoded_token not in TOKEN_WHITE_LIST[user_id]:
+        TOKEN_WHITE_LIST[user_id].append(encoded_token)
