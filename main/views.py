@@ -2,13 +2,13 @@
     views.py in django frame work
 """
 import json
+import re
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from . import tools
 from .models import UserBasicInfo
 from .responses import internal_error_response, unauthorized_response
-import re
 
 # Create your views here.
 
@@ -400,22 +400,22 @@ def get_location(info_str,start_tag='<span class="szz-type"',end_tag='</span>'):
     """
     start = len(start_tag)
     end = len(end_tag)
-    
+
     location_infos = []
     pattern = start_tag+'(.+?)'+end_tag
-    
-    for index,m in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
+
+    for idx, m_res in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
         location_info = []
-        
-        if index == 0:
-            location_info.append(m.span()[0])
-            location_info.append(m.span()[1]-(index+1)*(start+end+1))
+
+        if idx == 0:
+            location_info.append(m_res.span()[0])
+            location_info.append(m_res.span()[1]-(idx+1)*(start+end+1))
         else:
-            location_info.append(m.span()[0]-index*(start+end+1))
-            location_info.append(m.span()[1]-(index+1)*(start+end+1))
-        
+            location_info.append(m_res.span()[0]-idx*(start+end+1))
+            location_info.append(m_res.span()[1]-(idx+1)*(start+end+1))
+
         location_infos.append(location_info)
-        
+
     return location_infos
 
 
