@@ -89,7 +89,7 @@ class ToolsTests(TestCase):
 
     def test_tools_add_token_to_white_list(self):
         """
-            test add token to white list
+            test add token to white list function in tools
         """
         title = "Tools Test"
         content = "test add_token_to_white_list() function in tools"
@@ -106,11 +106,34 @@ class ToolsTests(TestCase):
                 SECRET_KEY,
                 algorithm="HS256"
             )
-            add_token_to_white_list(user_id=user_id, encoded_token=encoded_expired_token)
+            add_token_to_white_list(encoded_token=encoded_expired_token)
             for i in range(2):
-                add_token_to_white_list(user_id=user_id, encoded_token=encoded_token)
+                add_token_to_white_list(encoded_token=encoded_token)
             self.assertEqual(len(tools.TOKEN_WHITE_LIST[user_id]), 1)
         self.assertEqual(len(tools.TOKEN_WHITE_LIST.keys()), self.user_num)
+
+    def test_tools_check_token_in_white_list(self):
+        """
+            test check token in white list function in tools
+        """
+        title = "Tools Test"
+        content = "test check_token_in_white_list() function in tools"
+        self.assertEqual(type(tools.TOKEN_WHITE_LIST), dict)
+        for user_id in range(self.user_num):
+            user_name = self.user_name_list[user_id]
+            encoded_token = create_token(user_name=user_name, user_id=user_id)
+            encoded_expired_token = "Bearer " + jwt.encode(
+                {
+                    "id":user_id,
+                    "user_name": user_name,
+                    "EXPIRE_TIME": time.time() + 0
+                },
+                SECRET_KEY,
+                algorithm="HS256"
+            )
+            add_token_to_white_list(encoded_token=encoded_token)
+            self.assertEqual(check_token_in_white_list(encoded_token), True)
+            self.assertEqual(check_token_in_white_list(encoded_expired_token), False)
 
 
 class ViewsTests(TestCase):

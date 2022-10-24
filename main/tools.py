@@ -59,7 +59,7 @@ def token_expired(token):
     return False
 
 
-def add_token_to_white_list(encoded_token, user_id=0):
+def add_token_to_white_list(encoded_token):
     """
         add user's token to white list
     """
