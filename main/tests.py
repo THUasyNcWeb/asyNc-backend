@@ -135,6 +135,21 @@ class ToolsTests(TestCase):
             self.assertEqual(check_token_in_white_list(encoded_token), True)
             self.assertEqual(check_token_in_white_list(encoded_expired_token), False)
 
+    def test_tools_del_token_from_white_list(self):
+        """
+            test del token from white list function in tools
+        """
+        title = "Tools Test"
+        content = "test del_token_from_white_list() function in tools"
+        self.assertEqual(type(tools.TOKEN_WHITE_LIST), dict)
+        for user_id in range(self.user_num):
+            user_name = self.user_name_list[user_id]
+            encoded_token = create_token(user_name=user_name, user_id=user_id)
+            add_token_to_white_list(encoded_token=encoded_token)
+            self.assertEqual(check_token_in_white_list(encoded_token), True)
+            del_token_from_white_list(encoded_token=encoded_token)
+            self.assertEqual(check_token_in_white_list(encoded_token), False)
+
 
 class ViewsTests(TestCase):
     """
