@@ -28,7 +28,7 @@ def create_token(user_name, user_id=0):
     """
         create a jwt token for a user
     """
-    return "Bearer " + jwt.encode(
+    encoded_token = "Bearer " + jwt.encode(
         {
             "id":user_id,
             "user_name": user_name,
@@ -37,6 +37,7 @@ def create_token(user_name, user_id=0):
         SECRET_KEY,
         algorithm="HS256"
     )
+    return encoded_token
 
 
 def decode_token(encoded_token):

@@ -357,6 +357,8 @@ class ViewsTests(TestCase):
             }
 
             encoded_token = create_token(user_name=user_name, user_id=i)
+            add_token_to_white_list(encoded_token)
+            self.assertEqual(check_token_in_white_list(encoded_token), True)
             response = self.client.post('/modify_password/', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
@@ -378,6 +380,7 @@ class ViewsTests(TestCase):
                 "new_password": new_password
             }
             encoded_token = create_token(user_name=self.user_name_list[i - 1], user_id=i)
+            add_token_to_white_list(encoded_token)
             response = self.client.post('/modify_password/',
                                         data=requests,
                                         content_type="application/json",
@@ -400,6 +403,7 @@ class ViewsTests(TestCase):
                 "new_password": new_password
             }
             encoded_token = create_token(user_name=user_name, user_id=i)
+            add_token_to_white_list(encoded_token)
             response = self.client.post('/modify_password/', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
@@ -421,6 +425,7 @@ class ViewsTests(TestCase):
                 "new_password": new_password
             }
             encoded_token = create_token(user_name=self.user_name_list[i], user_id=i)
+            add_token_to_white_list(encoded_token)
             response = self.client.post('/modify_password/', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)

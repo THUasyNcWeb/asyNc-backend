@@ -86,6 +86,7 @@ def user_login(request):
                 }
             else:
                 if user.password == tools.md5(password):
+                    user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
                     status_code = 200
                     response_msg = {
                         "code": 0,
@@ -93,9 +94,10 @@ def user_login(request):
                         "data": {
                             "id": user.id,
                             "user_name": user_name,
-                            "token": tools.create_token(user_id=user.id, user_name=user.user_name)
+                            "token": user_token
                         }
                     }
+                    tools.add_token_to_white_list(user_token)
                 else:
                     status_code = 400
                     response_msg = {
@@ -163,6 +165,7 @@ def user_register(request):
                 try:
                     user.full_clean()
                     user.save()
+                    user_token = tools.create_token(user_name=user.user_name, user_id=user.id)
                     status_code = 200
                     response_msg = {
                         "code": 0,
@@ -170,9 +173,10 @@ def user_register(request):
                         "data": {
                             "id": user.id,
                             "user_name": user_name,
-                            "token": tools.create_token(user_id=user.id, user_name=user.user_name)
+                            "token": user_token
                         }
                     }
+                    tools.add_token_to_white_list(user_token)
                 except Exception as error:
                     print(error)
                     return internal_error_response()
@@ -256,9 +260,9 @@ def user_modify_password(request):
     """
     if request.method == "POST":
         try:
-            encoded_token = request.META.get("HTTP_AUTHORIZATION")
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
             token = tools.decode_token(encoded_token)
-            if tools.token_expired(token):
+            if not tools.check_token_in_white_list(encoded_token=encoded_token):
                 return unauthorized_response()
         except Exception as error:
             print(error)
@@ -410,8 +414,8 @@ def keyword_search(request):
     if request.method == "POST":
         try:
             encoded_token = request.META.get("HTTP_AUTHORIZATION")
-            token = tools.decode_token(encoded_token)
-            if tools.token_expired(token):
+            # token = tools.decode_token(encoded_token)
+            if not tools.check_token_in_white_list(encoded_token=encoded_token):
                 return unauthorized_response()
         except Exception as error:
             print(error)
