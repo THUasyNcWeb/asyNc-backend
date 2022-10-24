@@ -92,3 +92,24 @@ def check_token_in_white_list(encoded_token):
     if encoded_token in TOKEN_WHITE_LIST[user_id]:
         return True
     return False
+
+
+def del_token_from_white_list(encoded_token):
+    """
+        del token from white list, used when logout.
+        return true if succeed.
+    """
+    decoded_token = decode_token(encoded_token)
+    user_id = decoded_token["id"]
+    if user_id not in TOKEN_WHITE_LIST:
+        return False
+    while len(TOKEN_WHITE_LIST[user_id]):  # pop all expired token
+        if token_expired(decode_token(TOKEN_WHITE_LIST[user_id][0])):
+            TOKEN_WHITE_LIST[user_id].pop(0)
+        else:
+            break
+    if encoded_token in TOKEN_WHITE_LIST[user_id]:
+        while encoded_token in TOKEN_WHITE_LIST[user_id]:  # normally only loop once
+            TOKEN_WHITE_LIST[user_id].remove(encoded_token)
+        return True
+    return False
