@@ -59,10 +59,12 @@ def token_expired(token):
     return False
 
 
-def add_token_to_white_list(user_id, encoded_token):
+def add_token_to_white_list(encoded_token, user_id=0):
     """
         add user's token to white list
     """
+    decoded_token = decode_token(encoded_token)
+    user_id = decoded_token["id"]
     if user_id not in TOKEN_WHITE_LIST:
         TOKEN_WHITE_LIST[user_id] = []
     while len(TOKEN_WHITE_LIST[user_id]):  # pop all expired token
@@ -72,3 +74,21 @@ def add_token_to_white_list(user_id, encoded_token):
             break
     if encoded_token not in TOKEN_WHITE_LIST[user_id]:
         TOKEN_WHITE_LIST[user_id].append(encoded_token)
+
+
+def check_token_in_white_list(encoded_token):
+    """
+        check user's token in white list
+    """
+    decoded_token = decode_token(encoded_token)
+    user_id = decoded_token["id"]
+    if user_id not in TOKEN_WHITE_LIST:
+        return False
+    while len(TOKEN_WHITE_LIST[user_id]):  # pop all expired token
+        if token_expired(decode_token(TOKEN_WHITE_LIST[user_id][0])):
+            TOKEN_WHITE_LIST[user_id].pop(0)
+        else:
+            break
+    if encoded_token in TOKEN_WHITE_LIST[user_id]:
+        return True
+    return False
