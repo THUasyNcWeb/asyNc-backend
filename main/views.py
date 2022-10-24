@@ -434,17 +434,40 @@ def keyword_search(request):
             print(error)
             return unauthorized_response()
         key_word = request.POST.get("query")
+        start_page = request.POST.get("page")
         elastic_search = ElasticSearch()
-        all_news = elastic_search.search(key_words=key_word)
+        all_news = elastic_search.search(key_words=key_word,start=start_page)
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
+
+            highlights = new["highlight"]
+            # print(highlights)
+            title_keywords = []
+            keywords = []
+            if 'title' in highlights:
+                title_highligts = highlights['title']
+                title = ""
+                for h_title in title_highligts:
+                    title += h_title
+                title_keywords = get_location(title)
+            if 'content' in highlights:
+                content_higlights = highlights['content']
+                content = ""
+                for h_content in content_higlights:
+                    content += h_content
+                keywords = get_location(content)
+
             piece_new = {
                 "title": data['title'],
                 "url": data['news_url'],
+                "media": data['media'],
                 "category": data['tags'][0],
                 "priority": 1,
-                "picture_url": data['first_img_url']
+                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                "picture_url": data['first_img_url'],
+                "title_keywords": title_keywords,
+                "keywords": keywords
             }
             news += [piece_new]
         return JsonResponse(
