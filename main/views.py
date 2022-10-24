@@ -8,6 +8,7 @@ from elasticsearch import Elasticsearch
 from . import tools
 from .models import UserBasicInfo
 from .responses import internal_error_response, unauthorized_response
+import re
 
 # Create your views here.
 
@@ -391,6 +392,32 @@ class ElasticSearch():
         response = self.client.search(index="tencent_news", body=query_json)
         return response["hits"]
 
+def get_location(info_str,start_tag='<span class="szz-type"',end_tag='</span>'):
+    """
+    summary: pass in str
+    Returns:
+        location_list
+    """
+    start = len(start_tag)
+    end = len(end_tag)
+    
+    location_infos = []
+    pattern = start_tag+'(.+?)'+end_tag
+    
+    for index,m in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
+        location_info = []
+        
+        if index == 0:
+            location_info.append(m.span()[0])
+            location_info.append(m.span()[1]-(index+1)*(start+end+1))
+        else:
+            location_info.append(m.span()[0]-index*(start+end+1))
+            location_info.append(m.span()[1]-(index+1)*(start+end+1))
+        
+        location_infos.append(location_info)
+        
+    return location_infos
+
 
 @csrf_exempt
 def keyword_search(request):
@@ -406,7 +433,7 @@ def keyword_search(request):
         except Exception as error:
             print(error)
             return unauthorized_response()
-        key_word = request.POST.get("keyword")
+        key_word = request.POST.get("query")
         elastic_search = ElasticSearch()
         all_news = elastic_search.search(key_words=key_word)
         news = []
