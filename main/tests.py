@@ -5,6 +5,7 @@ import time
 import json
 from urllib import request
 from django.test import TestCase, Client
+from . import tools
 from .models import *
 from .tools import *
 
@@ -20,6 +21,7 @@ class ToolsTests(TestCase):
         """
             set up a test set
         """
+        self.user_num = 5
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
 
     def test_tools_md5(self):
@@ -42,11 +44,13 @@ class ToolsTests(TestCase):
         title = "Test"
         content = "test create token function in tools"
 
+        user_id = 0
         for user_name in self.user_name_list:
             self.assertEqual(
-                type(create_token(user_name)),
+                type(create_token(user_name=user_name, user_id=user_id)),
                 str
             )
+            user_id += 1
 
     def test_tools_decode_token(self):
         """
@@ -55,8 +59,9 @@ class ToolsTests(TestCase):
         title = "Test"
         content = "test decode token function in tools"
 
+        user_id = 0
         for user_name in self.user_name_list:
-            encoded_token = create_token(user_name)
+            encoded_token = create_token(user_name=user_name, user_id=user_id)
             self.assertEqual(
                 user_name,
                 jwt.decode(
@@ -65,6 +70,7 @@ class ToolsTests(TestCase):
                     algorithms=["HS256"]
                 )["user_name"]
             )
+            user_id += 1
 
     def test_tools_token_expired(self):
         """
@@ -80,6 +86,69 @@ class ToolsTests(TestCase):
         for user_name in self.user_name_list:
             unexpired_token = {"user_name": user_name,"EXPIRE_TIME": time.time() + 1}
             self.assertEqual(token_expired(unexpired_token), False)
+
+    def test_tools_add_token_to_white_list(self):
+        """
+            test add token to white list function in tools
+        """
+        title = "Tools Test"
+        content = "test add_token_to_white_list() function in tools"
+        self.assertEqual(type(tools.TOKEN_WHITE_LIST), dict)
+        for user_id in range(self.user_num):
+            user_name = self.user_name_list[user_id]
+            encoded_token = create_token(user_name=user_name, user_id=user_id)
+            encoded_expired_token = "Bearer " + jwt.encode(
+                {
+                    "id":user_id,
+                    "user_name": user_name,
+                    "EXPIRE_TIME": time.time() + 0
+                },
+                SECRET_KEY,
+                algorithm="HS256"
+            )
+            add_token_to_white_list(encoded_token=encoded_expired_token)
+            for i in range(2):
+                add_token_to_white_list(encoded_token=encoded_token)
+            self.assertEqual(len(tools.TOKEN_WHITE_LIST[user_id]), 1)
+        self.assertEqual(len(tools.TOKEN_WHITE_LIST.keys()), self.user_num)
+
+    def test_tools_check_token_in_white_list(self):
+        """
+            test check token in white list function in tools
+        """
+        title = "Tools Test"
+        content = "test check_token_in_white_list() function in tools"
+        self.assertEqual(type(tools.TOKEN_WHITE_LIST), dict)
+        for user_id in range(self.user_num):
+            user_name = self.user_name_list[user_id]
+            encoded_token = create_token(user_name=user_name, user_id=user_id)
+            encoded_expired_token = "Bearer " + jwt.encode(
+                {
+                    "id":user_id,
+                    "user_name": user_name,
+                    "EXPIRE_TIME": time.time() + 0
+                },
+                SECRET_KEY,
+                algorithm="HS256"
+            )
+            add_token_to_white_list(encoded_token=encoded_token)
+            self.assertEqual(check_token_in_white_list(encoded_token), True)
+            self.assertEqual(check_token_in_white_list(encoded_expired_token), False)
+
+    def test_tools_del_token_from_white_list(self):
+        """
+            test del token from white list function in tools
+        """
+        title = "Tools Test"
+        content = "test del_token_from_white_list() function in tools"
+        self.assertEqual(type(tools.TOKEN_WHITE_LIST), dict)
+        for user_id in range(self.user_num):
+            user_name = self.user_name_list[user_id]
+            encoded_token = create_token(user_name=user_name, user_id=user_id)
+            add_token_to_white_list(encoded_token=encoded_token)
+            self.assertEqual(check_token_in_white_list(encoded_token), True)
+            del_token_from_white_list(encoded_token=encoded_token)
+            self.assertEqual(check_token_in_white_list(encoded_token), False)
 
 
 class ViewsTests(TestCase):
@@ -287,7 +356,9 @@ class ViewsTests(TestCase):
                 "new_password": new_password
             }
 
-            encoded_token = create_token(user_name)
+            encoded_token = create_token(user_name=user_name, user_id=i)
+            add_token_to_white_list(encoded_token)
+            self.assertEqual(check_token_in_white_list(encoded_token), True)
             response = self.client.post('/modify_password/', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
@@ -308,7 +379,8 @@ class ViewsTests(TestCase):
                 "old_password": old_password,
                 "new_password": new_password
             }
-            encoded_token = create_token(self.user_name_list[i - 1])
+            encoded_token = create_token(user_name=self.user_name_list[i - 1], user_id=i)
+            add_token_to_white_list(encoded_token)
             response = self.client.post('/modify_password/',
                                         data=requests,
                                         content_type="application/json",
@@ -330,7 +402,8 @@ class ViewsTests(TestCase):
                 "old_password": old_password,
                 "new_password": new_password
             }
-            encoded_token = create_token(user_name)
+            encoded_token = create_token(user_name=user_name, user_id=i)
+            add_token_to_white_list(encoded_token)
             response = self.client.post('/modify_password/', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
@@ -351,7 +424,8 @@ class ViewsTests(TestCase):
                 "old_password": old_password,
                 "new_password": new_password
             }
-            encoded_token = create_token(self.user_name_list[i])
+            encoded_token = create_token(user_name=self.user_name_list[i], user_id=i)
+            add_token_to_white_list(encoded_token)
             response = self.client.post('/modify_password/', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
