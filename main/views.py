@@ -2,6 +2,7 @@
     views.py in django frame work
 """
 import json
+import re
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
@@ -423,7 +424,7 @@ class ElasticSearch():
             "size":size,
             # highthlight keyword in results
             "highlight":{
-                "pre_tags": ['<span class="keyWord">'],
+                "pre_tags": ['<span class="szz-type">'],
                 "post_tags": ['</span>'],
                 "fields":{
                     "title": {},
@@ -433,6 +434,33 @@ class ElasticSearch():
         }
         response = self.client.search(index="tencent_news", body=query_json)
         return response["hits"]
+
+@csrf_exempt
+def get_location(info_str,start_tag='<span class="szz-type">',end_tag='</span>'):
+    """
+    summary: pass in str
+    Returns:
+        location_list
+    """
+
+    start = len(start_tag)
+    end = len(end_tag)
+    location_infos = []
+    pattern = start_tag+'(.+?)'+end_tag
+
+    for idx,m_res in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
+        location_info = []
+
+        if idx == 0:
+            location_info.append(m_res.span()[0])
+            location_info.append(m_res.span()[1]-(idx+1)*(start+end))
+        else:
+            location_info.append(m_res.span()[0]-idx*(start+end))
+            location_info.append(m_res.span()[1]-(idx+1)*(start+end))
+
+        location_infos.append(location_info)
+
+    return location_infos
 
 
 @csrf_exempt
@@ -449,22 +477,57 @@ def keyword_search(request):
         except Exception as error:
             print(error)
             return unauthorized_response()
-        key_word = request.POST.get("keyword")
+        key_word = request.POST.get("query")
+        start_page = int(request.POST.get("page"))
+        if isinstance(start_page,int) is False:
+            return JsonResponse(
+                {"code": 5, "message": "INVALID_PAGE", "data": {}},
+                status=400,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
         elastic_search = ElasticSearch()
-        all_news = elastic_search.search(key_words=key_word)
+        all_news = elastic_search.search(key_words=key_word,start=start_page)
+        total_num = all_news['total']['value']
+        if total_num % 10 == 0:
+            total_num = total_num/10
+        else:
+            total_num = int(total_num/10) + 1
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
+            highlights = new["highlight"]
+            # print(highlights)
+            title_keywords = []
+            keywords = []
+            if 'title' in highlights:
+                title_highligts = highlights['title']
+                title = "".join(title_highligts)
+
+                title_keywords = get_location(title)
+            if 'content' in highlights:
+                content_higlights = highlights['content']
+                content = "".join(content_higlights)
+
+                keywords = get_location(content)
+
             piece_new = {
                 "title": data['title'],
                 "url": data['news_url'],
+                "media": data['media'],
                 "category": data['tags'][0],
                 "priority": 1,
-                "picture_url": data['first_img_url']
+                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                "picture_url": data['first_img_url'],
+                "title_keywords": title_keywords,
+                "keywords": keywords
             }
             news += [piece_new]
+        data = {
+            "page_count": total_num,
+            "news": news
+        }
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": news},
+            {"code": 0, "message": "SUCCESS", "data": data},
             status=200,
             headers={'Access-Control-Allow-Origin':'*'}
         )
