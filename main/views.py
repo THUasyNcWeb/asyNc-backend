@@ -435,6 +435,7 @@ class ElasticSearch():
         response = self.client.search(index="tencent_news", body=query_json)
         return response["hits"]
 
+
 @csrf_exempt
 def get_location(info_str,start_tag='<span class="szz-type">',end_tag='</span>'):
     """
@@ -446,17 +447,17 @@ def get_location(info_str,start_tag='<span class="szz-type">',end_tag='</span>')
     start = len(start_tag)
     end = len(end_tag)
     location_infos = []
-    pattern = start_tag+'(.+?)'+end_tag
+    pattern = start_tag + '(.+?)' + end_tag
 
     for idx,m_res in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
         location_info = []
 
         if idx == 0:
             location_info.append(m_res.span()[0])
-            location_info.append(m_res.span()[1]-(idx+1)*(start+end))
+            location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
         else:
-            location_info.append(m_res.span()[0]-idx*(start+end))
-            location_info.append(m_res.span()[1]-(idx+1)*(start+end))
+            location_info.append(m_res.span()[0] - idx * (start + end))
+            location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
 
         location_infos.append(location_info)
 
@@ -489,9 +490,9 @@ def keyword_search(request):
         all_news = elastic_search.search(key_words=key_word,start=start_page)
         total_num = all_news['total']['value']
         if total_num % 10 == 0:
-            total_num = total_num/10
+            total_num = total_num / 10
         else:
-            total_num = int(total_num/10) + 1
+            total_num = int(total_num / 10) + 1
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
