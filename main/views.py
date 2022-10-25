@@ -342,12 +342,11 @@ def check_login_state(request):
                     "message": "SUCCESS",
                     "data": {}
                 }
-                JsonResponse(
+                return JsonResponse(
                     response_msg,
                     status=status_code,
                     headers={'Access-Control-Allow-Origin':'*'}
                 )
-                return JsonResponse
             return unauthorized_response()
         except Exception as error:
             print(error)
