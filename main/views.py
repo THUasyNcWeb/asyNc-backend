@@ -435,12 +435,22 @@ def keyword_search(request):
             return unauthorized_response()
         key_word = request.POST.get("query")
         start_page = request.POST.get("page")
+        if isinstance(start_page,int) == False:
+            return JsonResponse(
+                {"code": 5, "message": "INVALID_PAGE", "data": {}},
+                status=400,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
         elastic_search = ElasticSearch()
         all_news = elastic_search.search(key_words=key_word,start=start_page)
+        total_num = all_news['total']['value']
+        if total_num % 10 == 0:
+            total_num = total_num/10
+        else:
+            total_num = int(total_num/10) + 1
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
-
             highlights = new["highlight"]
             # print(highlights)
             title_keywords = []
@@ -470,8 +480,12 @@ def keyword_search(request):
                 "keywords": keywords
             }
             news += [piece_new]
+        data = {
+            "page_count": total_num,
+            "news": news
+        }
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": news},
+            {"code": 0, "message": "SUCCESS", "data": data},
             status=200,
             headers={'Access-Control-Allow-Origin':'*'}
         )
