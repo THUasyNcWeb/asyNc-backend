@@ -381,7 +381,7 @@ class ElasticSearch():
             "size":size,
             # highthlight keyword in results
             "highlight":{
-                "pre_tags": ['<span class="keyWord">'],
+                "pre_tags": ['<span class="szz-type">'],
                 "post_tags": ['</span>'],
                 "fields":{
                     "title": {},
@@ -392,27 +392,28 @@ class ElasticSearch():
         response = self.client.search(index="tencent_news", body=query_json)
         return response["hits"]
 
-def get_location(info_str,start_tag='<span class="szz-type"',end_tag='</span>'):
+@csrf_exempt
+def get_location(info_str,start_tag='<span class="szz-type">',end_tag='</span>'):
     """
     summary: pass in str
     Returns:
         location_list
     """
+
     start = len(start_tag)
     end = len(end_tag)
-
     location_infos = []
     pattern = start_tag+'(.+?)'+end_tag
 
-    for idx, m_res in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
+    for idx,m_res in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
         location_info = []
 
         if idx == 0:
             location_info.append(m_res.span()[0])
-            location_info.append(m_res.span()[1]-(idx+1)*(start+end+1))
+            location_info.append(m_res.span()[1]-(idx+1)*(start+end))
         else:
-            location_info.append(m_res.span()[0]-idx*(start+end+1))
-            location_info.append(m_res.span()[1]-(idx+1)*(start+end+1))
+            location_info.append(m_res.span()[0]-idx*(start+end))
+            location_info.append(m_res.span()[1]-(idx+1)*(start+end))
 
         location_infos.append(location_info)
 
@@ -434,7 +435,7 @@ def keyword_search(request):
             print(error)
             return unauthorized_response()
         key_word = request.POST.get("query")
-        start_page = request.POST.get("page")
+        start_page = int(request.POST.get("page"))
         if isinstance(start_page,int) is False:
             return JsonResponse(
                 {"code": 5, "message": "INVALID_PAGE", "data": {}},
@@ -457,15 +458,13 @@ def keyword_search(request):
             keywords = []
             if 'title' in highlights:
                 title_highligts = highlights['title']
-                title = ""
-                for h_title in title_highligts:
-                    title.join(h_title)
+                title = "".join(title_highligts)
+
                 title_keywords = get_location(title)
             if 'content' in highlights:
                 content_higlights = highlights['content']
-                content = ""
-                for h_content in content_higlights:
-                    content.join(h_content)
+                content = "".join(content_higlights)
+
                 keywords = get_location(content)
 
             piece_new = {
