@@ -431,3 +431,20 @@ class ViewsTests(TestCase):
                                         HTTP_AUTHORIZATION=encoded_token)
 
             self.assertEqual(response.status_code, 400)
+
+    def test_check_login_state(self):
+        """
+            test check login state function
+        """
+        for i in range(5):
+            user_name = self.user_name_list[i]
+            encoded_token = create_token(user_name=user_name, user_id=i)
+            response = self.client.post('/checklogin/', data={},
+                                        content_type="application/json",
+                                        HTTP_AUTHORIZATION=encoded_token)
+            self.assertEqual(response.status_code, 401)
+            add_token_to_white_list(encoded_token)
+            response = self.client.post('/checklogin/', data={},
+                                        content_type="application/json",
+                                        HTTP_AUTHORIZATION=encoded_token)
+            self.assertEqual(response.status_code, 200)

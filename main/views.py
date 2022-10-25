@@ -326,6 +326,35 @@ def user_modify_password(request):
     return internal_error_response()
 
 
+# check login state
+@csrf_exempt
+def check_login_state(request):
+    """
+    request:
+    token in 'HTTP_AUTHORIZATION'.
+    """
+    if request.method == "POST":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            if tools.check_token_in_white_list(encoded_token=encoded_token):
+                status_code = 200
+                response_msg = {
+                    "code": 0,
+                    "message": "SUCCESS",
+                    "data": {}
+                }
+                return JsonResponse(
+                    response_msg,
+                    status=status_code,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+    return internal_error_response()
+
+
 # Keyword search
 class ElasticSearch():
     """
