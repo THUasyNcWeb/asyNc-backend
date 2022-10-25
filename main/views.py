@@ -355,6 +355,38 @@ def check_login_state(request):
     return internal_error_response()
 
 
+# user logout
+@csrf_exempt
+def user_logout(request):
+    """
+    request:
+    token in 'HTTP_AUTHORIZATION'.
+    """
+    if request.method == "POST":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            if tools.check_token_in_white_list(encoded_token=encoded_token):
+                tools.del_token_from_white_list(encoded_token=encoded_token)
+                if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                    status_code = 200
+                    response_msg = {
+                        "code": 0,
+                        "message": "SUCCESS",
+                        "data": {}
+                    }
+                    return JsonResponse(
+                        response_msg,
+                        status=status_code,
+                        headers={'Access-Control-Allow-Origin':'*'}
+                    )
+                return internal_error_response()
+            return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+    return internal_error_response()
+
+
 # Keyword search
 class ElasticSearch():
     """
