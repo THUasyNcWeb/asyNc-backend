@@ -507,14 +507,13 @@ class ViewsTests(TestCase):
 
     def test_modify_username(self):
         """
-            test user logout function
+            test modify_username api
         """
         for i in range(5):
             user_name = self.user_name_list[i]
             new_user_name = "new_" + user_name
             encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
             add_token_to_white_list(encoded_token)
-            self.assertEqual(check_token_in_white_list(encoded_token), True)
 
             requests = {
                 "old_user_name": user_name,
@@ -526,3 +525,22 @@ class ViewsTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["data"]["user_name"], new_user_name)
             self.assertEqual(check_token_in_white_list(encoded_token), False)
+
+    def test_user_info(self):
+        """
+            test user_info api
+        """
+        for i in range(5):
+            user_name = self.user_name_list[i]
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            response = self.client.get(
+                '/user_info/',
+                data={},
+                content_type="application/json",
+                HTTP_AUTHORIZATION=encoded_token
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["data"]["user_name"], user_name)
+            self.assertEqual(isinstance(response.json()["data"]["signature"],str), True)
+            self.assertEqual(isinstance(response.json()["data"]["tags"],list), True)
