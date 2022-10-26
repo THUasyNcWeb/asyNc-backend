@@ -517,6 +517,12 @@ def keyword_search(request):
             total_num = total_num / 10
         else:
             total_num = int(total_num / 10) + 1
+        if start_page > total_num :
+            return JsonResponse(
+                {"code": 0, "message": "SUCCESS", "data": {}},
+                status=200,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
@@ -524,14 +530,16 @@ def keyword_search(request):
             # print(highlights)
             title_keywords = []
             keywords = []
+            title = ""
+            content = data['content']
             if 'title' in highlights:
-                title_highligts = highlights['title']
-                title = "".join(title_highligts)
+                title = highlights['title']
+                title = "".join(title)
 
                 title_keywords = get_location(title)
             if 'content' in highlights:
-                content_higlights = highlights['content']
-                content = "".join(content_higlights)
+                content = highlights['content']
+                content = "".join(content)
 
                 keywords = get_location(content)
 
