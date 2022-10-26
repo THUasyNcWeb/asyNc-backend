@@ -1,7 +1,6 @@
 """
 Models for db.
 """
-from email.policy import default
 from django.db import models
 from django.db.models import AutoField, CharField, URLField, DateTimeField
 from django.db.models import TextField, ForeignKey, IntegerField
