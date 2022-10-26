@@ -502,8 +502,10 @@ def keyword_search(request):
         keyword_search
     """
     if request.method == "POST":
-        key_word = request.POST.get("query")
-        start_page = int(request.POST.get("page"))
+        body = json.loads(request.body)
+        key_word = body["query"]
+        start_page = int(body["page"]) - 1
+        start_page = max(start_page, 0)
         if isinstance(start_page,int) is False:
             return JsonResponse(
                 {"code": 5, "message": "INVALID_PAGE", "data": {}},
