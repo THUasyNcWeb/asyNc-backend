@@ -300,7 +300,7 @@ def news_response(request):
         # if token_expired(token):
         #  return 401
         news_list = []
-        for news in News.objects.using("news").all().order_by("-pub_time")[0:20]:
+        for news in News.objects.all().order_by("-pub_time")[0:20]:
             news_list.append(
                 {
                     "title": news.title,
