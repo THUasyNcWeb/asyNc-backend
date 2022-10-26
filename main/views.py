@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from . import tools
 from .models import UserBasicInfo, News
-from .responses import internal_error_response, unauthorized_response
+from .responses import internal_error_response, unauthorized_response, not_found_response
 
 # Create your views here.
 
@@ -122,7 +122,7 @@ def user_login(request):
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
-    return internal_error_response()
+    return not_found_response()
 
 
 # user register
@@ -145,63 +145,67 @@ def user_register(request):
         }
     }
     """
-    if request.method == "POST":
-        try:
-            request_data = json.loads(request.body.decode())
-            user_name = request_data["user_name"]
-            password = request_data["password"]
-        except Exception as error:
-            print(error)
-            return internal_error_response(error=str(error))
-        if not isinstance(user_name, str):  # format check.
-            status_code = 400
-            response_msg = {
-                "code": 2,
-                "message": "INVALID_USER_NAME_FORMAT",
-                "data": {}
-            }
-        elif not isinstance(password, str):  # format check.
-            status_code = 400
-            response_msg = {
-                "code": 3,
-                "message": "INVALID_PASSWORD_FORMAT",
-                "data": {}
-            }
-        else:
-            user = UserBasicInfo.objects.filter(user_name=user_name).first()
-            if not user:  # user name not existed yet.
-                user = UserBasicInfo(user_name=user_name, password=tools.md5(password))
-                try:
-                    user.full_clean()
-                    user.save()
-                    user_token = tools.create_token(user_name=user.user_name, user_id=user.id)
-                    status_code = 200
-                    response_msg = {
-                        "code": 0,
-                        "message": "SUCCESS",
-                        "data": {
-                            "id": user.id,
-                            "user_name": user_name,
-                            "token": user_token
-                        }
-                    }
-                    tools.add_token_to_white_list(user_token)
-                except Exception as error:
-                    print(error)
-                    return internal_error_response(error=str(error))
-            else:  # user name already existed.
+    try:
+        if request.method == "POST":
+            try:
+                request_data = json.loads(request.body.decode())
+                user_name = request_data["user_name"]
+                password = request_data["password"]
+            except Exception as error:
+                print(error)
+                return internal_error_response(error=str(error))
+            if not isinstance(user_name, str):  # format check.
                 status_code = 400
                 response_msg = {
-                    "code": 1,
-                    "message": "USER_NAME_CONFLICT",
+                    "code": 2,
+                    "message": "INVALID_USER_NAME_FORMAT",
                     "data": {}
                 }
-        return JsonResponse(
-            response_msg,
-            status=status_code,
-            headers={'Access-Control-Allow-Origin':'*'}
-        )
-    return internal_error_response()
+            elif not isinstance(password, str):  # format check.
+                status_code = 400
+                response_msg = {
+                    "code": 3,
+                    "message": "INVALID_PASSWORD_FORMAT",
+                    "data": {}
+                }
+            else:
+                user = UserBasicInfo.objects.filter(user_name=user_name).first()
+                if not user:  # user name not existed yet.
+                    user = UserBasicInfo(user_name=user_name, password=tools.md5(password))
+                    try:
+                        user.full_clean()
+                        user.save()
+                        user_token = tools.create_token(user_name=user.user_name, user_id=user.id)
+                        status_code = 200
+                        response_msg = {
+                            "code": 0,
+                            "message": "SUCCESS",
+                            "data": {
+                                "id": user.id,
+                                "user_name": user_name,
+                                "token": user_token
+                            }
+                        }
+                        tools.add_token_to_white_list(user_token)
+                    except Exception as error:
+                        print(error)
+                        return internal_error_response(error=str(error))
+                else:  # user name already existed.
+                    status_code = 400
+                    response_msg = {
+                        "code": 1,
+                        "message": "USER_NAME_CONFLICT",
+                        "data": {}
+                    }
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
+    return not_found_response()
 
 
 # return user info
