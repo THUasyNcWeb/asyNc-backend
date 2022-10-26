@@ -121,4 +121,4 @@ def del_all_token_of_an_user(user_id):
         del all token of an user from white list.
     """
     if user_id in TOKEN_WHITE_LIST:
-        TOKEN_WHITE_LIST.pop(user_id)
+        TOKEN_WHITE_LIST[user_id] = []
