@@ -17,11 +17,11 @@ class News(models.Model):
     news_url = URLField(max_length=200)
     media = CharField(max_length=20)
     category = ArrayField(models.CharField(max_length=30), size=5)
-    tags = ArrayField(models.CharField(max_length=30), size=8)
+    tags = ArrayField(models.CharField(max_length=30))
     title = CharField(max_length=200)
     description = TextField()
     content = TextField()
-    first_img_url = URLField(max_length=200)
+    first_img_url = TextField(blank=True)
     pub_time = DateTimeField()
 
     class Meta:
@@ -39,6 +39,8 @@ class UserBasicInfo(models.Model):
     user_name = CharField(max_length=12, unique=True)
     password = CharField(max_length=40)
     # register_date = DateTimeField(auto_now_add=True)
+    signature = CharField(max_length=200, blank=True)
+    tags = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return str(self.user_name)

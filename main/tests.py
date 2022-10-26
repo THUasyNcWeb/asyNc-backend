@@ -170,21 +170,27 @@ class ToolsTests(TestCase):
 
 class ViewsTests(TestCase):
     """
-        test functions in tools
+        test functions in views
     """
 
     def setUp(self):
         """
             set up a test set
         """
+        # self.databases = "__all__"
 
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
         self.user_password = ["Alcie", "password", "123456", "密码", "パスワード"]
+        self.user_tags = ["用户", "Tag", "パスワード"]
+        self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []
         for i in range(5):
             user_name = self.user_name_list[i]
             password = self.user_password[i]
             user = UserBasicInfo.objects.create(user_name=user_name, password=md5(password))
+            user.tags = self.user_tags_dict
+            user.full_clean()
+            user.save()
             self.user_id.append(user.id)
 
     def test_index(self):
@@ -544,3 +550,4 @@ class ViewsTests(TestCase):
             self.assertEqual(response.json()["data"]["user_name"], user_name)
             self.assertEqual(isinstance(response.json()["data"]["signature"],str), True)
             self.assertEqual(isinstance(response.json()["data"]["tags"],list), True)
+            self.assertEqual(response.json()["data"]["tags"], self.user_tags)

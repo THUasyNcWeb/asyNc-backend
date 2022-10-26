@@ -234,6 +234,15 @@ def user_info(request):
             user = UserBasicInfo.objects.filter(user_name=user_name).first()
             if not user:  # user name not existed yet.
                 return unauthorized_response()
+            user_tags = []
+            if user.tags:
+                user_tags_dict = user.tags
+                for key_value in sorted(
+                    user_tags_dict.items(),
+                    key=lambda kv:(kv[1], kv[0]),
+                    reverse=True
+                ):
+                    user_tags.append(key_value[0])
 
             status_code = 200
             response_msg = {
@@ -243,11 +252,7 @@ def user_info(request):
                     "id": user.id,
                     "user_name": user.user_name,
                     "signature": "This is my signature.",
-                    "tags": [
-                        "C++",
-                        "中年",
-                        "アニメ"
-                    ]
+                    "tags": user_tags[:10]
                 }
             }
             return JsonResponse(
@@ -698,10 +703,11 @@ def keyword_search(request):
             title = ""
             content = data['content']
             if 'title' in highlights:
-                title = highlights['title']
-                title = "".join(title)
-
-                title_keywords = get_location(title)
+                for title in highlights['title']:
+                    loc_offset = data['title'].find(title.replace('<span class="szz-type">','')
+                                                    .replace('</span>',''))
+                    for location_info in get_location(title):
+                        title_keywords += [[index + loc_offset for index in location_info]]
 
             if 'content' in highlights:
                 content = highlights['content']
