@@ -239,18 +239,16 @@ def user_info(request):
             response_msg = {
                 "code": 0,
                 "message": "SUCCESS",
-                "data": [
-                    {
-                        "id": user.id,
-                        "user_name": user.user_name,
-                        "signature": "This is my signature.",
-                        "tags": [
-                            "C++",
-                            "中年",
-                            "アニメ"
-                        ]
-                    }
-                ]
+                "data": {
+                    "id": user.id,
+                    "user_name": user.user_name,
+                    "signature": "This is my signature.",
+                    "tags": [
+                        "C++",
+                        "中年",
+                        "アニメ"
+                    ]
+                }
             }
             return JsonResponse(
                 response_msg,
