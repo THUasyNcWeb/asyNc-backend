@@ -502,14 +502,6 @@ def keyword_search(request):
         keyword_search
     """
     if request.method == "POST":
-        try:
-            encoded_token = request.META.get("HTTP_AUTHORIZATION")
-            # token = tools.decode_token(encoded_token)
-            if not tools.check_token_in_white_list(encoded_token=encoded_token):
-                return unauthorized_response()
-        except Exception as error:
-            print(error)
-            return unauthorized_response()
         key_word = request.POST.get("query")
         start_page = int(request.POST.get("page"))
         if isinstance(start_page,int) is False:
@@ -525,6 +517,12 @@ def keyword_search(request):
             total_num = total_num / 10
         else:
             total_num = int(total_num / 10) + 1
+        if start_page > total_num :
+            return JsonResponse(
+                {"code": 0, "message": "SUCCESS", "data": {}},
+                status=200,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
@@ -532,14 +530,16 @@ def keyword_search(request):
             # print(highlights)
             title_keywords = []
             keywords = []
+            title = ""
+            content = data['content']
             if 'title' in highlights:
-                title_highligts = highlights['title']
-                title = "".join(title_highligts)
+                title = highlights['title']
+                title = "".join(title)
 
                 title_keywords = get_location(title)
             if 'content' in highlights:
-                content_higlights = highlights['content']
-                content = "".join(content_higlights)
+                content = highlights['content']
+                content = "".join(content)
 
                 keywords = get_location(content)
 
