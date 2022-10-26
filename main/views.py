@@ -196,6 +196,71 @@ def user_register(request):
     return internal_error_response()
 
 
+# return user info
+@csrf_exempt
+def user_info(request):
+    """
+    status_code = 200
+    response:
+    {
+        "code": 0,
+        "message": "SUCCESS",
+        "data": [
+            {
+                "id": 1,
+                "user_name": "Bob",
+                "signature": "This is my signature.",
+                "tags": [
+                    "C++",
+                    "中年",
+                    "アニメ"
+                ]
+            }
+        ]
+    }
+    """
+    if request.method == "GET":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            token = tools.decode_token(encoded_token)
+            if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+
+        try:
+            user_name = token["user_name"]
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if not user:  # user name not existed yet.
+                return unauthorized_response()
+
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": {
+                    "id": user.id,
+                    "user_name": user.user_name,
+                    "signature": "This is my signature.",
+                    "tags": [
+                        "C++",
+                        "中年",
+                        "アニメ"
+                    ]
+                }
+            }
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+        except Exception as error:
+            print(error)
+            return internal_error_response()
+    return internal_error_response()
+
+
 # return a news list
 @csrf_exempt
 def news_response(request):
@@ -326,6 +391,93 @@ def user_modify_password(request):
     return internal_error_response()
 
 
+# modify a user's username
+@csrf_exempt
+def user_modify_username(request):
+    """
+    request:
+    {
+        "old_user_name": "Alice",
+        "new_user_name": "Bob"
+    }
+    response:
+    {
+        "code": 0,
+        "message": "SUCCESS",
+        "data": {
+            "id": 1,
+            "user_name": "Bob",
+            "token": "SECRET_TOKEN"
+        }
+    }
+    """
+    if request.method == "POST":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            token = tools.decode_token(encoded_token)
+            if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+
+        try:
+            request_data = json.loads(request.body.decode())
+            old_user_name = request_data["old_user_name"]
+            new_user_name = request_data["new_user_name"]
+        except Exception as error:
+            print(error)
+            return internal_error_response()
+
+        if not old_user_name == token["user_name"]:
+            return unauthorized_response()
+
+        try:
+            user = UserBasicInfo.objects.filter(user_name=old_user_name).first()
+            if not user:  # user name not existed yet.
+                status_code = 400
+                response_msg = {
+                    "code": 6,
+                    "message": "WRONG_USERNAME",
+                    "data": {}
+                }
+            else:
+                if not isinstance(new_user_name, str):
+                    status_code = 400
+                    response_msg = {
+                        "code": 3,
+                        "message": "INVALID_USERNAME_FORMAT",
+                        "data": {}
+                    }
+                else:
+                    tools.del_all_token_of_an_user(user_id=user.id)
+                    user.user_name = new_user_name
+                    user.full_clean()
+                    user.save()
+                    user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
+                    status_code = 200
+                    response_msg = {
+                        "code": 0,
+                        "message":
+                        "SUCCESS",
+                        "data": {
+                            "id": user.id,
+                            "user_name": user.user_name,
+                            "token": user_token
+                        }
+                    }
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+        except Exception as error:
+            print(error)
+            return internal_error_response()
+
+    return internal_error_response()
+
+
 # check login state
 @csrf_exempt
 def check_login_state(request):
@@ -439,7 +591,7 @@ class ElasticSearch():
                             {
                                 "query":key_words,
                                 "operator": operator,
-                                "fields":["title","tags","content"]
+                                "fields":["title","content"]
                             }
                         },
                     ]
@@ -502,13 +654,21 @@ def keyword_search(request):
         keyword_search
     """
     if request.method == "POST":
-        body = json.loads(request.body)
-        key_word = body["query"]
-        start_page = int(body["page"]) - 1
-        start_page = max(start_page, 0)
-        if isinstance(start_page,int) is False:
+        try:
+            body = json.loads(request.body)
+            key_word = body["query"]
+            start_page = int(body["page"]) - 1
+            start_page = min(max(start_page, 0),5000)
+            if isinstance(start_page,int) is False:
+                return JsonResponse(
+                    {"code": 5, "message": "INVALID_PAGE", "data": {"page_count": 0, "news": []}},
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+        except Exception as error:
+            print(error)
             return JsonResponse(
-                {"code": 5, "message": "INVALID_PAGE", "data": {}},
+                {"code": 1005, "message": "INVALID_FORMAT", "data": {"page_count": 0, "news": []}},
                 status=400,
                 headers={'Access-Control-Allow-Origin':'*'}
             )
@@ -521,15 +681,18 @@ def keyword_search(request):
             total_num = int(total_num / 10) + 1
         if start_page > total_num:
             return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": {}},
+                {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
                 status=200,
                 headers={'Access-Control-Allow-Origin':'*'}
             )
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
-            highlights = new["highlight"]
-            # print(highlights)
+            try:
+                highlights = new["highlight"]
+            except Exception as error:
+                print(error)
+                highlights = {}
             title_keywords = []
             keywords = []
             title = ""
@@ -539,6 +702,7 @@ def keyword_search(request):
                 title = "".join(title)
 
                 title_keywords = get_location(title)
+
             if 'content' in highlights:
                 content = highlights['content']
                 content = "".join(content)
