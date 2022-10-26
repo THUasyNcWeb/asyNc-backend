@@ -385,7 +385,7 @@ def user_modify_username(request):
                         "data": {}
                     }
                 else:
-                    # should del old token here
+                    tools.del_all_token_of_an_user(user_id=user.id)
                     user.user_name = new_user_name
                     user.full_clean()
                     user.save()

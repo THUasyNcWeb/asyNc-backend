@@ -114,3 +114,11 @@ def del_token_from_white_list(encoded_token):
             TOKEN_WHITE_LIST[user_id].remove(encoded_token)
         return True
     return False
+
+
+def del_all_token_of_an_user(user_id):
+    """
+        del all token of an user from white list.
+    """
+    if user_id in TOKEN_WHITE_LIST:
+        TOKEN_WHITE_LIST.pop(user_id)
