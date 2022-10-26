@@ -231,51 +231,55 @@ def user_info(request):
         ]
     }
     """
-    if request.method == "GET":
-        try:
-            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
-            token = tools.decode_token(encoded_token)
-            if not tools.check_token_in_white_list(encoded_token=encoded_token):
+    try:
+        if request.method == "GET":
+            try:
+                encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+                token = tools.decode_token(encoded_token)
+                if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                    return unauthorized_response()
+            except Exception as error:
+                print(error)
                 return unauthorized_response()
-        except Exception as error:
-            print(error)
-            return unauthorized_response()
 
-        try:
-            user_name = token["user_name"]
-            user = UserBasicInfo.objects.filter(user_name=user_name).first()
-            if not user:  # user name not existed yet.
-                return unauthorized_response()
-            user_tags = []
-            if user.tags:
-                user_tags_dict = user.tags
-                for key_value in sorted(
-                    user_tags_dict.items(),
-                    key=lambda kv:(kv[1], kv[0]),
-                    reverse=True
-                ):
-                    user_tags.append(key_value[0])
+            try:
+                user_name = token["user_name"]
+                user = UserBasicInfo.objects.filter(user_name=user_name).first()
+                if not user:  # user name not existed yet.
+                    return unauthorized_response()
+                user_tags = []
+                if user.tags:
+                    user_tags_dict = user.tags
+                    for key_value in sorted(
+                        user_tags_dict.items(),
+                        key=lambda kv:(kv[1], kv[0]),
+                        reverse=True
+                    ):
+                        user_tags.append(key_value[0])
 
-            status_code = 200
-            response_msg = {
-                "code": 0,
-                "message": "SUCCESS",
-                "data": {
-                    "id": user.id,
-                    "user_name": user.user_name,
-                    "signature": "This is my signature.",
-                    "tags": user_tags[:10]
+                status_code = 200
+                response_msg = {
+                    "code": 0,
+                    "message": "SUCCESS",
+                    "data": {
+                        "id": user.id,
+                        "user_name": user.user_name,
+                        "signature": "This is my signature.",
+                        "tags": user_tags[:10]
+                    }
                 }
-            }
-            return JsonResponse(
-                response_msg,
-                status=status_code,
-                headers={'Access-Control-Allow-Origin':'*'}
-            )
-        except Exception as error:
-            print(error)
-            return internal_error_response(error=str(error))
-    return internal_error_response()
+                return JsonResponse(
+                    response_msg,
+                    status=status_code,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            except Exception as error:
+                print(error)
+                return internal_error_response(error=str(error))
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
+    return not_found_response()
 
 
 # return a news list
