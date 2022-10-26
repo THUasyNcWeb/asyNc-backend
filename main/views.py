@@ -196,6 +196,73 @@ def user_register(request):
     return internal_error_response()
 
 
+# return user info
+@csrf_exempt
+def user_info(request):
+    """
+    status_code = 200
+    response:
+    {
+        "code": 0,
+        "message": "SUCCESS",
+        "data": [
+            {
+                "id": 1,
+                "user_name": "Bob",
+                "signature": "This is my signature.",
+                "tags": [
+                    "C++",
+                    "中年",
+                    "アニメ"
+                ]
+            }
+        ]
+    }
+    """
+    if request.method == "GET":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            token = tools.decode_token(encoded_token)
+            if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+
+        try:
+            user_name = token["user_name"]
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if not user:  # user name not existed yet.
+                return unauthorized_response()
+
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": [
+                    {
+                        "id": user.id,
+                        "user_name": user.user_name,
+                        "signature": "This is my signature.",
+                        "tags": [
+                            "C++",
+                            "中年",
+                            "アニメ"
+                        ]
+                    }
+                ]
+            }
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+        except Exception as error:
+            print(error)
+            return internal_error_response()
+    return internal_error_response()
+
+
 # return a news list
 @csrf_exempt
 def news_response(request):
