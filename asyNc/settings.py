@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
     'rest_framework',
     'main.apps.MainConfig',
 ]
@@ -92,6 +93,15 @@ DATABASES = {
         'PASSWORD': config["backend-db"]['password'],
         'HOST': config["backend-db"]['hostname'],
         'PORT': config["backend-db"]['port'],
+    },
+    'news':
+    {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': config["crawler-db"]['database'],
+        'USER': config["crawler-db"]['username'],
+        'PASSWORD': config["crawler-db"]['password'],
+        'HOST': config["crawler-db"]['hostname'],
+        'PORT': config["crawler-db"]['port'],
     }
 }
 # DATABASES = {
