@@ -87,11 +87,11 @@ with open("config/config.json","r",encoding="utf-8") as f:
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': config['database'],
-        'USER': config['username'],
-        'PASSWORD': config['password'],
-        'HOST': config['hostname'],
-        'PORT': config['port'],
+        'NAME': config["backend-db"]['database'],
+        'USER': config["backend-db"]['username'],
+        'PASSWORD': config["backend-db"]['password'],
+        'HOST': config["backend-db"]['hostname'],
+        'PORT': config["backend-db"]['port'],
     }
 }
 # DATABASES = {
