@@ -591,7 +591,7 @@ class ElasticSearch():
                             {
                                 "query":key_words,
                                 "operator": operator,
-                                "fields":["title","tags","content"]
+                                "fields":["title","content"]
                             }
                         },
                     ]
@@ -654,13 +654,21 @@ def keyword_search(request):
         keyword_search
     """
     if request.method == "POST":
-        body = json.loads(request.body)
-        key_word = body["query"]
-        start_page = int(body["page"]) - 1
-        start_page = max(start_page, 0)
-        if isinstance(start_page,int) is False:
+        try:
+            body = json.loads(request.body)
+            key_word = body["query"]
+            start_page = int(body["page"]) - 1
+            start_page = min(max(start_page, 0),5000)
+            if isinstance(start_page,int) is False:
+                return JsonResponse(
+                    {"code": 5, "message": "INVALID_PAGE", "data": {}},
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+        except Exception as error:
+            print(error)
             return JsonResponse(
-                {"code": 5, "message": "INVALID_PAGE", "data": {}},
+                {"code": 1005, "message": "INVALID_FORMAT", "data": {"page_count": 0, "news": []}},
                 status=400,
                 headers={'Access-Control-Allow-Origin':'*'}
             )
@@ -673,15 +681,18 @@ def keyword_search(request):
             total_num = int(total_num / 10) + 1
         if start_page > total_num:
             return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": {}},
+                {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
                 status=200,
                 headers={'Access-Control-Allow-Origin':'*'}
             )
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
-            highlights = new["highlight"]
-            # print(highlights)
+            try:
+                highlights = new["highlight"]
+            except Exception as error:
+                print(error)
+                highlights = {}
             title_keywords = []
             keywords = []
             title = ""
@@ -691,6 +702,7 @@ def keyword_search(request):
                 title = "".join(title)
 
                 title_keywords = get_location(title)
+
             if 'content' in highlights:
                 content = highlights['content']
                 content = "".join(content)
