@@ -3,6 +3,7 @@
 """
 import json
 import re
+from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
@@ -670,11 +671,38 @@ def get_location(info_str,start_tag='<span class="szz-type">',end_tag='</span>')
 
 
 @csrf_exempt
+def update_tags(username, tags, user_tags_dict):
+    """
+    update user tags when searching
+    """
+    if user_tags_dict is None:
+        print("None")
+        user_tags_dict = {}
+    tags_dict = {}
+    user_tags = []
+    for key in tags:
+        tags_dict[key] = tags_dict.get(key,0) + 1
+    tags_dict = sorted(tags_dict.items(), key=lambda x: x[1], reverse=True)
+    for i in range(3):
+        user_tags += [tags_dict[i][0]]
+    for key in user_tags:
+        user_tags_dict[key] = user_tags_dict.get(key,0) + 1
+    try:
+        user = UserBasicInfo.objects.filter(user_name=username).first()
+        user.tags = user_tags_dict
+        user.save()
+    except Exception as error:
+        print(error)
+        print("Update failed!")
+
+
+@csrf_exempt
 def keyword_search(request):
     """
         keyword_search
     """
     if request.method == "POST":
+
         try:
             body = json.loads(request.body)
             key_word = body["query"]
@@ -695,11 +723,7 @@ def keyword_search(request):
             )
         elastic_search = ElasticSearch()
         all_news = elastic_search.search(key_words=key_word,start=start_page)
-        total_num = all_news['total']['value']
-        if total_num % 10 == 0:
-            total_num = total_num / 10
-        else:
-            total_num = int(total_num / 10) + 1
+        total_num = ceil(all_news['total']['value'] / 10)
         if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
@@ -707,13 +731,10 @@ def keyword_search(request):
                 headers={'Access-Control-Allow-Origin':'*'}
             )
         news = []
+        tags = []
         for new in all_news["hits"]:
             data = new["_source"]
-            try:
-                highlights = new["highlight"]
-            except Exception as error:
-                print(error)
-                highlights = {}
+            highlights = new["highlight"]
             title_keywords = []
             keywords = []
             title = ""
@@ -742,10 +763,23 @@ def keyword_search(request):
                 "keywords": keywords
             }
             news += [piece_new]
+            if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
+                    and data['tags'] != [""]:
+                tags += data['tags']
         data = {
             "page_count": total_num,
             "news": news
         }
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            token = tools.decode_token(encoded_token)
+            user_name = token["user_name"]
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if user:
+                update_tags(user.user_name, tags, user.tags)
+
+        except Exception as error:
+            print(error)
         return JsonResponse(
             {"code": 0, "message": "SUCCESS", "data": data},
             status=200,
