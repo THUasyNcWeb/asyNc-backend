@@ -699,6 +699,7 @@ def keyword_search(request):
         keyword_search
     """
     if request.method == "POST":
+
         try:
             body = json.loads(request.body)
             key_word = body["query"]
@@ -719,11 +720,7 @@ def keyword_search(request):
             )
         elastic_search = ElasticSearch()
         all_news = elastic_search.search(key_words=key_word,start=start_page)
-        total_num = all_news['total']['value']
-        if total_num % 10 == 0:
-            total_num = total_num / 10
-        else:
-            total_num = int(total_num / 10) + 1
+        total_num = ceil(all_news['total']['value']/10)
         if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
@@ -731,13 +728,10 @@ def keyword_search(request):
                 headers={'Access-Control-Allow-Origin':'*'}
             )
         news = []
+        tags = []
         for new in all_news["hits"]:
             data = new["_source"]
-            try:
-                highlights = new["highlight"]
-            except Exception as error:
-                print(error)
-                highlights = {}
+            highlights = new["highlight"]
             title_keywords = []
             keywords = []
             title = ""
@@ -766,10 +760,20 @@ def keyword_search(request):
                 "keywords": keywords
             }
             news += [piece_new]
+            if data['tags'] and isinstance(data['tags'],list) and start_page == 0 and data['tags'] != [""]:
+                tags += data['tags']
         data = {
             "page_count": total_num,
             "news": news
         }
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            token = tools.decode_token(encoded_token)
+            user_name = token["user_name"]
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+
+        except Exception as error:
+            print(error)
         return JsonResponse(
             {"code": 0, "message": "SUCCESS", "data": data},
             status=200,
