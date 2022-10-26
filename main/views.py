@@ -502,14 +502,6 @@ def keyword_search(request):
         keyword_search
     """
     if request.method == "POST":
-        try:
-            encoded_token = request.META.get("HTTP_AUTHORIZATION")
-            # token = tools.decode_token(encoded_token)
-            if not tools.check_token_in_white_list(encoded_token=encoded_token):
-                return unauthorized_response()
-        except Exception as error:
-            print(error)
-            return unauthorized_response()
         key_word = request.POST.get("query")
         start_page = int(request.POST.get("page"))
         if isinstance(start_page,int) is False:
