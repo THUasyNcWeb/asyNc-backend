@@ -2,6 +2,7 @@
     views.py in django frame work
 """
 import json
+import re
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
@@ -86,16 +87,18 @@ def user_login(request):
                 }
             else:
                 if user.password == tools.md5(password):
+                    user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
                     status_code = 200
                     response_msg = {
                         "code": 0,
                         "message": "SUCCESS",
                         "data": {
-                            "id": 1,
+                            "id": user.id,
                             "user_name": user_name,
-                            "token": tools.create_token(user_name)
+                            "token": user_token
                         }
                     }
+                    tools.add_token_to_white_list(user_token)
                 else:
                     status_code = 400
                     response_msg = {
@@ -163,16 +166,18 @@ def user_register(request):
                 try:
                     user.full_clean()
                     user.save()
+                    user_token = tools.create_token(user_name=user.user_name, user_id=user.id)
                     status_code = 200
                     response_msg = {
                         "code": 0,
                         "message": "SUCCESS",
                         "data": {
-                            "id": 1,
+                            "id": user.id,
                             "user_name": user_name,
-                            "token": tools.create_token(user_name)
+                            "token": user_token
                         }
                     }
+                    tools.add_token_to_white_list(user_token)
                 except Exception as error:
                     print(error)
                     return internal_error_response()
@@ -256,9 +261,9 @@ def user_modify_password(request):
     """
     if request.method == "POST":
         try:
-            encoded_token = request.META.get("HTTP_AUTHORIZATION")
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
             token = tools.decode_token(encoded_token)
-            if tools.token_expired(token):
+            if not tools.check_token_in_white_list(encoded_token=encoded_token):
                 return unauthorized_response()
         except Exception as error:
             print(error)
@@ -321,13 +326,74 @@ def user_modify_password(request):
     return internal_error_response()
 
 
+# check login state
+@csrf_exempt
+def check_login_state(request):
+    """
+    request:
+    token in 'HTTP_AUTHORIZATION'.
+    """
+    if request.method == "POST":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            if tools.check_token_in_white_list(encoded_token=encoded_token):
+                status_code = 200
+                response_msg = {
+                    "code": 0,
+                    "message": "SUCCESS",
+                    "data": {}
+                }
+                return JsonResponse(
+                    response_msg,
+                    status=status_code,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+    return internal_error_response()
+
+
+# user logout
+@csrf_exempt
+def user_logout(request):
+    """
+    request:
+    token in 'HTTP_AUTHORIZATION'.
+    """
+    if request.method == "POST":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            if tools.check_token_in_white_list(encoded_token=encoded_token):
+                tools.del_token_from_white_list(encoded_token=encoded_token)
+                if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                    status_code = 200
+                    response_msg = {
+                        "code": 0,
+                        "message": "SUCCESS",
+                        "data": {}
+                    }
+                    return JsonResponse(
+                        response_msg,
+                        status=status_code,
+                        headers={'Access-Control-Allow-Origin':'*'}
+                    )
+                return internal_error_response()
+            return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+    return internal_error_response()
+
+
 # Keyword search
 class ElasticSearch():
     """
     class for keyword search
     """
     def __init__(self):
-        self.client = Elasticsearch(hosts=["localhost"])
+        self.client = Elasticsearch(hosts=["43.143.147.5"])
 
     def search(self,key_words,sorted_by="_score",operator="or", start=0, size=10):
         """
@@ -390,7 +456,7 @@ class ElasticSearch():
             "size":size,
             # highthlight keyword in results
             "highlight":{
-                "pre_tags": ['<span class="keyWord">'],
+                "pre_tags": ['<span class="szz-type">'],
                 "post_tags": ['</span>'],
                 "fields":{
                     "title": {},
@@ -403,35 +469,97 @@ class ElasticSearch():
 
 
 @csrf_exempt
+def get_location(info_str,start_tag='<span class="szz-type">',end_tag='</span>'):
+    """
+    summary: pass in str
+    Returns:
+        location_list
+    """
+
+    start = len(start_tag)
+    end = len(end_tag)
+    location_infos = []
+    pattern = start_tag + '(.+?)' + end_tag
+
+    for idx,m_res in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
+        location_info = []
+
+        if idx == 0:
+            location_info.append(m_res.span()[0])
+            location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
+        else:
+            location_info.append(m_res.span()[0] - idx * (start + end))
+            location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
+
+        location_infos.append(location_info)
+
+    return location_infos
+
+
+@csrf_exempt
 def keyword_search(request):
     """
         keyword_search
     """
     if request.method == "POST":
-        try:
-            encoded_token = request.META.get("HTTP_AUTHORIZATION")
-            token = tools.decode_token(encoded_token)
-            if tools.token_expired(token):
-                return unauthorized_response()
-        except Exception as error:
-            print(error)
-            return unauthorized_response()
-        key_word = request.POST.get("keyword")
+        key_word = request.POST.get("query")
+        start_page = int(request.POST.get("page"))
+        if isinstance(start_page,int) is False:
+            return JsonResponse(
+                {"code": 5, "message": "INVALID_PAGE", "data": {}},
+                status=400,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
         elastic_search = ElasticSearch()
-        all_news = elastic_search.search(key_words=key_word)
+        all_news = elastic_search.search(key_words=key_word,start=start_page)
+        total_num = all_news['total']['value']
+        if total_num % 10 == 0:
+            total_num = total_num / 10
+        else:
+            total_num = int(total_num / 10) + 1
+        if start_page > total_num:
+            return JsonResponse(
+                {"code": 0, "message": "SUCCESS", "data": {}},
+                status=200,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
         news = []
         for new in all_news["hits"]:
             data = new["_source"]
+            highlights = new["highlight"]
+            # print(highlights)
+            title_keywords = []
+            keywords = []
+            title = ""
+            content = data['content']
+            if 'title' in highlights:
+                title = highlights['title']
+                title = "".join(title)
+
+                title_keywords = get_location(title)
+            if 'content' in highlights:
+                content = highlights['content']
+                content = "".join(content)
+
+                keywords = get_location(content)
+
             piece_new = {
                 "title": data['title'],
                 "url": data['news_url'],
-                "category": data['tags'][0],
-                "priority": 1,
-                "picture_url": data['first_img_url']
+                "media": data['media'],
+                "pub_time": data['create_date'],
+                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                "picture_url": data['first_img_url'],
+                "title_keywords": title_keywords,
+                "keywords": keywords
             }
             news += [piece_new]
+        data = {
+            "page_count": total_num,
+            "news": news
+        }
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": news},
+            {"code": 0, "message": "SUCCESS", "data": data},
             status=200,
             headers={'Access-Control-Allow-Origin':'*'}
         )
