@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from . import tools
 from .models import UserBasicInfo, News
-from .responses import internal_error_response, unauthorized_response
+from .responses import internal_error_response, unauthorized_response, not_found_response
 
 # Create your views here.
 
@@ -20,20 +20,24 @@ def index(request):
     This funtion is for testing only, please delete this funcion before deploying.
     Always return code 200
     """
-    if request.method == "GET":
-        pass
-    elif request.method == "POST":
-        pass
-    else:
-        print("Any thing new?")
-    return JsonResponse(
-        {
-            "code": 200,
-            "data": "Hello World"
-        },
-        status=200,
-        headers={'Access-Control-Allow-Origin': '*'}
-    )
+    try:
+        if request.method == "GET":
+            pass
+        elif request.method == "POST":
+            pass
+        else:
+            print("Any thing new?")
+        return JsonResponse(
+            {
+                "code": 200,
+                "data": "Hello World"
+            },
+            status=200,
+            headers={'Access-Control-Allow-Origin': '*'}
+        )
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
 
 
 # user login
@@ -56,65 +60,69 @@ def user_login(request):
         }
     }
     """
-    if request.method == "POST":
-        try:
-            request_data = json.loads(request.body.decode())
-            user_name = request_data["user_name"]
-            password = request_data["password"]
-            if not (isinstance(user_name, str) and isinstance(password, str)):
-                status_code = 400
-                response_msg = {
-                    "code": 4,
-                    "message": "WRONG_PASSWORD",
-                    "data": {}
-                }
-                return JsonResponse(
-                    response_msg,
-                    status=status_code,
-                    headers={'Access-Control-Allow-Origin': '*'}
-                )
-        except Exception as error:
-            print(error)
-            return internal_error_response()
-        try:
-            user = UserBasicInfo.objects.filter(user_name=user_name).first()
-            if not user:  # user name not existed yet.
-                status_code = 400
-                response_msg = {
-                    "code": 4,
-                    "message": "WRONG_PASSWORD",
-                    "data": {}
-                }
-            else:
-                if user.password == tools.md5(password):
-                    user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
-                    status_code = 200
-                    response_msg = {
-                        "code": 0,
-                        "message": "SUCCESS",
-                        "data": {
-                            "id": user.id,
-                            "user_name": user_name,
-                            "token": user_token
-                        }
-                    }
-                    tools.add_token_to_white_list(user_token)
-                else:
+    try:
+        if request.method == "POST":
+            try:
+                request_data = json.loads(request.body.decode())
+                user_name = request_data["user_name"]
+                password = request_data["password"]
+                if not (isinstance(user_name, str) and isinstance(password, str)):
                     status_code = 400
                     response_msg = {
                         "code": 4,
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
-            return JsonResponse(
-                response_msg,
-                status=status_code,
-                headers={'Access-Control-Allow-Origin': '*'}
-            )
-        except Exception as error:
-            print(error)
-            return internal_error_response()
-    return internal_error_response()
+                    return JsonResponse(
+                        response_msg,
+                        status=status_code,
+                        headers={'Access-Control-Allow-Origin': '*'}
+                    )
+            except Exception as error:
+                print(error)
+                return internal_error_response(error=str(error))
+            try:
+                user = UserBasicInfo.objects.filter(user_name=user_name).first()
+                if not user:  # user name not existed yet.
+                    status_code = 400
+                    response_msg = {
+                        "code": 4,
+                        "message": "WRONG_PASSWORD",
+                        "data": {}
+                    }
+                else:
+                    if user.password == tools.md5(password):
+                        user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
+                        status_code = 200
+                        response_msg = {
+                            "code": 0,
+                            "message": "SUCCESS",
+                            "data": {
+                                "id": user.id,
+                                "user_name": user_name,
+                                "token": user_token
+                            }
+                        }
+                        tools.add_token_to_white_list(user_token)
+                    else:
+                        status_code = 400
+                        response_msg = {
+                            "code": 4,
+                            "message": "WRONG_PASSWORD",
+                            "data": {}
+                        }
+                return JsonResponse(
+                    response_msg,
+                    status=status_code,
+                    headers={'Access-Control-Allow-Origin': '*'}
+                )
+            except Exception as error:
+                print(error)
+                return internal_error_response(error=str(error))
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
+    return not_found_response()
 
 
 # user register
@@ -137,63 +145,67 @@ def user_register(request):
         }
     }
     """
-    if request.method == "POST":
-        try:
-            request_data = json.loads(request.body.decode())
-            user_name = request_data["user_name"]
-            password = request_data["password"]
-        except Exception as error:
-            print(error)
-            return internal_error_response()
-        if not isinstance(user_name, str):  # format check.
-            status_code = 400
-            response_msg = {
-                "code": 2,
-                "message": "INVALID_USER_NAME_FORMAT",
-                "data": {}
-            }
-        elif not isinstance(password, str):  # format check.
-            status_code = 400
-            response_msg = {
-                "code": 3,
-                "message": "INVALID_PASSWORD_FORMAT",
-                "data": {}
-            }
-        else:
-            user = UserBasicInfo.objects.filter(user_name=user_name).first()
-            if not user:  # user name not existed yet.
-                user = UserBasicInfo(user_name=user_name, password=tools.md5(password))
-                try:
-                    user.full_clean()
-                    user.save()
-                    user_token = tools.create_token(user_name=user.user_name, user_id=user.id)
-                    status_code = 200
-                    response_msg = {
-                        "code": 0,
-                        "message": "SUCCESS",
-                        "data": {
-                            "id": user.id,
-                            "user_name": user_name,
-                            "token": user_token
-                        }
-                    }
-                    tools.add_token_to_white_list(user_token)
-                except Exception as error:
-                    print(error)
-                    return internal_error_response()
-            else:  # user name already existed.
+    try:
+        if request.method == "POST":
+            try:
+                request_data = json.loads(request.body.decode())
+                user_name = request_data["user_name"]
+                password = request_data["password"]
+            except Exception as error:
+                print(error)
+                return internal_error_response(error=str(error))
+            if not isinstance(user_name, str):  # format check.
                 status_code = 400
                 response_msg = {
-                    "code": 1,
-                    "message": "USER_NAME_CONFLICT",
+                    "code": 2,
+                    "message": "INVALID_USER_NAME_FORMAT",
                     "data": {}
                 }
-        return JsonResponse(
-            response_msg,
-            status=status_code,
-            headers={'Access-Control-Allow-Origin':'*'}
-        )
-    return internal_error_response()
+            elif not isinstance(password, str):  # format check.
+                status_code = 400
+                response_msg = {
+                    "code": 3,
+                    "message": "INVALID_PASSWORD_FORMAT",
+                    "data": {}
+                }
+            else:
+                user = UserBasicInfo.objects.filter(user_name=user_name).first()
+                if not user:  # user name not existed yet.
+                    user = UserBasicInfo(user_name=user_name, password=tools.md5(password))
+                    try:
+                        user.full_clean()
+                        user.save()
+                        user_token = tools.create_token(user_name=user.user_name, user_id=user.id)
+                        status_code = 200
+                        response_msg = {
+                            "code": 0,
+                            "message": "SUCCESS",
+                            "data": {
+                                "id": user.id,
+                                "user_name": user_name,
+                                "token": user_token
+                            }
+                        }
+                        tools.add_token_to_white_list(user_token)
+                    except Exception as error:
+                        print(error)
+                        return internal_error_response(error=str(error))
+                else:  # user name already existed.
+                    status_code = 400
+                    response_msg = {
+                        "code": 1,
+                        "message": "USER_NAME_CONFLICT",
+                        "data": {}
+                    }
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
+    return not_found_response()
 
 
 # return user info
@@ -219,51 +231,55 @@ def user_info(request):
         ]
     }
     """
-    if request.method == "GET":
-        try:
-            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
-            token = tools.decode_token(encoded_token)
-            if not tools.check_token_in_white_list(encoded_token=encoded_token):
+    try:
+        if request.method == "GET":
+            try:
+                encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+                token = tools.decode_token(encoded_token)
+                if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                    return unauthorized_response()
+            except Exception as error:
+                print(error)
                 return unauthorized_response()
-        except Exception as error:
-            print(error)
-            return unauthorized_response()
 
-        try:
-            user_name = token["user_name"]
-            user = UserBasicInfo.objects.filter(user_name=user_name).first()
-            if not user:  # user name not existed yet.
-                return unauthorized_response()
-            user_tags = []
-            if user.tags:
-                user_tags_dict = user.tags
-                for key_value in sorted(
-                    user_tags_dict.items(),
-                    key=lambda kv:(kv[1], kv[0]),
-                    reverse=True
-                ):
-                    user_tags.append(key_value[0])
+            try:
+                user_name = token["user_name"]
+                user = UserBasicInfo.objects.filter(user_name=user_name).first()
+                if not user:  # user name not existed yet.
+                    return unauthorized_response()
+                user_tags = []
+                if user.tags:
+                    user_tags_dict = user.tags
+                    for key_value in sorted(
+                        user_tags_dict.items(),
+                        key=lambda kv:(kv[1], kv[0]),
+                        reverse=True
+                    ):
+                        user_tags.append(key_value[0])
 
-            status_code = 200
-            response_msg = {
-                "code": 0,
-                "message": "SUCCESS",
-                "data": {
-                    "id": user.id,
-                    "user_name": user.user_name,
-                    "signature": "This is my signature.",
-                    "tags": user_tags[:10]
+                status_code = 200
+                response_msg = {
+                    "code": 0,
+                    "message": "SUCCESS",
+                    "data": {
+                        "id": user.id,
+                        "user_name": user.user_name,
+                        "signature": "This is my signature.",
+                        "tags": user_tags[:10]
+                    }
                 }
-            }
-            return JsonResponse(
-                response_msg,
-                status=status_code,
-                headers={'Access-Control-Allow-Origin':'*'}
-            )
-        except Exception as error:
-            print(error)
-            return internal_error_response()
-    return internal_error_response()
+                return JsonResponse(
+                    response_msg,
+                    status=status_code,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            except Exception as error:
+                print(error)
+                return internal_error_response(error=str(error))
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
+    return not_found_response()
 
 
 # return a news list
@@ -293,29 +309,33 @@ def news_response(request):
         "picture_url": "https://breaking.news/picture.png"
     }
     """
-    if request.method == "GET":
-        # Do not check token until news recommendation is online:
-        # encoded_token = request.META.get("HTTP_AUTHORIZATION")
-        # token = tools.decode_token(encoded_token)
-        # if token_expired(token):
-        #  return 401
-        news_list = []
-        for news in News.objects.all().order_by("-pub_time")[0:20]:
-            news_list.append(
-                {
-                    "title": news.title,
-                    "url": news.news_url,
-                    "category": news.category,
-                    "priority": 1,
-                    "picture_url": news.first_img_url
-                }
+    try:
+        if request.method == "GET":
+            # Do not check token until news recommendation is online:
+            # encoded_token = request.META.get("HTTP_AUTHORIZATION")
+            # token = tools.decode_token(encoded_token)
+            # if token_expired(token):
+            #  return 401
+            news_list = []
+            for news in News.objects.all().order_by("-pub_time")[0:20]:
+                news_list.append(
+                    {
+                        "title": news.title,
+                        "url": news.news_url,
+                        "category": news.category,
+                        "priority": 1,
+                        "picture_url": news.first_img_url
+                    }
+                )
+            return JsonResponse(
+                {"code": 0, "message": "SUCCESS", "data": news_list},
+                status=200,
+                headers={'Access-Control-Allow-Origin': '*'}
             )
-        return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": news_list},
-            status=200,
-            headers={'Access-Control-Allow-Origin': '*'}
-        )
-    return internal_error_response()
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
+    return not_found_response()
 
 
 # modify a user's password
@@ -345,7 +365,7 @@ def user_modify_password(request):
             new_password = request_data["new_password"]
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
 
         if not user_name == token["user_name"]:
             return unauthorized_response()
@@ -392,7 +412,7 @@ def user_modify_password(request):
             )
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
     return internal_error_response()
 
 
@@ -432,7 +452,7 @@ def user_modify_username(request):
             new_user_name = request_data["new_user_name"]
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
 
         if not old_user_name == token["user_name"]:
             return unauthorized_response()
@@ -478,7 +498,7 @@ def user_modify_username(request):
             )
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
 
     return internal_error_response()
 
