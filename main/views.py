@@ -20,20 +20,24 @@ def index(request):
     This funtion is for testing only, please delete this funcion before deploying.
     Always return code 200
     """
-    if request.method == "GET":
-        pass
-    elif request.method == "POST":
-        pass
-    else:
-        print("Any thing new?")
-    return JsonResponse(
-        {
-            "code": 200,
-            "data": "Hello World"
-        },
-        status=200,
-        headers={'Access-Control-Allow-Origin': '*'}
-    )
+    try:
+        if request.method == "GET":
+            pass
+        elif request.method == "POST":
+            pass
+        else:
+            print("Any thing new?")
+        return JsonResponse(
+            {
+                "code": 200,
+                "data": "Hello World"
+            },
+            status=200,
+            headers={'Access-Control-Allow-Origin': '*'}
+        )
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
 
 
 # user login
@@ -56,64 +60,68 @@ def user_login(request):
         }
     }
     """
-    if request.method == "POST":
-        try:
-            request_data = json.loads(request.body.decode())
-            user_name = request_data["user_name"]
-            password = request_data["password"]
-            if not (isinstance(user_name, str) and isinstance(password, str)):
-                status_code = 400
-                response_msg = {
-                    "code": 4,
-                    "message": "WRONG_PASSWORD",
-                    "data": {}
-                }
-                return JsonResponse(
-                    response_msg,
-                    status=status_code,
-                    headers={'Access-Control-Allow-Origin': '*'}
-                )
-        except Exception as error:
-            print(error)
-            return internal_error_response(error=str(error))
-        try:
-            user = UserBasicInfo.objects.filter(user_name=user_name).first()
-            if not user:  # user name not existed yet.
-                status_code = 400
-                response_msg = {
-                    "code": 4,
-                    "message": "WRONG_PASSWORD",
-                    "data": {}
-                }
-            else:
-                if user.password == tools.md5(password):
-                    user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
-                    status_code = 200
-                    response_msg = {
-                        "code": 0,
-                        "message": "SUCCESS",
-                        "data": {
-                            "id": user.id,
-                            "user_name": user_name,
-                            "token": user_token
-                        }
-                    }
-                    tools.add_token_to_white_list(user_token)
-                else:
+    try:
+        if request.method == "POST":
+            try:
+                request_data = json.loads(request.body.decode())
+                user_name = request_data["user_name"]
+                password = request_data["password"]
+                if not (isinstance(user_name, str) and isinstance(password, str)):
                     status_code = 400
                     response_msg = {
                         "code": 4,
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
-            return JsonResponse(
-                response_msg,
-                status=status_code,
-                headers={'Access-Control-Allow-Origin': '*'}
-            )
-        except Exception as error:
-            print(error)
-            return internal_error_response(error=str(error))
+                    return JsonResponse(
+                        response_msg,
+                        status=status_code,
+                        headers={'Access-Control-Allow-Origin': '*'}
+                    )
+            except Exception as error:
+                print(error)
+                return internal_error_response(error=str(error))
+            try:
+                user = UserBasicInfo.objects.filter(user_name=user_name).first()
+                if not user:  # user name not existed yet.
+                    status_code = 400
+                    response_msg = {
+                        "code": 4,
+                        "message": "WRONG_PASSWORD",
+                        "data": {}
+                    }
+                else:
+                    if user.password == tools.md5(password):
+                        user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
+                        status_code = 200
+                        response_msg = {
+                            "code": 0,
+                            "message": "SUCCESS",
+                            "data": {
+                                "id": user.id,
+                                "user_name": user_name,
+                                "token": user_token
+                            }
+                        }
+                        tools.add_token_to_white_list(user_token)
+                    else:
+                        status_code = 400
+                        response_msg = {
+                            "code": 4,
+                            "message": "WRONG_PASSWORD",
+                            "data": {}
+                        }
+                return JsonResponse(
+                    response_msg,
+                    status=status_code,
+                    headers={'Access-Control-Allow-Origin': '*'}
+                )
+            except Exception as error:
+                print(error)
+                return internal_error_response(error=str(error))
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
     return internal_error_response()
 
 
