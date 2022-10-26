@@ -393,7 +393,7 @@ class ElasticSearch():
     class for keyword search
     """
     def __init__(self):
-        self.client = Elasticsearch(hosts=["localhost"])
+        self.client = Elasticsearch(hosts=["43.143.147.5"])
 
     def search(self,key_words,sorted_by="_score",operator="or", start=0, size=10):
         """
@@ -517,7 +517,7 @@ def keyword_search(request):
             total_num = total_num / 10
         else:
             total_num = int(total_num / 10) + 1
-        if start_page > total_num :
+        if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {}},
                 status=200,
@@ -547,8 +547,7 @@ def keyword_search(request):
                 "title": data['title'],
                 "url": data['news_url'],
                 "media": data['media'],
-                "category": data['tags'][0],
-                "priority": 1,
+                "pub_time": data['create_date'],
                 "content": content.replace('<span class="szz-type">','').replace('</span>',''),
                 "picture_url": data['first_img_url'],
                 "title_keywords": title_keywords,
