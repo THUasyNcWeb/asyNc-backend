@@ -75,7 +75,7 @@ def user_login(request):
                 )
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
         try:
             user = UserBasicInfo.objects.filter(user_name=user_name).first()
             if not user:  # user name not existed yet.
@@ -113,7 +113,7 @@ def user_login(request):
             )
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
     return internal_error_response()
 
 
@@ -144,7 +144,7 @@ def user_register(request):
             password = request_data["password"]
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
         if not isinstance(user_name, str):  # format check.
             status_code = 400
             response_msg = {
@@ -180,7 +180,7 @@ def user_register(request):
                     tools.add_token_to_white_list(user_token)
                 except Exception as error:
                     print(error)
-                    return internal_error_response()
+                    return internal_error_response(error=str(error))
             else:  # user name already existed.
                 status_code = 400
                 response_msg = {
@@ -262,7 +262,7 @@ def user_info(request):
             )
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
     return internal_error_response()
 
 
@@ -345,7 +345,7 @@ def user_modify_password(request):
             new_password = request_data["new_password"]
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
 
         if not user_name == token["user_name"]:
             return unauthorized_response()
@@ -392,7 +392,7 @@ def user_modify_password(request):
             )
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
     return internal_error_response()
 
 
@@ -432,7 +432,7 @@ def user_modify_username(request):
             new_user_name = request_data["new_user_name"]
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
 
         if not old_user_name == token["user_name"]:
             return unauthorized_response()
@@ -478,7 +478,7 @@ def user_modify_username(request):
             )
         except Exception as error:
             print(error)
-            return internal_error_response()
+            return internal_error_response(error=str(error))
 
     return internal_error_response()
 

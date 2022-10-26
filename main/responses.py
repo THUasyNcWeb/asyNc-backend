@@ -7,12 +7,12 @@ from django.http import JsonResponse
 
 
 # return commen internal error response
-def internal_error_response():
+def internal_error_response(error=""):
     """
         return commen internal error response
     """
     return JsonResponse(
-        {"code": 1003, "message": "INTERNAL_ERROR", "data": {}},
+        {"code": 1003, "message": "INTERNAL_ERROR", "data": {"error":error}},
         status=500,
         headers={'Access-Control-Allow-Origin':'*'}
     )
