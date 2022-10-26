@@ -517,7 +517,7 @@ def keyword_search(request):
             total_num = total_num / 10
         else:
             total_num = int(total_num / 10) + 1
-        if start_page > total_num :
+        if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {}},
                 status=200,
