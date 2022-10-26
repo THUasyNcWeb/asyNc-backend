@@ -309,29 +309,33 @@ def news_response(request):
         "picture_url": "https://breaking.news/picture.png"
     }
     """
-    if request.method == "GET":
-        # Do not check token until news recommendation is online:
-        # encoded_token = request.META.get("HTTP_AUTHORIZATION")
-        # token = tools.decode_token(encoded_token)
-        # if token_expired(token):
-        #  return 401
-        news_list = []
-        for news in News.objects.all().order_by("-pub_time")[0:20]:
-            news_list.append(
-                {
-                    "title": news.title,
-                    "url": news.news_url,
-                    "category": news.category,
-                    "priority": 1,
-                    "picture_url": news.first_img_url
-                }
+    try:
+        if request.method == "GET":
+            # Do not check token until news recommendation is online:
+            # encoded_token = request.META.get("HTTP_AUTHORIZATION")
+            # token = tools.decode_token(encoded_token)
+            # if token_expired(token):
+            #  return 401
+            news_list = []
+            for news in News.objects.all().order_by("-pub_time")[0:20]:
+                news_list.append(
+                    {
+                        "title": news.title,
+                        "url": news.news_url,
+                        "category": news.category,
+                        "priority": 1,
+                        "picture_url": news.first_img_url
+                    }
+                )
+            return JsonResponse(
+                {"code": 0, "message": "SUCCESS", "data": news_list},
+                status=200,
+                headers={'Access-Control-Allow-Origin': '*'}
             )
-        return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": news_list},
-            status=200,
-            headers={'Access-Control-Allow-Origin': '*'}
-        )
-    return internal_error_response()
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
+    return not_found_response()
 
 
 # modify a user's password
