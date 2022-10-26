@@ -326,6 +326,93 @@ def user_modify_password(request):
     return internal_error_response()
 
 
+# modify a user's username
+@csrf_exempt
+def user_modify_username(request):
+    """
+    request:
+    {
+        "old_user_name": "Alice",
+        "new_user_name": "Bob"
+    }
+    response:
+    {
+        "code": 0,
+        "message": "SUCCESS",
+        "data": {
+            "id": 1,
+            "user_name": "Bob",
+            "token": "SECRET_TOKEN"
+        }
+    }
+    """
+    if request.method == "POST":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            token = tools.decode_token(encoded_token)
+            if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+
+        try:
+            request_data = json.loads(request.body.decode())
+            old_user_name = request_data["old_user_name"]
+            new_user_name = request_data["new_user_name"]
+        except Exception as error:
+            print(error)
+            return internal_error_response()
+
+        if not old_user_name == token["user_name"]:
+            return unauthorized_response()
+
+        try:
+            user = UserBasicInfo.objects.filter(user_name=old_user_name).first()
+            if not user:  # user name not existed yet.
+                status_code = 400
+                response_msg = {
+                    "code": 6,
+                    "message": "WRONG_USERNAME",
+                    "data": {}
+                }
+            else:
+                if not isinstance(new_user_name, str):
+                    status_code = 400
+                    response_msg = {
+                        "code": 3,
+                        "message": "INVALID_USERNAME_FORMAT",
+                        "data": {}
+                    }
+                else:
+                    tools.del_all_token_of_an_user(user_id=user.id)
+                    user.user_name = new_user_name
+                    user.full_clean()
+                    user.save()
+                    user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
+                    status_code = 200
+                    response_msg = {
+                        "code": 0,
+                        "message":
+                        "SUCCESS",
+                        "data": {
+                            "id": user.id,
+                            "user_name": user.user_name,
+                            "token": user_token
+                        }
+                    }
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+        except Exception as error:
+            print(error)
+            return internal_error_response()
+
+    return internal_error_response()
+
+
 # check login state
 @csrf_exempt
 def check_login_state(request):
