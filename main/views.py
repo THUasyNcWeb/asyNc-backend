@@ -668,6 +668,30 @@ def get_location(info_str,start_tag='<span class="szz-type">',end_tag='</span>')
 
     return location_infos
 
+@csrf_exempt
+def update_tags(username, tags, user_tags_dict):
+    """
+    update user tags when searching
+    """
+    if user_tags_dict is None:
+        print("None")
+        user_tags_dict = {}
+    tags_dict = {}
+    user_tags = []
+    for key in tags:
+        tags_dict[key] = tags_dict.get(key,0) + 1
+    tags_dict = sorted(tags_dict.items(), key=lambda x: x[1], reverse=True)
+    for i in range(3):
+        user_tags += [tags_dict[i][0]]
+    for key in user_tags:
+        user_tags_dict[key] = user_tags_dict.get(key,0) + 1
+    try:
+        user = UserBasicInfo.objects.filter(user_name=username).first()
+        user.tags = user_tags_dict
+        user.save()
+    except Exception as error:
+        print(error)
+        print("Update failed!")
 
 @csrf_exempt
 def keyword_search(request):
