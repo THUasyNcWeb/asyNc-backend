@@ -170,13 +170,14 @@ class ToolsTests(TestCase):
 
 class ViewsTests(TestCase):
     """
-        test functions in tools
+        test functions in views
     """
 
     def setUp(self):
         """
             set up a test set
         """
+        # self.databases = "__all__"
 
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
         self.user_password = ["Alcie", "password", "123456", "密码", "パスワード"]
