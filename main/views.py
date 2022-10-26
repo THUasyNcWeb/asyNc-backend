@@ -505,8 +505,7 @@ def keyword_search(request):
         body = json.loads(request.body)
         key_word = body["query"]
         start_page = int(body["page"]) - 1
-        if start_page < 0:
-            start_page = 0
+        start_page = max(start_page, 0)
         if isinstance(start_page,int) is False:
             return JsonResponse(
                 {"code": 5, "message": "INVALID_PAGE", "data": {}},
