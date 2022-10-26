@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from . import tools
-from .models import UserBasicInfo, News
+from .models import UserBasicInfo, HomeNews
 from .responses import internal_error_response, unauthorized_response, not_found_response
 
 # Create your views here.
@@ -316,7 +316,7 @@ def news_response(request):
         # if token_expired(token):
         #  return 401
         news_list = []
-        for news in News.objects.using("news").all().order_by("-pub_time")[0:20]:
+        for news in HomeNews.objects.using("news").all().order_by("-pub_time")[0:20]:
             news_list.append(
                 {
                     "title": news.title,
