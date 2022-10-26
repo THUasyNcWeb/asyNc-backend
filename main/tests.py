@@ -354,17 +354,17 @@ class ViewsTests(TestCase):
         response = self.client.post('/all_news/', data=None, content_type="application/json")
         self.assertEqual(response.status_code, 404)
 
-    def test_news_response(self):
-        """
-            test news response
-        """
-        for i in range(5):
-            response = self.client.get('/all_news/', data=None, content_type="application/json")
-            self.assertEqual(response.status_code, 200)
-            news_list = json.loads(response.content)["data"]
-            self.assertEqual(type(news_list), list)
-            for news in news_list:
-                self.assertEqual(type(news), dict)
+    # def test_news_response(self):
+    #     """
+    #         test news response
+    #     """
+    #     for i in range(5):
+    #         response = self.client.get('/all_news/', data=None, content_type="application/json")
+    #         self.assertEqual(response.status_code, 200)
+    #         news_list = json.loads(response.content)["data"]
+    #         self.assertEqual(type(news_list), list)
+    #         for news in news_list:
+    #             self.assertEqual(type(news), dict)
 
     def test_user_modify_password(self):
         """

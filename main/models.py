@@ -28,7 +28,7 @@ class News(models.Model):
         """
             set table name in db
         """
-        db_table = "News"
+        db_table = "news"
 
 
 class UserBasicInfo(models.Model):
@@ -49,7 +49,7 @@ class UserBasicInfo(models.Model):
         """
             set table name in db
         """
-        db_table = "UserBasicInfo"
+        db_table = "user_basic_info"
 
 
 class SearchHistory(models.Model):
@@ -64,7 +64,7 @@ class SearchHistory(models.Model):
         """
             set table name in db
         """
-        db_table = "SearchHistory"
+        db_table = "search_history"
 
 
 class UserPreference(models.Model):
@@ -80,4 +80,4 @@ class UserPreference(models.Model):
         """
             set table name in db
         """
-        db_table = "UserPreference"
+        db_table = "user_preference"
