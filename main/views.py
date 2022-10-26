@@ -252,7 +252,7 @@ def user_info(request):
                     "id": user.id,
                     "user_name": user.user_name,
                     "signature": "This is my signature.",
-                    "tags": user_tags
+                    "tags": user_tags[:10]
                 }
             }
             return JsonResponse(
