@@ -3,6 +3,7 @@
 """
 import json
 import re
+from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
@@ -668,6 +669,7 @@ def get_location(info_str,start_tag='<span class="szz-type">',end_tag='</span>')
 
     return location_infos
 
+
 @csrf_exempt
 def update_tags(username, tags, user_tags_dict):
     """
@@ -692,6 +694,7 @@ def update_tags(username, tags, user_tags_dict):
     except Exception as error:
         print(error)
         print("Update failed!")
+
 
 @csrf_exempt
 def keyword_search(request):
@@ -720,7 +723,7 @@ def keyword_search(request):
             )
         elastic_search = ElasticSearch()
         all_news = elastic_search.search(key_words=key_word,start=start_page)
-        total_num = ceil(all_news['total']['value']/10)
+        total_num = ceil(all_news['total']['value'] / 10)
         if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
@@ -760,7 +763,8 @@ def keyword_search(request):
                 "keywords": keywords
             }
             news += [piece_new]
-            if data['tags'] and isinstance(data['tags'],list) and start_page == 0 and data['tags'] != [""]:
+            if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
+                    and data['tags'] != [""]:
                 tags += data['tags']
         data = {
             "page_count": total_num,
