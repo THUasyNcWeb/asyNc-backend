@@ -180,10 +180,12 @@ class ViewsTests(TestCase):
 
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
         self.user_password = ["Alcie", "password", "123456", "密码", "パスワード"]
+        self.user_id = []
         for i in range(5):
             user_name = self.user_name_list[i]
             password = self.user_password[i]
-            UserBasicInfo.objects.create(user_name=user_name, password=md5(password))
+            user = UserBasicInfo.objects.create(user_name=user_name, password=md5(password))
+            self.user_id.append(user.id)
 
     def test_index(self):
         """
@@ -320,7 +322,7 @@ class ViewsTests(TestCase):
             test user register
         """
         requests = {
-            "user_name": "Bob19937",
+            "user_name": "RegBob19937",
             "password": "Bob19937"
         }
 
@@ -365,7 +367,7 @@ class ViewsTests(TestCase):
         for i in range(5):
             user_name = self.user_name_list[i]
             old_password = self.user_password[i]
-            new_password = self.user_password[i] + "new"
+            new_password = "new_" + self.user_password[i]
 
             requests = {
                 "user_name": user_name,
@@ -376,10 +378,22 @@ class ViewsTests(TestCase):
             encoded_token = create_token(user_name=user_name, user_id=i)
             add_token_to_white_list(encoded_token)
             self.assertEqual(check_token_in_white_list(encoded_token), True)
+
             response = self.client.post('/modify_password/', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
+            self.assertEqual(response.status_code, 200)
 
+            # change back the password
+            requests = {
+                "user_name": user_name,
+                "old_password": new_password,
+                "new_password": old_password
+            }
+
+            response = self.client.post('/modify_password/', data=requests,
+                                        content_type="application/json",
+                                        HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 200)
 
     def test_modify_wrong_token(self):
@@ -490,3 +504,25 @@ class ViewsTests(TestCase):
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 401)
+
+    def test_modify_username(self):
+        """
+            test user logout function
+        """
+        for i in range(5):
+            user_name = self.user_name_list[i]
+            new_user_name = "new_" + user_name
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            self.assertEqual(check_token_in_white_list(encoded_token), True)
+
+            requests = {
+                "old_user_name": user_name,
+                "new_user_name": new_user_name
+            }
+            response = self.client.post('/modify_username/', data=requests,
+                                        content_type="application/json",
+                                        HTTP_AUTHORIZATION=encoded_token)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["data"]["user_name"], new_user_name)
+            self.assertEqual(check_token_in_white_list(encoded_token), False)
