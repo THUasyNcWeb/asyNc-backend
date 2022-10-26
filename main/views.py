@@ -698,10 +698,11 @@ def keyword_search(request):
             title = ""
             content = data['content']
             if 'title' in highlights:
-                title = highlights['title']
-                title = "".join(title)
-
-                title_keywords = get_location(title)
+                for title in highlights['title']:
+                    loc_offset = data['title'].find(title.replace('<span class="szz-type">','')
+                                                    .replace('</span>',''))
+                    for location_info in get_location(title):
+                        title_keywords += [[index + loc_offset for index in location_info]]
 
             if 'content' in highlights:
                 content = highlights['content']
