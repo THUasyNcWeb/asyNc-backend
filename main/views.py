@@ -661,7 +661,7 @@ def keyword_search(request):
             start_page = min(max(start_page, 0),5000)
             if isinstance(start_page,int) is False:
                 return JsonResponse(
-                    {"code": 5, "message": "INVALID_PAGE", "data": {}},
+                    {"code": 5, "message": "INVALID_PAGE", "data": {"page_count": 0, "news": []}},
                     status=400,
                     headers={'Access-Control-Allow-Origin':'*'}
                 )
