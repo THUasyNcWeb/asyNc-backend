@@ -771,6 +771,8 @@ def keyword_search(request):
             token = tools.decode_token(encoded_token)
             user_name = token["user_name"]
             user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if user:
+                update_tags(user.user_name, tags, user.tags)
 
         except Exception as error:
             print(error)
