@@ -287,6 +287,11 @@ def user_info(request):
 @csrf_exempt
 def news_response(request):
     """
+    request:
+    {
+        "category": "ent"
+    }
+
     response:
     {
         "code": 0,
@@ -322,17 +327,21 @@ def news_response(request):
                 category = request_data["category"]
             except Exception as error:
                 print(error)
-                return internal_error_response(error=str(error))
+                return internal_error_response(error="[Request Format Error]:\n" + str(error))
         else:
             category = ""
 
-        news_list = []
-        if category == "":
-            db_news_list = News.objects.using("news").all().order_by("-pub_time")[0:200]
-        else:
-            db_news_list = News.objects.using("news").filter(
-                category=category
-            ).order_by("-pub_time")[0:200]
+        try:
+            news_list = []
+            if category == "":
+                db_news_list = News.objects.using("news").all().order_by("-pub_time")[0:200]
+            else:
+                db_news_list = News.objects.using("news").filter(
+                    category=category
+                ).order_by("-pub_time")[0:200]
+        except Exception as error:
+            print(error)
+            return internal_error_response(error="[Crawler DataBase Error]:\n" + str(error))
 
         for news in db_news_list:
             news_list.append(
