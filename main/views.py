@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from . import tools
-from .models import UserBasicInfo, HomeNews
+from .models import UserBasicInfo, News
 from .responses import internal_error_response, unauthorized_response, not_found_response
 
 # Create your views here.
@@ -287,6 +287,11 @@ def user_info(request):
 @csrf_exempt
 def news_response(request):
     """
+    request:
+    {
+        "category": "ent"
+    }
+
     response:
     {
         "code": 0,
@@ -316,8 +321,29 @@ def news_response(request):
         # token = tools.decode_token(encoded_token)
         # if token_expired(token):
         #  return 401
-        news_list = []
-        for news in HomeNews.objects.using("news").all().order_by("-pub_time")[0:20]:
+        if request.body:
+            try:
+                request_data = json.loads(request.body.decode())
+                category = request_data["category"]
+            except Exception as error:
+                print(error)
+                return internal_error_response(error="[Request Format Error]:\n" + str(error))
+        else:
+            category = ""
+
+        try:
+            news_list = []
+            if category == "":
+                db_news_list = News.objects.using("news").all().order_by("-pub_time")[0:200]
+            else:
+                db_news_list = News.objects.using("news").filter(
+                    category=category
+                ).order_by("-pub_time")[0:200]
+        except Exception as error:
+            print(error)
+            return internal_error_response(error="[Crawler DataBase Error]:\n" + str(error))
+
+        for news in db_news_list:
             news_list.append(
                 {
                     "title": news.title,
