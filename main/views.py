@@ -291,19 +291,24 @@ def news_response(request):
     {
         "category": "ent"
     }
-
     response:
     {
         "code": 0,
         "message": "SUCCESS",
         "data": [
             {
-                "title": "Breaking News",
-                "url": "https://breaking.news",
-                "category": "breaking",
-                "priority": 1,
-                "picture_url": "https://breaking.news/picture.png"
+                category:"科技",
+                news:[
+                    {
+                        "title": "Breaking News",
+                        "url": "https://breaking.news",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "media": "Foobar News",
+                        "pub_time": "2022-10-21T19:02:16.305Z",          
+                    }
+                ]
             }
+            
         ]
     }
     news template:

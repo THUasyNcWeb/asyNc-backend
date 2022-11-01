@@ -13,6 +13,21 @@ SECRET_KEY = "A good coder is all you need."
 
 TOKEN_WHITE_LIST = {}  # storage alive token for each user
 
+CATEGORY_LIST = [
+    "ent",
+    "sports",
+    "mil",
+    "politics",
+    "tech",
+    "social",
+    "finance",
+    "auto",
+    "game",
+    "women",
+    "health",
+    "history",
+    "edu"
+]
 
 def connect_to_db(configure):
     """
