@@ -348,29 +348,6 @@ def news_response(request):
                 config = json.load(config_file)
             connection = tools.connect_to_db(config["crawler-db"])
 
-            db_news_list = tools.get_data_from_db(
-                connection=connection,
-                filter_command="",
-                select=["title","news_url","first_img_url","media","pub_time","id"],
-                limit=200
-            )
-            news_list = []
-            for news in db_news_list:
-                news_list.append(
-                    {
-                        "title": news["title"],
-                        "url": news["news_url"],
-                        "picture_url": news["first_img_url"],
-                        "media": news["media"],
-                        "pub_time": news["pub_time"].strftime(time_format),
-                        "id": news["id"]
-                    }
-                )
-            news_lists.append({
-                "category": "",
-                "news": news_list
-            })
-
             for category in tools.CATEGORY_LIST:
                 db_news_list = tools.get_data_from_db(
                     connection=connection,
