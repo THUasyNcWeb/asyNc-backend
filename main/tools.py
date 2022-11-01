@@ -3,15 +3,36 @@ This .py file contains most commenly used tools in views.py
 
 Created by sxx
 """
+from distutils.command.config import config
 import hashlib
 import time
 import jwt
+import psycopg2
 
 EXPIRE_TIME = 7 * 86400  # 30s for testing. 7 days for deploy.
 SECRET_KEY = "A good coder is all you need."
 
 TOKEN_WHITE_LIST = {}  # storage alive token for each user
 
+
+def connect_to_db(configure):
+    """
+    {
+        "hostname": "43.143.201.186",
+        "port": 5432,
+        "username": "webread",
+        "password": "asyNcwebRead",
+        "database": "web"
+    }
+    """
+    connection = psycopg2.connect(
+        database=configure["database"],
+        user=configure["username"],
+        password=configure["password"],
+        host=configure["hostname"],
+        port=str(configure["port"])
+    )
+    return connection
 
 # return md5 of a string
 def md5(string):
