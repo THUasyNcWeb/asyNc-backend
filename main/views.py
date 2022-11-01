@@ -304,11 +304,10 @@ def news_response(request):
                         "url": "https://breaking.news",
                         "picture_url": "https://breaking.news/picture.png",
                         "media": "Foobar News",
-                        "pub_time": "2022-10-21T19:02:16.305Z",          
+                        "pub_time": "2022-10-21T19:02:16.305Z",
                     }
                 ]
             }
-            
         ]
     }
     news template:

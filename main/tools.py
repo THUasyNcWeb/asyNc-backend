@@ -30,6 +30,7 @@ CATEGORY_LIST = [
     "edu"
 ]
 
+
 def connect_to_db(configure):
     """
     {
