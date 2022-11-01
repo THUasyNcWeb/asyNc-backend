@@ -6,11 +6,66 @@ Created by sxx
 import hashlib
 import time
 import jwt
+import psycopg2
 
 EXPIRE_TIME = 7 * 86400  # 30s for testing. 7 days for deploy.
 SECRET_KEY = "A good coder is all you need."
 
 TOKEN_WHITE_LIST = {}  # storage alive token for each user
+
+
+def connect_to_db(configure):
+    """
+    {
+        "hostname": "43.143.201.186",
+        "port": 5432,
+        "username": "webread",
+        "password": "asyNcwebRead",
+        "database": "web"
+    }
+    """
+    connection = psycopg2.connect(
+        database=configure["database"],
+        user=configure["username"],
+        password=configure["password"],
+        host=configure["hostname"],
+        port=str(configure["port"])
+    )
+    return connection
+
+
+def get_data_from_db(connection, select="*", filter_command="", limit=200):
+    """
+        get data from db
+    """
+    element_names = select
+    if isinstance(select, list):
+        select = ",".join(select)
+    cursor = connection.cursor()
+    if filter_command:
+        filter_command = "WHERE " + filter_command
+    cursor.execute("SELECT {select} FROM news {filter_command} LIMIT {limit}".format(
+        select=select,
+        filter_command=filter_command,
+        limit=str(limit)
+    ))
+    rows = cursor.fetchall()
+    results = []
+    for row in rows:
+        if isinstance(element_names, str):
+            element_names = list(range(len(row)))
+        result = {}
+        for i in range(len(element_names)):
+            result[element_names[i]] = row[i]
+        results.append(result)
+    return results
+
+
+def close_db_connection(connection):
+    """
+        close db connection
+    """
+    connection.close()
 
 
 # return md5 of a string
