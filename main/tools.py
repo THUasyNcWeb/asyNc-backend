@@ -34,7 +34,7 @@ def connect_to_db(configure):
     return connection
 
 
-def get_data_from_db(connection, select = "*", filter_command="", limit=200):
+def get_data_from_db(connection, select="*", filter_command="", limit=200):
     """
         get data from db
     """

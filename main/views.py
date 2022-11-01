@@ -3,13 +3,12 @@
 """
 import json
 import re
-import datetime
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from . import tools
-from .models import UserBasicInfo, News
+from .models import UserBasicInfo
 from .responses import internal_error_response, unauthorized_response, not_found_response
 
 # Create your views here.
@@ -325,17 +324,19 @@ def news_response(request):
 
         if request.body:
             try:
-                request_data = json.loads(request.body.decode())
-                category = request_data["category"]
+                # request_data = json.loads(request.body.decode())
+                # category = request_data["category"]
+                pass
             except Exception as error:
                 print(error)
                 return internal_error_response(error="[Request Format Error]:\n" + str(error))
         else:
-            category = ""
+            # category = ""
+            pass
 
         try:
-            with open("config/config.json","r",encoding="utf-8") as f:
-                config = json.load(f)
+            with open("config/config.json","r",encoding="utf-8") as config_file:
+                config = json.load(config_file)
             connection = tools.connect_to_db(config["crawler-db"])
             db_news_list = tools.get_data_from_db(
                 connection=connection,
@@ -343,6 +344,7 @@ def news_response(request):
                 select=["title","news_url","first_img_url","media","pub_time"],
                 limit=200
             )
+            tools.close_db_connection(connection=connection)
             # if category == "":
             #     db_news_list = News.objects.using("news").all().order_by("-pub_time")[0:200]
             # else:

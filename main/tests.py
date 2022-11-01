@@ -172,7 +172,8 @@ class ViewsTests(TestCase):
     """
         test functions in views
     """
-    databases = ["default", "news"]
+    databases = "__all__"
+
     def setUp(self):
         """
             set up a test set

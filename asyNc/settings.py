@@ -93,22 +93,22 @@ DATABASES = {
         'PASSWORD': config["backend-db"]['password'],
         'HOST': config["backend-db"]['hostname'],
         'PORT': config["backend-db"]['port'],
-        'TEST': {
-            'NAME': 'web',
-        },
+        # 'TEST': {
+        #     'NAME': 'web',
+        # },
     },
-    'news':
-    {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': config["crawler-db"]['database'],
-        'USER': config["crawler-db"]['username'],
-        'PASSWORD': config["crawler-db"]['password'],
-        'HOST': config["crawler-db"]['hostname'],
-        'PORT': config["crawler-db"]['port'],
-        'TEST': {
-            'MIRROR': 'default'
-        },
-    }
+    # 'news':
+    # {
+    #     'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    #     'NAME': config["crawler-db"]['database'],
+    #     'USER': config["crawler-db"]['username'],
+    #     'PASSWORD': config["crawler-db"]['password'],
+    #     'HOST': config["crawler-db"]['hostname'],
+    #     'PORT': config["crawler-db"]['port'],
+    #     'TEST': {
+    #         'MIRROR': 'default'
+    #     },
+    # }
 }
 # DATABASES = {
 #     'default': {
