@@ -3,6 +3,7 @@
 """
 import json
 import re
+import datetime
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -310,9 +311,9 @@ def news_response(request):
     {
         "title": "Breaking News",
         "url": "https://breaking.news",
-        "category": "breaking",
-        "priority": 1,
-        "picture_url": "https://breaking.news/picture.png"
+        "picture_url": "https://breaking.news/picture.png",
+        "media": "Foobar News",
+        "pub_time": "2022-10-21T19:02:16.305Z"
     }
     """
     if request.method == "GET":
@@ -321,10 +322,6 @@ def news_response(request):
         # token = tools.decode_token(encoded_token)
         # if token_expired(token):
         #  return 401
-        with open("config/config.json","r",encoding="utf-8") as f:
-            config = json.load(f)
-        connection = tools.connect_to_db(config["crawler-db"])
-        tools.get_data_from_db(connection)
 
         if request.body:
             try:
@@ -337,27 +334,38 @@ def news_response(request):
             category = ""
 
         try:
-            news_list = []
-            if category == "":
-                db_news_list = News.objects.using("news").all().order_by("-pub_time")[0:200]
-            else:
-                db_news_list = News.objects.using("news").filter(
-                    category=category
-                ).order_by("-pub_time")[0:200]
+            with open("config/config.json","r",encoding="utf-8") as f:
+                config = json.load(f)
+            connection = tools.connect_to_db(config["crawler-db"])
+            db_news_list = tools.get_data_from_db(
+                connection=connection,
+                filter_command="category='auto'",
+                select=["title","news_url","first_img_url","media","pub_time"],
+                limit=200
+            )
+            # if category == "":
+            #     db_news_list = News.objects.using("news").all().order_by("-pub_time")[0:200]
+            # else:
+            #     db_news_list = News.objects.using("news").filter(
+            #         category=category
+            #     ).order_by("-pub_time")[0:200]
         except Exception as error:
             print(error)
             return internal_error_response(error="[Crawler DataBase Error]:\n" + str(error))
 
+        news_list = []
+        time_format = "%y-%m-%d %H:%M:%S"
         for news in db_news_list:
             news_list.append(
                 {
-                    "title": news.title,
-                    "url": news.news_url,
-                    "category": news.category,
-                    "priority": 1,
-                    "picture_url": news.first_img_url
+                    "title": news["title"],
+                    "url": news["news_url"],
+                    "picture_url": news["first_img_url"],
+                    "media": news["media"],
+                    "pub_time": news["pub_time"].strftime(time_format)
                 }
             )
+        print(news_list)
         return JsonResponse(
             {"code": 0, "message": "SUCCESS", "data": news_list},
             status=200,

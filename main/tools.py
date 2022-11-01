@@ -38,16 +38,27 @@ def get_data_from_db(connection, select = "*", filter_command="", limit=200):
     """
         get data from db
     """
+    element_names = select
+    if isinstance(select, list):
+        select = ",".join(select)
     cursor = connection.cursor()
     if filter_command:
         filter_command = "WHERE " + filter_command
     cursor.execute("SELECT {select} FROM news {filter_command} LIMIT {limit}".format(
         select=select,
         filter_command=filter_command,
-        limit=limit
+        limit=str(limit)
     ))
     rows = cursor.fetchall()
-    return rows
+    results = []
+    for row in rows:
+        if isinstance(element_names, str):
+            element_names = list(range(len(row)))
+        result = {}
+        for i in range(len(element_names)):
+            result[element_names[i]] = row[i]
+        results.append(result)
+    return results
 
 
 def close_db_connection(connection):
