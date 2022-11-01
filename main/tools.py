@@ -3,7 +3,6 @@ This .py file contains most commenly used tools in views.py
 
 Created by sxx
 """
-from distutils.command.config import config
 import hashlib
 import time
 import jwt
@@ -33,6 +32,30 @@ def connect_to_db(configure):
         port=str(configure["port"])
     )
     return connection
+
+
+def get_data_from_db(connection, select = "*", filter_command="", limit=200):
+    """
+        get data from db
+    """
+    cursor = connection.cursor()
+    if filter_command:
+        filter_command = "WHERE " + filter_command
+    cursor.execute("SELECT {select} FROM news {filter_command} LIMIT {limit}".format(
+        select=select,
+        filter_command=filter_command,
+        limit=limit
+    ))
+    rows = cursor.fetchall()
+    return rows
+
+
+def close_db_connection(connection):
+    """
+        close db connection
+    """
+    connection.close()
+
 
 # return md5 of a string
 def md5(string):

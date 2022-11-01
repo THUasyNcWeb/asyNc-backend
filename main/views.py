@@ -321,6 +321,11 @@ def news_response(request):
         # token = tools.decode_token(encoded_token)
         # if token_expired(token):
         #  return 401
+        with open("config/config.json","r",encoding="utf-8") as f:
+            config = json.load(f)
+        connection = tools.connect_to_db(config["crawler-db"])
+        tools.get_data_from_db(connection)
+
         if request.body:
             try:
                 request_data = json.loads(request.body.decode())
