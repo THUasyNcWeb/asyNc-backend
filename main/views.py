@@ -339,42 +339,70 @@ def news_response(request):
             # category = ""
             pass
 
+        news_lists = []
+
+        time_format = "%y-%m-%dT%H:%M:%SZ"
+
         try:
             with open("config/config.json","r",encoding="utf-8") as config_file:
                 config = json.load(config_file)
             connection = tools.connect_to_db(config["crawler-db"])
+
             db_news_list = tools.get_data_from_db(
                 connection=connection,
-                filter_command="category='auto'",
-                select=["title","news_url","first_img_url","media","pub_time"],
+                filter_command="",
+                select=["title","news_url","first_img_url","media","pub_time","id"],
                 limit=200
             )
+            news_list = []
+            for news in db_news_list:
+                news_list.append(
+                    {
+                        "title": news["title"],
+                        "url": news["news_url"],
+                        "picture_url": news["first_img_url"],
+                        "media": news["media"],
+                        "pub_time": news["pub_time"].strftime(time_format),
+                        "id": news["id"]
+                    }
+                )
+            news_lists.append({
+                "category": "",
+                "news": news_list
+            })
+
+            for category in tools.CATEGORY_LIST:
+                db_news_list = tools.get_data_from_db(
+                    connection=connection,
+                    filter_command="category='{category}'".format(category=category),
+                    select=["title","news_url","first_img_url","media","pub_time","id"],
+                    limit=200
+                )
+                news_list = []
+                for news in db_news_list:
+                    news_list.append(
+                        {
+                            "title": news["title"],
+                            "url": news["news_url"],
+                            "picture_url": news["first_img_url"],
+                            "media": news["media"],
+                            "pub_time": news["pub_time"].strftime(time_format),
+                            "id": news["id"]
+                        }
+                    )
+                news_lists.append({
+                    "category": category,
+                    "news": news_list
+                })
+
             tools.close_db_connection(connection=connection)
-            # if category == "":
-            #     db_news_list = News.objects.using("news").all().order_by("-pub_time")[0:200]
-            # else:
-            #     db_news_list = News.objects.using("news").filter(
-            #         category=category
-            #     ).order_by("-pub_time")[0:200]
+
         except Exception as error:
             print(error)
             return internal_error_response(error="[Crawler DataBase Error]:\n" + str(error))
 
-        news_list = []
-        time_format = "%y-%m-%d %H:%M:%S"
-        for news in db_news_list:
-            news_list.append(
-                {
-                    "title": news["title"],
-                    "url": news["news_url"],
-                    "picture_url": news["first_img_url"],
-                    "media": news["media"],
-                    "pub_time": news["pub_time"].strftime(time_format)
-                }
-            )
-        print(news_list)
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": news_list},
+            {"code": 0, "message": "SUCCESS", "data": news_lists},
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )

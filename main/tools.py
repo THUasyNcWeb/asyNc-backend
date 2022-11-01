@@ -14,6 +14,7 @@ SECRET_KEY = "A good coder is all you need."
 TOKEN_WHITE_LIST = {}  # storage alive token for each user
 
 CATEGORY_LIST = [
+    "",
     "ent",
     "sports",
     "mil",
