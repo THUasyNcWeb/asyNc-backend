@@ -339,9 +339,6 @@ def news_response(request):
             pass
 
         news_lists = []
-
-        time_format = "%y-%m-%dT%H:%M:%SZ"
-
         try:
             with open("config/config.json","r",encoding="utf-8") as config_file:
                 config = json.load(config_file)
@@ -354,28 +351,35 @@ def news_response(request):
                     select=["title","news_url","first_img_url","media","pub_time","id"],
                     limit=200
                 )
-                news_list = []
-                for news in db_news_list:
-                    news_list.append(
-                        {
-                            "title": news["title"],
-                            "url": news["news_url"],
-                            "picture_url": news["first_img_url"],
-                            "media": news["media"],
-                            "pub_time": news["pub_time"].strftime(time_format),
-                            "id": news["id"]
-                        }
+                try:
+                    news_list = []
+                    for news in db_news_list:
+                        news_list.append(
+                            {
+                                "title": news["title"],
+                                "url": news["news_url"],
+                                "picture_url": news["first_img_url"],
+                                "media": news["media"],
+                                "pub_time": news["pub_time"],  # .strftime("%y-%m-%dT%H:%M:%SZ"),
+                                "id": news["id"]
+                            }
+                        )
+                    news_lists.append({
+                        "category": category,
+                        "news": news_list
+                    })
+                except Exception as error:
+                    print(error)
+                    return internal_error_response(
+                        error="[Crawler DataBase Format Error]:\n" + str(error)
                     )
-                news_lists.append({
-                    "category": category,
-                    "news": news_list
-                })
-
             tools.close_db_connection(connection=connection)
 
         except Exception as error:
             print(error)
-            return internal_error_response(error="[Crawler DataBase Error]:\n" + str(error))
+            return internal_error_response(
+                error="[Crawler DataBase Connection Error]:\n" + str(error)
+            )
 
         return JsonResponse(
             {"code": 0, "message": "SUCCESS", "data": news_lists},
