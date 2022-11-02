@@ -239,16 +239,16 @@ def user_info(request):
         token = tools.decode_token(encoded_token)
         if not tools.check_token_in_white_list(encoded_token=encoded_token):
             return unauthorized_response()
+        user_name = token["user_name"]
+        user = UserBasicInfo.objects.filter(user_name=user_name).first()
+        if not user:  # user name not existed yet.
+            return unauthorized_response()
     except Exception as error:
         print(error)
         return unauthorized_response()
     try:
         if request.method == "GET":
             try:
-                user_name = token["user_name"]
-                user = UserBasicInfo.objects.filter(user_name=user_name).first()
-                if not user:  # user name not existed yet.
-                    return unauthorized_response()
                 user_tags = []
                 if user.tags:
                     user_tags_dict = user.tags
@@ -263,8 +263,8 @@ def user_info(request):
 
                 user_avatar = user.avatar
                 if not user_avatar:
-                    with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
-                        user_avatar = f.read()
+                    with open("data/default_avatar.base64", "r", encoding="utf-8") as avatar_file:
+                        user_avatar = avatar_file.read()
 
                 response_msg = {
                     "code": 0,
@@ -278,6 +278,7 @@ def user_info(request):
                         "avatar": user_avatar,
                     }
                 }
+
                 return JsonResponse(
                     response_msg,
                     status=status_code,
@@ -286,6 +287,44 @@ def user_info(request):
             except Exception as error:
                 print(error)
                 return internal_error_response(error=str(error))
+        elif request.method == "POST":
+            try:
+                request_data = json.loads(request.body.decode())
+            except Exception as error:
+                print(error)
+                return JsonResponse(
+                    {
+                        "code": 8,
+                        "message": "POST_DATA_FORMAT_ERROR",
+                        "data": {
+                            "error": error
+                        }
+                    },
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            if "avatar" in request_data:
+                user.avatar = request_data["avatar"]
+            if "mail" in request_data:
+                user.mail = request_data["mail"]
+            if "signature" in request_data:
+                user.signature = request_data["signature"]
+            try:
+                user.full_clean()
+                user.save()
+            except Exception as error:
+                print(error)
+                return JsonResponse(
+                    {
+                        "code": 8,
+                        "message": "POST_DATA_FORMAT_ERROR",
+                        "data": {
+                            "error": error
+                        }
+                    },
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
