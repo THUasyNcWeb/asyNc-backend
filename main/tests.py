@@ -184,6 +184,9 @@ class ViewsTests(TestCase):
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []
+        self.default_avatar = ""
+        with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
+            self.default_avatar = f.read()
         for i in range(5):
             user_name = self.user_name_list[i]
             password = self.user_password[i]
@@ -534,10 +537,18 @@ class ViewsTests(TestCase):
             self.assertEqual(response.json()["data"]["user_name"], new_user_name)
             self.assertEqual(check_token_in_white_list(encoded_token), False)
 
-    def test_user_info(self):
+    def test_user_info_get_method(self):
         """
-            test user_info api
+            test get method of user_info api
         """
+        response = self.client.get(
+            '/user_info/',
+            data={},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=""
+        )
+        self.assertEqual(response.status_code, 401)
+
         for i in range(5):
             user_name = self.user_name_list[i]
             encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
@@ -548,8 +559,64 @@ class ViewsTests(TestCase):
                 content_type="application/json",
                 HTTP_AUTHORIZATION=encoded_token
             )
+            response_data = response.json()["data"]
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json()["data"]["user_name"], user_name)
-            self.assertEqual(isinstance(response.json()["data"]["signature"],str), True)
-            self.assertEqual(isinstance(response.json()["data"]["tags"],list), True)
-            self.assertEqual(response.json()["data"]["tags"], self.user_tags)
+            self.assertEqual(response_data["user_name"], user_name)
+            self.assertEqual(isinstance(response_data["signature"],str), True)
+            self.assertEqual(isinstance(response_data["mail"],str), True)
+            self.assertEqual(isinstance(response_data["avatar"],str), True)
+            self.assertEqual(isinstance(response_data["tags"],list), True)
+            self.assertEqual(response_data["tags"], self.user_tags)
+
+    def test_user_info_post_method(self):
+        """
+            test post method of user_info api
+        """
+        response = self.client.get(
+            '/user_info/',
+            data={},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=""
+        )
+        self.assertEqual(response.status_code, 401)
+
+        for i in range(5):
+            user_name = self.user_name_list[i]
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            mail = "mail" + str(i) + "@mail.com"
+            signature = "signature" + str(i)
+            response = self.client.post(
+                '/user_info/',
+                data={
+                    "mail": mail,
+                    "avatar": "data:image/jpeg;base64,",
+                    "signature": signature
+                },
+                content_type="application/json",
+                HTTP_AUTHORIZATION=encoded_token
+            )
+            response_data = response.json()["data"]
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response_data["mail"], mail)
+            self.assertEqual(response_data["signature"], signature)
+            self.assertEqual(response_data["avatar"], "data:image/jpeg;base64,")
+            response = self.client.post(
+                '/user_info/',
+                data={
+                    "signature": signature + str(i),
+                    "avatar": "",
+                },
+                content_type="application/json",
+                HTTP_AUTHORIZATION=encoded_token
+            )
+            response = self.client.get(
+                '/user_info/',
+                data={},
+                content_type="application/json",
+                HTTP_AUTHORIZATION=encoded_token
+            )
+            response_data = response.json()["data"]
+            self.assertEqual(response_data["mail"], mail)
+            self.assertEqual(response_data["signature"], signature + str(i))
+            self.assertEqual(response_data["avatar"], self.default_avatar)

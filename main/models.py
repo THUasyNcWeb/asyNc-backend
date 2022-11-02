@@ -62,6 +62,8 @@ class UserBasicInfo(models.Model):
     user_name = CharField(max_length=12, unique=True)
     password = CharField(max_length=40)
     signature = CharField(max_length=200, blank=True)
+    mail = CharField(max_length=100, blank=True)
+    avatar = TextField(blank=True)
     # register_date = DateTimeField(auto_now_add=True)
 
     def __str__(self):
