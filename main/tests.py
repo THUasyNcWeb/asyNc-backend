@@ -184,6 +184,9 @@ class ViewsTests(TestCase):
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []
+        self.default_avatar = ""
+        with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
+            self.default_avatar = f.read()
         for i in range(5):
             user_name = self.user_name_list[i]
             password = self.user_password[i]
@@ -587,7 +590,7 @@ class ViewsTests(TestCase):
                 '/user_info/',
                 data={
                     "mail": mail,
-                    "avatar": "",
+                    "avatar": "data:image/jpeg;base64,",
                     "signature": signature
                 },
                 content_type="application/json",
@@ -597,3 +600,23 @@ class ViewsTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response_data["mail"], mail)
             self.assertEqual(response_data["signature"], signature)
+            self.assertEqual(response_data["avatar"], "data:image/jpeg;base64,")
+            response = self.client.post(
+                '/user_info/',
+                data={
+                    "signature": signature + str(i),
+                    "avatar": "",
+                },
+                content_type="application/json",
+                HTTP_AUTHORIZATION=encoded_token
+            )
+            response = self.client.get(
+                '/user_info/',
+                data={},
+                content_type="application/json",
+                HTTP_AUTHORIZATION=encoded_token
+            )
+            response_data = response.json()["data"]
+            self.assertEqual(response_data["mail"], mail)
+            self.assertEqual(response_data["signature"], signature + str(i))
+            self.assertEqual(response_data["avatar"], self.default_avatar)
