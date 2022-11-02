@@ -564,7 +564,7 @@ class ViewsTests(TestCase):
             self.assertEqual(isinstance(response_data["avatar"],str), True)
             self.assertEqual(isinstance(response_data["tags"],list), True)
             self.assertEqual(response_data["tags"], self.user_tags)
-    
+
     def test_user_info_post_method(self):
         """
             test post method of user_info api
@@ -581,9 +581,9 @@ class ViewsTests(TestCase):
             user_name = self.user_name_list[i]
             encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
             add_token_to_white_list(encoded_token)
-            mail = "mail"+str(i)+"@mail.com"
-            signature = "signature"+str(i)
-            response = self.client.get(
+            mail = "mail" + str(i) + "@mail.com"
+            signature = "signature" + str(i)
+            response = self.client.post(
                 '/user_info/',
                 data={
                     "mail": mail,

@@ -246,8 +246,9 @@ def user_info(request):
     except Exception as error:
         print(error)
         return unauthorized_response()
+
     try:
-        if request.method == "GET":
+        def return_user_info(user):
             try:
                 user_tags = []
                 if user.tags:
@@ -259,13 +260,12 @@ def user_info(request):
                     ):
                         user_tags.append(key_value[0])
 
-                status_code = 200
-
                 user_avatar = user.avatar
                 if not user_avatar:
                     with open("data/default_avatar.base64", "r", encoding="utf-8") as avatar_file:
                         user_avatar = avatar_file.read()
 
+                status_code = 200
                 response_msg = {
                     "code": 0,
                     "message": "SUCCESS",
@@ -287,7 +287,9 @@ def user_info(request):
             except Exception as error:
                 print(error)
                 return internal_error_response(error=str(error))
-        elif request.method == "POST":
+        if request.method == "GET":
+            return return_user_info(user=user)
+        if request.method == "POST":
             try:
                 request_data = json.loads(request.body.decode())
             except Exception as error:
@@ -325,6 +327,7 @@ def user_info(request):
                     status=400,
                     headers={'Access-Control-Allow-Origin':'*'}
                 )
+            return return_user_info(user=user)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
