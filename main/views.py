@@ -214,24 +214,28 @@ def user_register(request):
 def user_info(request):
     """
     status_code = 200
+    post request:
+    {
+        "signature": "This is my signature.",
+        "avatar": "",
+        "mail": "waifu@diffusion.com"
+    }
     response:
     {
         "code": 0,
         "message": "SUCCESS",
-        "data": [
-            {
-                "id": 1,
-                "user_name": "Bob",
-                "signature": "This is my signature.",
-                "tags": [
-                    "C++",
-                    "中年",
-                    "アニメ"
-                ],
-                "mail": "waifu@diffusion.com",
-                "avatar": "",
-            }
-        ]
+        "data": {
+            "id": 1,
+            "user_name": "Bob",
+            "signature": "This is my signature.",
+            "tags": [
+                "C++",
+                "中年",
+                "アニメ"
+            ],
+            "mail": "waifu@diffusion.com",
+            "avatar": "",
+        }
     }
     """
     try:
