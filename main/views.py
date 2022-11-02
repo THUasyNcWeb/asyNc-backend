@@ -260,6 +260,12 @@ def user_info(request):
                         user_tags.append(key_value[0])
 
                 status_code = 200
+
+                user_avatar = user.avatar
+                if not user_avatar:
+                    with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
+                        user_avatar = f.read()
+
                 response_msg = {
                     "code": 0,
                     "message": "SUCCESS",
@@ -269,7 +275,7 @@ def user_info(request):
                         "signature": user.signature,
                         "tags": user_tags[:10],
                         "mail": user.mail,
-                        "avatar": user.avatar,
+                        "avatar": user_avatar,
                     }
                 }
                 return JsonResponse(
