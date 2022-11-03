@@ -340,7 +340,7 @@ def user_info(request):
 
 # return a news list
 @csrf_exempt
-def news_response(request):
+def news_response(request, news_category = ""):
     """
     request:
     {
@@ -374,6 +374,7 @@ def news_response(request):
         "pub_time": "2022-10-21T19:02:16.305Z"
     }
     """
+
     if request.method == "GET":
         # Do not check token until news recommendation is online:
         # encoded_token = request.META.get("HTTP_AUTHORIZATION")
@@ -393,41 +394,39 @@ def news_response(request):
             # category = ""
             pass
 
-        news_lists = []
         try:
             with open("config/config.json","r",encoding="utf-8") as config_file:
                 config = json.load(config_file)
             connection = tools.connect_to_db(config["crawler-db"])
 
-            for category in tools.CATEGORY_LIST:
-                db_news_list = tools.get_data_from_db(
-                    connection=connection,
-                    filter_command="category='{category}'".format(category=category),
-                    select=["title","news_url","first_img_url","media","pub_time","id"],
-                    limit=200
-                )
-                try:
-                    news_list = []
-                    for news in db_news_list:
-                        news_list.append(
-                            {
-                                "title": news["title"],
-                                "url": news["news_url"],
-                                "picture_url": news["first_img_url"],
-                                "media": news["media"],
-                                "pub_time": news["pub_time"],  # .strftime("%y-%m-%dT%H:%M:%SZ"),
-                                "id": news["id"]
-                            }
-                        )
-                    news_lists.append({
-                        "category": category,
-                        "news": news_list
-                    })
-                except Exception as error:
-                    print(error)
-                    return internal_error_response(
-                        error="[Crawler DataBase Format Error]:\n" + str(error)
+            if news_category in tools.CATEGORY_LIST:
+                category = news_category
+            else:
+                category = ""
+            db_news_list = tools.get_data_from_db(
+                connection=connection,
+                filter_command="category='{category}'".format(category=category),
+                select=["title","news_url","first_img_url","media","pub_time","id"],
+                limit=200
+            )
+            try:
+                news_list = []
+                for news in db_news_list:
+                    news_list.append(
+                        {
+                            "title": news["title"],
+                            "url": news["news_url"],
+                            "picture_url": news["first_img_url"],
+                            "media": news["media"],
+                            "pub_time": news["pub_time"],  # .strftime("%y-%m-%dT%H:%M:%SZ"),
+                            "id": news["id"]
+                        }
                     )
+            except Exception as error:
+                print(error)
+                return internal_error_response(
+                    error="[Crawler DataBase Format Error]:\n" + str(error)
+                )
             tools.close_db_connection(connection=connection)
 
         except Exception as error:
@@ -437,7 +436,7 @@ def news_response(request):
             )
 
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": news_lists},
+            {"code": 0, "message": "SUCCESS", "data": news_list},
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )

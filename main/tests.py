@@ -354,14 +354,14 @@ class ViewsTests(TestCase):
         """
             test news response with post method
         """
-        response = self.client.post('/all_news/', data=None, content_type="application/json")
+        response = self.client.post('/all_news', data=None, content_type="application/json")
         self.assertEqual(response.status_code, 404)
 
     def test_news_response(self):
         """
             test news response
         """
-        response = self.client.get('/all_news/', data=None, content_type="application/json")
+        response = self.client.get('/all_news', data=None, content_type="application/json")
         self.assertEqual(response.status_code, 200)
         news_lists = json.loads(response.content)["data"]
         self.assertEqual(type(news_lists), list)
