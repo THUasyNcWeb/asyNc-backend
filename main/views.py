@@ -928,5 +928,57 @@ def keyword_search(request):
         )
         str_server = rpc_client.get_proxy()
         all_news = str_server.search_news(key_word,start_page)
+        total_num = ceil(all_news['total'] / 10)
+        # print(all_news['total'])
+        if start_page > total_num:
+            return JsonResponse(
+                {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
+                status=200,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+        news = []
+        tags = []
+        for new in all_news["news_list"]:
+            data = new
+            title_keywords = []
+            keywords = []
+            title = data['title']
+            content = data['content']
+            title_keywords = get_location(title)
+            keywords = get_location(content)
+
+            piece_new = {
+                "title": title.replace('<span class="szz-type">','').replace('</span>',''),
+                "url": data['url'],
+                "media": data['media'],
+                "pub_time": data['pub_time'],
+                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                "picture_url": data['picture_url'],
+                "title_keywords": title_keywords,
+                "keywords": keywords
+            }
+            news += [piece_new]
+            if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
+                    and data['tags'] != [""]:
+                tags += data['tags']
+        data = {
+            "page_count": total_num,
+            "news": news
+        }
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            token = tools.decode_token(encoded_token)
+            user_name = token["user_name"]
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if user:
+                update_tags(user.user_name, tags, user.tags)
+
+        except Exception as error:
+            print(error)
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": data},
+            status=200,
+            headers={'Access-Control-Allow-Origin':'*'}
+        )
     return internal_error_response()
 
