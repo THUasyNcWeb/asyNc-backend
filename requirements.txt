@@ -10,3 +10,5 @@ elasticsearch==7.13.1
 elasticsearch-dsl==7.4.0
 
 gunicorn
+zmq
+tinyrpc
