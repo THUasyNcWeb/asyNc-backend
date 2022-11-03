@@ -12,3 +12,4 @@ elasticsearch-dsl==7.4.0
 gunicorn
 zmq
 tinyrpc
+requests

@@ -7,11 +7,10 @@ from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
-import zmq
 
 from tinyrpc import RPCClient
 from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
-from tinyrpc.transports.zmq import ZmqClientTransport
+from tinyrpc.transports.http import HttpPostClientTransport
 
 from . import tools
 from .models import UserBasicInfo
@@ -923,11 +922,13 @@ def keyword_search(request):
                 status=400,
                 headers={'Access-Control-Allow-Origin':'*'}
             )
-        ctx = zmq.Context()
+        with open("config/lucene.json","r",encoding="utf-8") as config_file:
+            config = json.load(config_file)
         rpc_client = RPCClient(
             JSONRPCProtocol(),
-            ZmqClientTransport.create(ctx, 'tcp://127.0.0.1:5001')
+            HttpPostClientTransport('http://' + config['url'] + ':' + str(config['port']))
         )
+        str_server = rpc_client.get_proxy()
         str_server = rpc_client.get_proxy()
         all_news = str_server.search_news(key_word,start_page)
         total_num = ceil(all_news['total'] / 10)
