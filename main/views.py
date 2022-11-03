@@ -340,7 +340,7 @@ def user_info(request):
 
 # return a news list
 @csrf_exempt
-def news_response(request, news_category = ""):
+def news_response(request):
     """
     request:
     {
@@ -382,17 +382,12 @@ def news_response(request, news_category = ""):
         # if token_expired(token):
         #  return 401
 
-        if request.body:
-            try:
-                # request_data = json.loads(request.body.decode())
-                # category = request_data["category"]
-                pass
-            except Exception as error:
-                print(error)
-                return internal_error_response(error="[Request Format Error]:\n" + str(error))
-        else:
-            # category = ""
-            pass
+        try:
+            news_category = request.GET.get("category")
+            print("news_category :", news_category)
+        except Exception as error:
+            print(error)
+            return internal_error_response(error="[URL FORMAT ERROR]:\n" + str(error))
 
         try:
             with open("config/config.json","r",encoding="utf-8") as config_file:
@@ -400,9 +395,9 @@ def news_response(request, news_category = ""):
             connection = tools.connect_to_db(config["crawler-db"])
 
             if news_category in tools.CATEGORY_FRONT_TO_BACKEND:
-                category = tools.CATEGORY_LIST[news_category]
+                category = tools.CATEGORY_FRONT_TO_BACKEND[news_category]
             else:
-                category = tools.CATEGORY_LIST[""]
+                category = tools.CATEGORY_FRONT_TO_BACKEND[""]
 
             db_news_list = tools.get_data_from_db(
                 connection=connection,

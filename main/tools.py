@@ -30,7 +30,7 @@ CATEGORY_LIST = [
     "edu"
 ]
 
-CATEGORY_FRONT_TO_BACKEND ={
+CATEGORY_FRONT_TO_BACKEND = {
     "": "",
     "home": "",
     "ent": "ent",
