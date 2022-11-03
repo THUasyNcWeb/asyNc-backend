@@ -214,24 +214,28 @@ def user_register(request):
 def user_info(request):
     """
     status_code = 200
+    post request:
+    {
+        "signature": "This is my signature.",
+        "avatar": "",
+        "mail": "waifu@diffusion.com"
+    }
     response:
     {
         "code": 0,
         "message": "SUCCESS",
-        "data": [
-            {
-                "id": 1,
-                "user_name": "Bob",
-                "signature": "This is my signature.",
-                "tags": [
-                    "C++",
-                    "中年",
-                    "アニメ"
-                ],
-                "mail": "waifu@diffusion.com",
-                "avatar": "",
-            }
-        ]
+        "data": {
+            "id": 1,
+            "user_name": "Bob",
+            "signature": "This is my signature.",
+            "tags": [
+                "C++",
+                "中年",
+                "アニメ"
+            ],
+            "mail": "waifu@diffusion.com",
+            "avatar": "",
+        }
     }
     """
     try:
@@ -370,6 +374,7 @@ def news_response(request):
         "pub_time": "2022-10-21T19:02:16.305Z"
     }
     """
+
     if request.method == "GET":
         # Do not check token until news recommendation is online:
         # encoded_token = request.META.get("HTTP_AUTHORIZATION")
@@ -377,53 +382,47 @@ def news_response(request):
         # if token_expired(token):
         #  return 401
 
-        if request.body:
-            try:
-                # request_data = json.loads(request.body.decode())
-                # category = request_data["category"]
-                pass
-            except Exception as error:
-                print(error)
-                return internal_error_response(error="[Request Format Error]:\n" + str(error))
-        else:
-            # category = ""
-            pass
+        try:
+            news_category = request.GET.get("category")
+            print("news_category :", news_category)
+        except Exception as error:
+            print(error)
+            return internal_error_response(error="[URL FORMAT ERROR]:\n" + str(error))
 
-        news_lists = []
         try:
             with open("config/config.json","r",encoding="utf-8") as config_file:
                 config = json.load(config_file)
             connection = tools.connect_to_db(config["crawler-db"])
 
-            for category in tools.CATEGORY_LIST:
-                db_news_list = tools.get_data_from_db(
-                    connection=connection,
-                    filter_command="category='{category}'".format(category=category),
-                    select=["title","news_url","first_img_url","media","pub_time","id"],
-                    limit=200
-                )
-                try:
-                    news_list = []
-                    for news in db_news_list:
-                        news_list.append(
-                            {
-                                "title": news["title"],
-                                "url": news["news_url"],
-                                "picture_url": news["first_img_url"],
-                                "media": news["media"],
-                                "pub_time": news["pub_time"],  # .strftime("%y-%m-%dT%H:%M:%SZ"),
-                                "id": news["id"]
-                            }
-                        )
-                    news_lists.append({
-                        "category": category,
-                        "news": news_list
-                    })
-                except Exception as error:
-                    print(error)
-                    return internal_error_response(
-                        error="[Crawler DataBase Format Error]:\n" + str(error)
+            if news_category in tools.CATEGORY_FRONT_TO_BACKEND:
+                category = tools.CATEGORY_FRONT_TO_BACKEND[news_category]
+            else:
+                category = tools.CATEGORY_FRONT_TO_BACKEND[""]
+
+            db_news_list = tools.get_data_from_db(
+                connection=connection,
+                filter_command="category='{category}'".format(category=category),
+                select=["title","news_url","first_img_url","media","pub_time","id"],
+                limit=200
+            )
+            try:
+                news_list = []
+                for news in db_news_list:
+                    news_list.append(
+                        {
+                            "title": news["title"],
+                            "url": news["news_url"],
+                            "picture_url": news["first_img_url"],
+                            "media": news["media"],
+                            "pub_time": news["pub_time"],  # .strftime("%y-%m-%dT%H:%M:%SZ"),
+                            "id": news["id"]
+                        }
                     )
+            except Exception as error:
+                print(error)
+                return internal_error_response(
+                    error="[Crawler DataBase Format Error]:\n" + str(error)
+                )
             tools.close_db_connection(connection=connection)
 
         except Exception as error:
@@ -433,7 +432,7 @@ def news_response(request):
             )
 
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": news_lists},
+            {"code": 0, "message": "SUCCESS", "data": news_list},
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )

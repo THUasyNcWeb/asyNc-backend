@@ -30,6 +30,17 @@ CATEGORY_LIST = [
     "edu"
 ]
 
+CATEGORY_FRONT_TO_BACKEND = {
+    "": "",
+    "home": "",
+    "ent": "ent",
+    "sport": "sports",
+    "tech": "tech",
+    "game": "game",
+    "fashion": "women",
+    "health": "health",
+}
+
 
 def connect_to_db(configure):
     """
