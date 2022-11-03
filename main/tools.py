@@ -62,7 +62,7 @@ def connect_to_db(configure):
     return connection
 
 
-def get_data_from_db(connection, select="*", filter_command="", limit=200):
+def get_data_from_db(connection, select="*", filter_command="", order_command="", limit=200):
     """
         get data from db
     """
@@ -72,9 +72,10 @@ def get_data_from_db(connection, select="*", filter_command="", limit=200):
     cursor = connection.cursor()
     if filter_command:
         filter_command = "WHERE " + filter_command
-    cursor.execute("SELECT {select} FROM news {filter_command} LIMIT {limit}".format(
+    cursor.execute("SELECT {select} FROM news {filter_command} {order} LIMIT {limit}".format(
         select=select,
         filter_command=filter_command,
+        order=order_command,
         limit=str(limit)
     ))
     rows = cursor.fetchall()
