@@ -9,8 +9,8 @@
     "crawler-db": {
         "hostname": "43.143.201.186",
         "port": 5432,
-        "username": "postgres",
-        "password": "asyNc",
+        "username": "webread",
+        "password": "asyNcwebRead",
         "database": "web"
     }
 }

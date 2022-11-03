@@ -16,7 +16,7 @@ class News(models.Model):
     id = AutoField(primary_key=True, db_index=True)
     news_url = URLField(max_length=200)
     media = CharField(max_length=20)
-    category = ArrayField(models.CharField(max_length=30), size=5)
+    category = CharField(max_length=20)
     tags = ArrayField(models.CharField(max_length=30))
     title = CharField(max_length=200)
     description = TextField()
@@ -38,7 +38,7 @@ class HomeNews(models.Model):
     id = AutoField(primary_key=True, db_index=True)
     news_url = URLField(max_length=200)
     media = CharField(max_length=20)
-    category = ArrayField(models.CharField(max_length=30), size=5)
+    category = CharField(max_length=20)
     tags = ArrayField(models.CharField(max_length=30))
     title = CharField(max_length=200)
     description = TextField()
@@ -62,6 +62,8 @@ class UserBasicInfo(models.Model):
     user_name = CharField(max_length=12, unique=True)
     password = CharField(max_length=40)
     signature = CharField(max_length=200, blank=True)
+    mail = CharField(max_length=100, blank=True)
+    avatar = TextField(blank=True)
     # register_date = DateTimeField(auto_now_add=True)
 
     def __str__(self):

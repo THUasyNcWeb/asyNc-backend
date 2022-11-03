@@ -172,18 +172,21 @@ class ViewsTests(TestCase):
     """
         test functions in views
     """
+    databases = "__all__"
 
     def setUp(self):
         """
             set up a test set
         """
-        # self.databases = "__all__"
 
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
         self.user_password = ["Alcie", "password", "123456", "密码", "パスワード"]
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []
+        self.default_avatar = ""
+        with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
+            self.default_avatar = f.read()
         for i in range(5):
             user_name = self.user_name_list[i]
             password = self.user_password[i]
@@ -200,7 +203,7 @@ class ViewsTests(TestCase):
         title = "Test"
         content = "test index page in views"
 
-        response = self.client.post('/index/', data=None, content_type="application/json")
+        response = self.client.post('/index', data=None, content_type="application/json")
         self.assertEqual(response.status_code, 200)
 
     def test_login_with_wrong_response_method(self):
@@ -216,7 +219,7 @@ class ViewsTests(TestCase):
                 "password": password
             }
 
-            response = self.client.get('/login/', data=requests, content_type="application/json")
+            response = self.client.get('/login', data=requests, content_type="application/json")
             self.assertEqual(response.status_code, 404)
 
     def test_login_with_wrong_data_type(self):
@@ -227,21 +230,21 @@ class ViewsTests(TestCase):
             "user_name": "Carol",
             "password": 123456
         }
-        response = self.client.post('/login/', data=requests, content_type="application/json")
+        response = self.client.post('/login', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)
 
         requests = {
             "user_name": 666.66,
             "password": "password"
         }
-        response = self.client.post('/login/', data=requests, content_type="application/json")
+        response = self.client.post('/login', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)
 
         requests = {
             "username": "Alice",
             "PassWord": "Alice"
         }
-        response = self.client.post('/login/', data=requests, content_type="application/json")
+        response = self.client.post('/login', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 500)
 
     def test_login(self):
@@ -257,7 +260,7 @@ class ViewsTests(TestCase):
                 "password": password
             }
 
-            response = self.client.post('/login/', data=requests, content_type="application/json")
+            response = self.client.post('/login', data=requests, content_type="application/json")
             self.assertEqual(response.status_code, 200)
 
     def test_wrong_password(self):
@@ -271,7 +274,7 @@ class ViewsTests(TestCase):
                 "password": "Not_A_Pass"
             }
 
-            response = self.client.post('/login/', data=requests, content_type="application/json")
+            response = self.client.post('/login', data=requests, content_type="application/json")
             self.assertEqual(response.status_code, 400)
 
     def test_no_user(self):
@@ -283,7 +286,7 @@ class ViewsTests(TestCase):
             "password": "666"
         }
 
-        response = self.client.post('/login/', data=requests, content_type="application/json")
+        response = self.client.post('/login', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)
 
     def test_register_with_wrong_data_type(self):
@@ -294,21 +297,21 @@ class ViewsTests(TestCase):
             "user_name": "Carol6654",
             "password": 123456
         }
-        response = self.client.post('/register/', data=requests, content_type="application/json")
+        response = self.client.post('/register', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)
 
         requests = {
             "user_name": 666.66,
             "password": "password"
         }
-        response = self.client.post('/register/', data=requests, content_type="application/json")
+        response = self.client.post('/register', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)
 
         requests = {
             "username": "Alice",
             "PassWord": "Alice"
         }
-        response = self.client.post('/register/', data=requests, content_type="application/json")
+        response = self.client.post('/register', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 500)
 
     def test_register_with_wrong_response_method(self):
@@ -320,7 +323,7 @@ class ViewsTests(TestCase):
             "password": "Bob19937"
         }
 
-        response = self.client.get('/register/', data=requests, content_type="application/json")
+        response = self.client.get('/register', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 404)
 
     def test_user_register(self):
@@ -332,7 +335,7 @@ class ViewsTests(TestCase):
             "password": "Bob19937"
         }
 
-        response = self.client.post('/register/', data=requests, content_type="application/json")
+        response = self.client.post('/register', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 200)
 
     def test_name_conflict(self):
@@ -344,27 +347,26 @@ class ViewsTests(TestCase):
             "password": "Bob19937"
         }
 
-        response = self.client.post('/register/', data=requests, content_type="application/json")
+        response = self.client.post('/register', data=requests, content_type="application/json")
         self.assertEqual(response.status_code, 400)
 
     def test_news_response_with_wrong_response_method(self):
         """
             test news response with post method
         """
-        response = self.client.post('/all_news/', data=None, content_type="application/json")
+        response = self.client.post('/allnews', data=None, content_type="application/json")
         self.assertEqual(response.status_code, 404)
 
-    # def test_news_response(self):
-    #     """
-    #         test news response
-    #     """
-    #     for i in range(5):
-    #         response = self.client.get('/all_news/', data=None, content_type="application/json")
-    #         self.assertEqual(response.status_code, 200)
-    #         news_list = json.loads(response.content)["data"]
-    #         self.assertEqual(type(news_list), list)
-    #         for news in news_list:
-    #             self.assertEqual(type(news), dict)
+    def test_news_response(self):
+        """
+            test news response
+        """
+        response = self.client.get('/allnews', data=None, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        news_list = json.loads(response.content)["data"]
+        self.assertEqual(type(news_list), list)
+        for news in news_list:
+            self.assertEqual(type(news), dict)
 
     def test_user_modify_password(self):
         """
@@ -385,7 +387,7 @@ class ViewsTests(TestCase):
             add_token_to_white_list(encoded_token)
             self.assertEqual(check_token_in_white_list(encoded_token), True)
 
-            response = self.client.post('/modify_password/', data=requests,
+            response = self.client.post('/modifypassword', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 200)
@@ -397,7 +399,7 @@ class ViewsTests(TestCase):
                 "new_password": old_password
             }
 
-            response = self.client.post('/modify_password/', data=requests,
+            response = self.client.post('/modifypassword', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 200)
@@ -418,7 +420,7 @@ class ViewsTests(TestCase):
             }
             encoded_token = create_token(user_name=self.user_name_list[i - 1], user_id=i)
             add_token_to_white_list(encoded_token)
-            response = self.client.post('/modify_password/',
+            response = self.client.post('/modifypassword',
                                         data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
@@ -441,7 +443,7 @@ class ViewsTests(TestCase):
             }
             encoded_token = create_token(user_name=user_name, user_id=i)
             add_token_to_white_list(encoded_token)
-            response = self.client.post('/modify_password/', data=requests,
+            response = self.client.post('/modifypassword', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
 
@@ -463,7 +465,7 @@ class ViewsTests(TestCase):
             }
             encoded_token = create_token(user_name=self.user_name_list[i], user_id=i)
             add_token_to_white_list(encoded_token)
-            response = self.client.post('/modify_password/', data=requests,
+            response = self.client.post('/modifypassword', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
 
@@ -476,12 +478,12 @@ class ViewsTests(TestCase):
         for i in range(5):
             user_name = self.user_name_list[i]
             encoded_token = create_token(user_name=user_name, user_id=i)
-            response = self.client.post('/checklogin/', data={},
+            response = self.client.post('/checklogin', data={},
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 401)
             add_token_to_white_list(encoded_token)
-            response = self.client.post('/checklogin/', data={},
+            response = self.client.post('/checklogin', data={},
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 200)
@@ -492,28 +494,28 @@ class ViewsTests(TestCase):
         """
         for i in range(5):
             user_name = self.user_name_list[i]
-            response = self.client.post('/logout/', data={},
+            response = self.client.post('/logout', data={},
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION='')
             self.assertEqual(response.status_code, 401)
             encoded_token = create_token(user_name=user_name, user_id=i)
-            response = self.client.post('/logout/', data={},
+            response = self.client.post('/logout', data={},
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 401)
             add_token_to_white_list(encoded_token)
-            response = self.client.post('/logout/', data={},
+            response = self.client.post('/logout', data={},
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 200)
-            response = self.client.post('/logout/', data={},
+            response = self.client.post('/logout', data={},
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 401)
 
     def test_modify_username(self):
         """
-            test modify_username api
+            test modifyusername api
         """
         for i in range(5):
             user_name = self.user_name_list[i]
@@ -525,29 +527,93 @@ class ViewsTests(TestCase):
                 "old_user_name": user_name,
                 "new_user_name": new_user_name
             }
-            response = self.client.post('/modify_username/', data=requests,
+            response = self.client.post('/modifyusername', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["data"]["user_name"], new_user_name)
             self.assertEqual(check_token_in_white_list(encoded_token), False)
 
-    def test_user_info(self):
+    def test_user_info_get_method(self):
         """
-            test user_info api
+            test get method of userinfo api
         """
+        response = self.client.get(
+            '/userinfo',
+            data={},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=""
+        )
+        self.assertEqual(response.status_code, 401)
+
         for i in range(5):
             user_name = self.user_name_list[i]
             encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
             add_token_to_white_list(encoded_token)
             response = self.client.get(
-                '/user_info/',
+                '/userinfo',
                 data={},
                 content_type="application/json",
                 HTTP_AUTHORIZATION=encoded_token
             )
+            response_data = response.json()["data"]
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json()["data"]["user_name"], user_name)
-            self.assertEqual(isinstance(response.json()["data"]["signature"],str), True)
-            self.assertEqual(isinstance(response.json()["data"]["tags"],list), True)
-            self.assertEqual(response.json()["data"]["tags"], self.user_tags)
+            self.assertEqual(response_data["user_name"], user_name)
+            self.assertEqual(isinstance(response_data["signature"],str), True)
+            self.assertEqual(isinstance(response_data["mail"],str), True)
+            self.assertEqual(isinstance(response_data["avatar"],str), True)
+            self.assertEqual(isinstance(response_data["tags"],list), True)
+            self.assertEqual(response_data["tags"], self.user_tags)
+
+    def test_user_info_post_method(self):
+        """
+            test post method of userinfo api
+        """
+        response = self.client.get(
+            '/userinfo',
+            data={},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=""
+        )
+        self.assertEqual(response.status_code, 401)
+
+        for i in range(5):
+            user_name = self.user_name_list[i]
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            mail = "mail" + str(i) + "@mail.com"
+            signature = "signature" + str(i)
+            response = self.client.post(
+                '/userinfo',
+                data={
+                    "mail": mail,
+                    "avatar": "data:image/jpeg;base64,",
+                    "signature": signature
+                },
+                content_type="application/json",
+                HTTP_AUTHORIZATION=encoded_token
+            )
+            response_data = response.json()["data"]
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response_data["mail"], mail)
+            self.assertEqual(response_data["signature"], signature)
+            self.assertEqual(response_data["avatar"], "data:image/jpeg;base64,")
+            response = self.client.post(
+                '/userinfo',
+                data={
+                    "signature": signature + str(i),
+                    "avatar": "",
+                },
+                content_type="application/json",
+                HTTP_AUTHORIZATION=encoded_token
+            )
+            response = self.client.get(
+                '/userinfo',
+                data={},
+                content_type="application/json",
+                HTTP_AUTHORIZATION=encoded_token
+            )
+            response_data = response.json()["data"]
+            self.assertEqual(response_data["mail"], mail)
+            self.assertEqual(response_data["signature"], signature + str(i))
+            self.assertEqual(response_data["avatar"], self.default_avatar)

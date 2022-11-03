@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from . import tools
-from .models import UserBasicInfo, HomeNews
+from .models import UserBasicInfo
 from .responses import internal_error_response, unauthorized_response, not_found_response
 
 # Create your views here.
@@ -214,40 +214,46 @@ def user_register(request):
 def user_info(request):
     """
     status_code = 200
+    post request:
+    {
+        "signature": "This is my signature.",
+        "avatar": "",
+        "mail": "waifu@diffusion.com"
+    }
     response:
     {
         "code": 0,
         "message": "SUCCESS",
-        "data": [
-            {
-                "id": 1,
-                "user_name": "Bob",
-                "signature": "This is my signature.",
-                "tags": [
-                    "C++",
-                    "中年",
-                    "アニメ"
-                ]
-            }
-        ]
+        "data": {
+            "id": 1,
+            "user_name": "Bob",
+            "signature": "This is my signature.",
+            "tags": [
+                "C++",
+                "中年",
+                "アニメ"
+            ],
+            "mail": "waifu@diffusion.com",
+            "avatar": "",
+        }
     }
     """
     try:
-        if request.method == "GET":
-            try:
-                encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
-                token = tools.decode_token(encoded_token)
-                if not tools.check_token_in_white_list(encoded_token=encoded_token):
-                    return unauthorized_response()
-            except Exception as error:
-                print(error)
-                return unauthorized_response()
+        encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+        token = tools.decode_token(encoded_token)
+        if not tools.check_token_in_white_list(encoded_token=encoded_token):
+            return unauthorized_response()
+        user_name = token["user_name"]
+        user = UserBasicInfo.objects.filter(user_name=user_name).first()
+        if not user:  # user name not existed yet.
+            return unauthorized_response()
+    except Exception as error:
+        print(error)
+        return unauthorized_response()
 
+    try:
+        def return_user_info(user):
             try:
-                user_name = token["user_name"]
-                user = UserBasicInfo.objects.filter(user_name=user_name).first()
-                if not user:  # user name not existed yet.
-                    return unauthorized_response()
                 user_tags = []
                 if user.tags:
                     user_tags_dict = user.tags
@@ -258,6 +264,11 @@ def user_info(request):
                     ):
                         user_tags.append(key_value[0])
 
+                user_avatar = user.avatar
+                if not user_avatar:
+                    with open("data/default_avatar.base64", "r", encoding="utf-8") as avatar_file:
+                        user_avatar = avatar_file.read()
+
                 status_code = 200
                 response_msg = {
                     "code": 0,
@@ -265,10 +276,13 @@ def user_info(request):
                     "data": {
                         "id": user.id,
                         "user_name": user.user_name,
-                        "signature": "This is my signature.",
-                        "tags": user_tags[:10]
+                        "signature": user.signature,
+                        "tags": user_tags[:10],
+                        "mail": user.mail,
+                        "avatar": user_avatar,
                     }
                 }
+
                 return JsonResponse(
                     response_msg,
                     status=status_code,
@@ -277,6 +291,47 @@ def user_info(request):
             except Exception as error:
                 print(error)
                 return internal_error_response(error=str(error))
+        if request.method == "GET":
+            return return_user_info(user=user)
+        if request.method == "POST":
+            try:
+                request_data = json.loads(request.body.decode())
+            except Exception as error:
+                print(error)
+                return JsonResponse(
+                    {
+                        "code": 8,
+                        "message": "POST_DATA_FORMAT_ERROR",
+                        "data": {
+                            "error": error
+                        }
+                    },
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            if "avatar" in request_data:
+                user.avatar = request_data["avatar"]
+            if "mail" in request_data:
+                user.mail = request_data["mail"]
+            if "signature" in request_data:
+                user.signature = request_data["signature"]
+            try:
+                user.full_clean()
+                user.save()
+            except Exception as error:
+                print(error)
+                return JsonResponse(
+                    {
+                        "code": 8,
+                        "message": "POST_DATA_FORMAT_ERROR",
+                        "data": {
+                            "error": error
+                        }
+                    },
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            return return_user_info(user=user)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
@@ -287,17 +342,26 @@ def user_info(request):
 @csrf_exempt
 def news_response(request):
     """
+    request:
+    {
+        "category": "ent"
+    }
     response:
     {
         "code": 0,
         "message": "SUCCESS",
         "data": [
             {
-                "title": "Breaking News",
-                "url": "https://breaking.news",
-                "category": "breaking",
-                "priority": 1,
-                "picture_url": "https://breaking.news/picture.png"
+                category:"科技",
+                news:[
+                    {
+                        "title": "Breaking News",
+                        "url": "https://breaking.news",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "media": "Foobar News",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                    }
+                ]
             }
         ]
     }
@@ -305,28 +369,68 @@ def news_response(request):
     {
         "title": "Breaking News",
         "url": "https://breaking.news",
-        "category": "breaking",
-        "priority": 1,
-        "picture_url": "https://breaking.news/picture.png"
+        "picture_url": "https://breaking.news/picture.png",
+        "media": "Foobar News",
+        "pub_time": "2022-10-21T19:02:16.305Z"
     }
     """
+
     if request.method == "GET":
         # Do not check token until news recommendation is online:
         # encoded_token = request.META.get("HTTP_AUTHORIZATION")
         # token = tools.decode_token(encoded_token)
         # if token_expired(token):
         #  return 401
-        news_list = []
-        for news in HomeNews.objects.using("news").all().order_by("-pub_time")[0:20]:
-            news_list.append(
-                {
-                    "title": news.title,
-                    "url": news.news_url,
-                    "category": news.category,
-                    "priority": 1,
-                    "picture_url": news.first_img_url
-                }
+
+        try:
+            news_category = request.GET.get("category")
+            print("news_category :", news_category)
+        except Exception as error:
+            print(error)
+            return internal_error_response(error="[URL FORMAT ERROR]:\n" + str(error))
+
+        try:
+            with open("config/config.json","r",encoding="utf-8") as config_file:
+                config = json.load(config_file)
+            connection = tools.connect_to_db(config["crawler-db"])
+
+            if news_category in tools.CATEGORY_FRONT_TO_BACKEND:
+                category = tools.CATEGORY_FRONT_TO_BACKEND[news_category]
+            else:
+                category = tools.CATEGORY_FRONT_TO_BACKEND[""]
+
+            db_news_list = tools.get_data_from_db(
+                connection=connection,
+                filter_command="category='{category}'".format(category=category),
+                select=["title","news_url","first_img_url","media","pub_time","id"],
+                limit=200
             )
+            try:
+                news_list = []
+                for news in db_news_list:
+                    news_list.append(
+                        {
+                            "title": news["title"],
+                            "url": news["news_url"],
+                            "picture_url": news["first_img_url"],
+                            "media": news["media"],
+                            "pub_time": news["pub_time"],  # .strftime("%y-%m-%dT%H:%M:%SZ"),
+                            "id": news["id"]
+                        }
+                    )
+            except Exception as error:
+                print(error)
+                return internal_error_response(
+                    error="[Crawler DataBase Format Error]:\n" + str(error)
+                )
+            tools.close_db_connection(connection=connection)
+
+        except Exception as error:
+            print(error)
+            return internal_error_response(
+                error="[Crawler DataBase Connection Error]:\n" + str(error)
+            )
+
         return JsonResponse(
             {"code": 0, "message": "SUCCESS", "data": news_list},
             status=200,
