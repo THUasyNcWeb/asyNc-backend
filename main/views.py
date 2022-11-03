@@ -7,16 +7,17 @@ from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
-from . import tools
-from .models import UserBasicInfo
-from .responses import internal_error_response, unauthorized_response, not_found_response
-
-# Create your views here.
 import zmq
 
 from tinyrpc import RPCClient
 from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
 from tinyrpc.transports.zmq import ZmqClientTransport
+
+from . import tools
+from .models import UserBasicInfo
+from .responses import internal_error_response, unauthorized_response, not_found_response
+
+# Create your views here.
 
 
 # This funtion is for testing only, please delete this funcion before deploying.
@@ -896,6 +897,7 @@ def keyword_essearch(request):
         )
     return internal_error_response()
 
+
 @csrf_exempt
 def keyword_search(request):
     """
@@ -981,4 +983,3 @@ def keyword_search(request):
             headers={'Access-Control-Allow-Origin':'*'}
         )
     return internal_error_response()
-
