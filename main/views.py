@@ -409,8 +409,10 @@ def news_response(request):
                 connection=connection,
                 filter_command="category='{category}'".format(category=category),
                 select=["title","news_url","first_img_url","media","pub_time","id"],
+                order_command="ORDER BY pub_time",
                 limit=200
             )
+
             try:
                 news_list = []
                 for news in db_news_list:
