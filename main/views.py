@@ -399,10 +399,11 @@ def news_response(request, news_category = ""):
                 config = json.load(config_file)
             connection = tools.connect_to_db(config["crawler-db"])
 
-            if news_category in tools.CATEGORY_LIST:
-                category = news_category
+            if news_category in tools.CATEGORY_FRONT_TO_BACKEND:
+                category = tools.CATEGORY_LIST[news_category]
             else:
-                category = ""
+                category = tools.CATEGORY_LIST[""]
+
             db_news_list = tools.get_data_from_db(
                 connection=connection,
                 filter_command="category='{category}'".format(category=category),
