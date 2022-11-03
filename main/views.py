@@ -12,6 +12,11 @@ from .models import UserBasicInfo
 from .responses import internal_error_response, unauthorized_response, not_found_response
 
 # Create your views here.
+import zmq
+
+from tinyrpc import RPCClient
+from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
+from tinyrpc.transports.zmq import ZmqClientTransport
 
 
 # This funtion is for testing only, please delete this funcion before deploying.
@@ -801,7 +806,7 @@ def update_tags(username, tags, user_tags_dict):
 
 
 @csrf_exempt
-def keyword_search(request):
+def keyword_essearch(request):
     """
         keyword_search
     """
@@ -890,3 +895,38 @@ def keyword_search(request):
             headers={'Access-Control-Allow-Origin':'*'}
         )
     return internal_error_response()
+
+@csrf_exempt
+def keyword_search(request):
+    """
+        keyword_search
+    """
+    if request.method == "POST":
+
+        try:
+            body = json.loads(request.body)
+            key_word = body["query"]
+            start_page = int(body["page"]) - 1
+            start_page = min(max(start_page, 0),5000)
+            if isinstance(start_page,int) is False:
+                return JsonResponse(
+                    {"code": 5, "message": "INVALID_PAGE", "data": {"page_count": 0, "news": []}},
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+        except Exception as error:
+            print(error)
+            return JsonResponse(
+                {"code": 1005, "message": "INVALID_FORMAT", "data": {"page_count": 0, "news": []}},
+                status=400,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+        ctx = zmq.Context()
+        rpc_client = RPCClient(
+            JSONRPCProtocol(),
+            ZmqClientTransport.create(ctx, 'tcp://192.168.227.128:5001')
+        )
+        str_server = rpc_client.get_proxy()
+        all_news = str_server.search_news(key_word,start_page)
+    return internal_error_response()
+
