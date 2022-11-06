@@ -14,7 +14,7 @@ from tinyrpc.transports.http import HttpPostClientTransport
 
 from . import tools
 from .models import UserBasicInfo
-from .responses import internal_error_response, unauthorized_response, not_found_response
+from .responses import internal_error_response, unauthorized_response, not_found_response, post_data_format_error_response
 
 # Create your views here.
 
@@ -303,17 +303,7 @@ def user_info(request):
                 request_data = json.loads(request.body.decode())
             except Exception as error:
                 print(error)
-                return JsonResponse(
-                    {
-                        "code": 8,
-                        "message": "POST_DATA_FORMAT_ERROR",
-                        "data": {
-                            "error": error
-                        }
-                    },
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
+                return post_data_format_error_response(error)
             if "avatar" in request_data:
                 user.avatar = request_data["avatar"]
             if "mail" in request_data:
@@ -522,6 +512,30 @@ def user_modify_password(request):
             print(error)
             return internal_error_response(error=str(error))
     return internal_error_response()
+
+
+# modify a user's avatar
+@csrf_exempt
+def modify_avatar(request):
+    """
+        request:
+            form:
+                avatar: bin
+    """
+    if request.method == "POST":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            token = tools.decode_token(encoded_token)
+            if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+        if not request.FILES.items():
+            return post_data_format_error_response("avatar file not found.")
+        for (file_name, file) in request.FILES.items():
+            break
+    return not_found_response()
 
 
 # modify a user's username
