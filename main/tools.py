@@ -87,7 +87,7 @@ def connect_to_db(configure):
     return connection
 
 
-def return_user_info(user):
+def return_user_info(user, user_token=""):
     """
         return user info
     """
@@ -120,6 +120,8 @@ def return_user_info(user):
             "code": 0,
             "message": "SUCCESS",
         }
+        if user_token:
+            response_msg["data"]["token"] = user_token
 
         return JsonResponse(
             data=response_msg,
