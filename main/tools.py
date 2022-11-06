@@ -12,7 +12,7 @@ import jwt
 import psycopg2
 from PIL import Image
 from django.http import JsonResponse
-from .models import UserBasicInfo, News
+from .models import UserBasicInfo
 from .responses import internal_error_response
 
 EXPIRE_TIME = 7 * 86400  # 30s for testing. 7 days for deploy.
@@ -49,7 +49,7 @@ CATEGORY_FRONT_TO_BACKEND = {
 }
 
 
-def add_to_favorites(user : UserBasicInfo, news : News):
+def add_to_favorites(user: UserBasicInfo, news: dict):
     """
         add a news to user's favorites
     """
@@ -58,7 +58,7 @@ def add_to_favorites(user : UserBasicInfo, news : News):
     user.save()
 
 
-def get_favorites(user : UserBasicInfo):
+def get_favorites(user: UserBasicInfo):
     """
         get favorites list from a user
     """
