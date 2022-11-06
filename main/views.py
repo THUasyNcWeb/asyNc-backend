@@ -214,6 +214,63 @@ def user_register(request):
     return not_found_response()
 
 
+# modify user info
+@csrf_exempt
+def modify_user_info(request):
+    """
+    status_code = 200
+    post request:
+    {
+        "signature": "This is my signature.",
+        "avatar": "",
+        "mail": "waifu@diffusion.com"
+    }
+    """
+    try:
+        if request.method == "POST":
+            try:
+                request_data = json.loads(request.body.decode())
+            except Exception as error:
+                print(error)
+                return JsonResponse(
+                    {
+                        "code": 8,
+                        "message": "POST_DATA_FORMAT_ERROR",
+                        "data": {
+                            "error": error
+                        }
+                    },
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            if "avatar" in request_data:
+                user.avatar = request_data["avatar"]
+            if "mail" in request_data:
+                user.mail = request_data["mail"]
+            if "signature" in request_data:
+                user.signature = request_data["signature"]
+            try:
+                user.full_clean()
+                user.save()
+            except Exception as error:
+                print(error)
+                return JsonResponse(
+                    {
+                        "code": 8,
+                        "message": "POST_DATA_FORMAT_ERROR",
+                        "data": {
+                            "error": error
+                        }
+                    },
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            return return_user_info(user=user)
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
+    return not_found_response()
+
 # return user info
 @csrf_exempt
 def user_info(request):
@@ -297,45 +354,6 @@ def user_info(request):
                 print(error)
                 return internal_error_response(error=str(error))
         if request.method == "GET":
-            return return_user_info(user=user)
-        if request.method == "POST":
-            try:
-                request_data = json.loads(request.body.decode())
-            except Exception as error:
-                print(error)
-                return JsonResponse(
-                    {
-                        "code": 8,
-                        "message": "POST_DATA_FORMAT_ERROR",
-                        "data": {
-                            "error": error
-                        }
-                    },
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
-            if "avatar" in request_data:
-                user.avatar = request_data["avatar"]
-            if "mail" in request_data:
-                user.mail = request_data["mail"]
-            if "signature" in request_data:
-                user.signature = request_data["signature"]
-            try:
-                user.full_clean()
-                user.save()
-            except Exception as error:
-                print(error)
-                return JsonResponse(
-                    {
-                        "code": 8,
-                        "message": "POST_DATA_FORMAT_ERROR",
-                        "data": {
-                            "error": error
-                        }
-                    },
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
             return return_user_info(user=user)
     except Exception as error:
         print(error)
