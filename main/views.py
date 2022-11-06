@@ -15,7 +15,8 @@ from tinyrpc.transports.http import HttpPostClientTransport
 
 from . import tools
 from .models import UserBasicInfo
-from .responses import internal_error_response, unauthorized_response, not_found_response, post_data_format_error_response
+from .responses import internal_error_response, unauthorized_response, not_found_response
+from .responses import post_data_format_error_response
 
 # Create your views here.
 
@@ -258,17 +259,7 @@ def modify_user_info(request):
                 user.save()
             except Exception as error:
                 print(error)
-                return JsonResponse(
-                    {
-                        "code": 8,
-                        "message": "POST_DATA_FORMAT_ERROR",
-                        "data": {
-                            "error": error
-                        }
-                    },
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
+                return post_data_format_error_response(error)
             return tools.return_user_info(user=user)
     except Exception as error:
         print(error)
@@ -534,7 +525,7 @@ def modify_avatar(request):
             return post_data_format_error_response("avatar file not found.")
         for (file_name, file) in request.FILES.items():
             print("file_name :", file_name)
-            file_content=file.file.read()
+            file_content = file.file.read()
             print(base64.b64encode(file_content).decode()[:100])
             user.avatar = "data:image/png;base64," + base64.b64encode(file_content).decode()
             try:
