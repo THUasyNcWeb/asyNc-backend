@@ -7,6 +7,7 @@ from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
+import jieba
 
 from tinyrpc import RPCClient
 from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
@@ -760,25 +761,27 @@ def get_location(info_str,start_tag='<span class="szz-type">',end_tag='</span>')
     Returns:
         location_list
     """
-
     start = len(start_tag)
     end = len(end_tag)
     location_infos = []
     pattern = start_tag + '(.+?)' + end_tag
+    try:
+        for idx,m_res in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
+            location_info = []
 
-    for idx,m_res in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
-        location_info = []
+            if idx == 0:
+                location_info.append(m_res.span()[0])
+                location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
+            else:
+                location_info.append(m_res.span()[0] - idx * (start + end))
+                location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
 
-        if idx == 0:
-            location_info.append(m_res.span()[0])
-            location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
-        else:
-            location_info.append(m_res.span()[0] - idx * (start + end))
-            location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
+            location_infos.append(location_info)
 
-        location_infos.append(location_info)
-
-    return location_infos
+        return location_infos
+    except Exception as error:
+        print(error)
+        return location_infos
 
 
 @csrf_exempt
@@ -900,6 +903,42 @@ def keyword_essearch(request):
 
 
 @csrf_exempt
+def check_contain(title, content, title_keywords, content_keywords, must, must_not):
+    """
+    Check whether satisfy the need
+    """
+    try:
+        for no_contain in must_not:
+            if title.find(no_contain) != -1:
+                return False
+            if content.find(no_contain) != -1:
+                return False
+
+        for yes in must:
+            yes_len = len(yes)
+            flag = False
+            for title_keyword in title_keywords:
+                start = title_keyword[0]
+                end = start + yes_len
+                target = title[start:end]
+                if target == yes:
+                    flag = True
+            if flag is False:
+                for content_keyword in content_keywords:
+                    start = content_keyword[0]
+                    end = start + yes_len
+                    target = content[start:end]
+                    if target == yes:
+                        flag = True
+            if flag is False:
+                return False
+        return True
+    except Exception as error:
+        print(error)
+        return False
+
+
+@csrf_exempt
 def keyword_search(request):
     """
         keyword_search
@@ -909,6 +948,8 @@ def keyword_search(request):
         try:
             body = json.loads(request.body)
             key_word = body["query"]
+            include = body["include"]
+            exclude = body["exclude"]
             start_page = int(body["page"]) - 1
             start_page = min(max(start_page, 0),5000)
             if isinstance(start_page,int) is False:
@@ -932,9 +973,22 @@ def keyword_search(request):
         )
         str_server = rpc_client.get_proxy()
         str_server = rpc_client.get_proxy()
-        all_news = str_server.search_news(key_word,start_page)
+        if len(include) != 0 or len(exclude) != 0:
+            keyword_list = list(jieba.cut_for_search(key_word))
+            include_list = []
+            exclude_list = []
+            for must in include:
+                include_list += jieba.cut_for_search(must)
+            for must_not in exclude:
+                exclude_list += jieba.cut_for_search(must_not)
+            include_list = list(set(include_list))
+            exclude_list = list(set(exclude_list))
+            all_news = str_server.search_keywords(keyword_list,
+                                                  list(include_list),
+                                                  list(exclude_list),0)
+        else:
+            all_news = str_server.search_news(key_word,start_page)
         total_num = ceil(all_news['total'] / 10)
-        # print(all_news['total'])
         if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
@@ -951,7 +1005,10 @@ def keyword_search(request):
             content = data['content']
             title_keywords = get_location(title)
             keywords = get_location(content)
-
+            if content is None:
+                content = ""
+            if title is None:
+                title = ""
             piece_new = {
                 "title": title.replace('<span class="szz-type">','').replace('</span>',''),
                 "url": data['url'],
@@ -962,7 +1019,14 @@ def keyword_search(request):
                 "title_keywords": title_keywords,
                 "keywords": keywords
             }
-            news += [piece_new]
+            if len(include) != 0 or len(exclude) != 0:
+                if check_contain(piece_new['title'], piece_new['content'],
+                                 piece_new['title_keywords'], piece_new['keywords'],
+                                 list(include_list), list(exclude_list)) is True:
+                    news += [piece_new]
+                total_num = ceil(len(news) / 10)
+            else:
+                news += [piece_new]
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
                     and data['tags'] != [""]:
                 tags += data['tags']
