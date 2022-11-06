@@ -290,6 +290,7 @@ def modify_user_info(request):
                         user.full_clean()
                         user.save()
                         user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
+                        tools.add_token_to_white_list(encoded_token=user_token)
                     except Exception as error:
                         print(error)
                         return internal_error_response(error=str(error))
