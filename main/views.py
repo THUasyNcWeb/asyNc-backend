@@ -3,6 +3,7 @@
 """
 import json
 import re
+import base64
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +16,7 @@ from tinyrpc.transports.http import HttpPostClientTransport
 from . import tools
 from .models import UserBasicInfo
 from .responses import internal_error_response, unauthorized_response, not_found_response
+from .responses import post_data_format_error_response
 
 # Create your views here.
 
@@ -245,17 +247,7 @@ def modify_user_info(request):
                 request_data = json.loads(request.body.decode())
             except Exception as error:
                 print(error)
-                return JsonResponse(
-                    {
-                        "code": 8,
-                        "message": "POST_DATA_FORMAT_ERROR",
-                        "data": {
-                            "error": error
-                        }
-                    },
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
+                return post_data_format_error_response(error)
             if "avatar" in request_data:
                 user.avatar = request_data["avatar"]
             if "mail" in request_data:
@@ -267,17 +259,7 @@ def modify_user_info(request):
                 user.save()
             except Exception as error:
                 print(error)
-                return JsonResponse(
-                    {
-                        "code": 8,
-                        "message": "POST_DATA_FORMAT_ERROR",
-                        "data": {
-                            "error": error
-                        }
-                    },
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
+                return post_data_format_error_response(error)
             return tools.return_user_info(user=user)
     except Exception as error:
         print(error)
@@ -515,6 +497,46 @@ def user_modify_password(request):
             print(error)
             return internal_error_response(error=str(error))
     return internal_error_response()
+
+
+# modify a user's avatar
+@csrf_exempt
+def modify_avatar(request):
+    """
+        request:
+            form:
+                avatar: bin
+    """
+    if request.method == "POST":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            token = tools.decode_token(encoded_token)
+            if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                return unauthorized_response()
+            user_name = token["user_name"]
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if not user:  # user name not existed yet.
+                return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+
+        if not request.FILES.items():
+            return post_data_format_error_response("avatar file not found.")
+        for (file_name, file) in request.FILES.items():
+            print("file_name :", file_name)
+            file_content = file.file.read()
+            print(base64.b64encode(file_content).decode()[:100])
+            user.avatar = "data:image/png;base64," + base64.b64encode(file_content).decode()
+            try:
+                user.full_clean()
+                user.save()
+            except Exception as error:
+                print(error)
+                return post_data_format_error_response(str(error))
+            break
+        return tools.return_user_info(user=user)
+    return not_found_response()
 
 
 # modify a user's username
