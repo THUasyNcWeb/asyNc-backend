@@ -55,3 +55,20 @@ def not_found_response():
             'Access-Control-Allow-Origin':'*'
         }
     )
+
+
+def post_data_format_error_response(error=""):
+    """
+        return post data format error
+    """
+    return JsonResponse(
+        {
+            "code": 8,
+            "message": "POST_DATA_FORMAT_ERROR",
+            "data": {
+                "error": error
+            }
+        },
+        status=400,
+        headers={'Access-Control-Allow-Origin':'*'}
+    )

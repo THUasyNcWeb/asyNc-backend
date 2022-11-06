@@ -565,9 +565,9 @@ class ViewsTests(TestCase):
             self.assertEqual(isinstance(response_data["tags"],list), True)
             self.assertEqual(response_data["tags"], self.user_tags)
 
-    def test_user_info_post_method(self):
+    def test_modify_user_info_post_method(self):
         """
-            test post method of userinfo api
+            test post method of modifyuserinfo api
         """
         response = self.client.get(
             '/userinfo',
@@ -584,7 +584,7 @@ class ViewsTests(TestCase):
             mail = "mail" + str(i) + "@mail.com"
             signature = "signature" + str(i)
             response = self.client.post(
-                '/userinfo',
+                '/modifyuserinfo',
                 data={
                     "mail": mail,
                     "avatar": "data:image/jpeg;base64,",
@@ -599,7 +599,7 @@ class ViewsTests(TestCase):
             self.assertEqual(response_data["signature"], signature)
             self.assertEqual(response_data["avatar"], "data:image/jpeg;base64,")
             response = self.client.post(
-                '/userinfo',
+                '/modifyuserinfo',
                 data={
                     "signature": signature + str(i),
                     "avatar": "",
@@ -617,3 +617,34 @@ class ViewsTests(TestCase):
             self.assertEqual(response_data["mail"], mail)
             self.assertEqual(response_data["signature"], signature + str(i))
             self.assertEqual(response_data["avatar"], self.default_avatar)
+
+    def test_modify_user_info_username(self):
+        """
+            test modify username in modifyuserinfo api
+        """
+        for i in range(5):
+            user_name = self.user_name_list[i]
+            new_user_name = "new_" + user_name
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            mail = "mail" + str(i) + "@mail.com"
+            signature = "signature" + str(i)
+
+            requests = {
+                "new_user_name": new_user_name,
+                "mail": mail,
+                "avatar": "data:image/jpeg;base64,",
+                "signature": signature
+            }
+            response = self.client.post('/modifyuserinfo', data=requests,
+                                        content_type="application/json",
+                                        HTTP_AUTHORIZATION=encoded_token)
+            response_data = response.json()["data"]
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response_data["user_name"], new_user_name)
+            self.assertEqual(check_token_in_white_list(encoded_token), False)
+            self.assertEqual(response_data["mail"], mail)
+            self.assertEqual(response_data["signature"], signature)
+            self.assertEqual(response_data["avatar"], "data:image/jpeg;base64,")
+            self.assertEqual(check_token_in_white_list(response_data['token']), True)

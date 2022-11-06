@@ -16,6 +16,7 @@ from tinyrpc.transports.http import HttpPostClientTransport
 from . import tools
 from .models import UserBasicInfo
 from .responses import internal_error_response, unauthorized_response, not_found_response
+from .responses import post_data_format_error_response
 
 # Create your views here.
 
@@ -215,6 +216,105 @@ def user_register(request):
     return not_found_response()
 
 
+# modify user info
+@csrf_exempt
+def modify_user_info(request):
+    """
+    status_code = 200
+    post request:
+    {
+        "old_user_name": "Alice",
+        "new_user_name": "Bob",
+        "signature": "This is my signature.",
+        "avatar": "",
+        "mail": "waifu@diffusion.com"
+    }
+    """
+    try:
+        encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+        user_token = encoded_token
+        token = tools.decode_token(encoded_token)
+        if not tools.check_token_in_white_list(encoded_token=encoded_token):
+            return unauthorized_response()
+        user_name = token["user_name"]
+        user = UserBasicInfo.objects.filter(user_name=user_name).first()
+        if not user:  # user name not existed yet.
+            return unauthorized_response()
+    except Exception as error:
+        print(error)
+        return unauthorized_response()
+
+    try:
+        if request.method == "POST":
+            try:
+                request_data = json.loads(request.body.decode())
+            except Exception as error:
+                print(error)
+                return post_data_format_error_response(error)
+            if "new_user_name" in request_data:
+                try:
+                    old_user_name = user_name
+                    new_user_name = request_data["new_user_name"]
+                except Exception as error:
+                    print(error)
+                    return internal_error_response(error=str(error))
+
+                if not old_user_name == new_user_name:
+                    try:
+                        user = UserBasicInfo.objects.filter(user_name=old_user_name).first()
+                        if not user:  # user name not existed yet.
+                            status_code = 400
+                            response_msg = {
+                                "code": 6,
+                                "message": "WRONG_USERNAME",
+                                "data": {}
+                            }
+                            return JsonResponse(
+                                response_msg,
+                                status=status_code,
+                                headers={'Access-Control-Allow-Origin':'*'}
+                            )
+                        if not isinstance(new_user_name, str):
+                            status_code = 400
+                            response_msg = {
+                                "code": 3,
+                                "message": "INVALID_USERNAME_FORMAT",
+                                "data": {}
+                            }
+                            return JsonResponse(
+                                response_msg,
+                                status=status_code,
+                                headers={'Access-Control-Allow-Origin':'*'}
+                            )
+                        tools.del_all_token_of_an_user(user_id=user.id)
+                        user.user_name = new_user_name
+                        user.full_clean()
+                        user.save()
+                        user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
+                        tools.add_token_to_white_list(encoded_token=user_token)
+                    except Exception as error:
+                        print(error)
+                        return internal_error_response(error=str(error))
+
+            if "avatar" in request_data:
+                user.avatar = request_data["avatar"]
+            if "mail" in request_data:
+                user.mail = request_data["mail"]
+            if "signature" in request_data:
+                user.signature = request_data["signature"]
+            try:
+                user.full_clean()
+                user.save()
+            except Exception as error:
+                print(error)
+                return post_data_format_error_response(error)
+            return tools.return_user_info(user=user, user_token=user_token)
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
+    return not_found_response()
+
+
 # return user info
 @csrf_exempt
 def user_info(request):
@@ -258,86 +358,8 @@ def user_info(request):
         return unauthorized_response()
 
     try:
-        def return_user_info(user):
-            try:
-                user_tags = []
-                if user.tags:
-                    user_tags_dict = user.tags
-                    for key_value in sorted(
-                        user_tags_dict.items(),
-                        key=lambda kv:(kv[1], kv[0]),
-                        reverse=True
-                    ):
-                        user_tags.append(key_value[0])
-
-                user_avatar = user.avatar
-                if not user_avatar:
-                    with open("data/default_avatar.base64", "r", encoding="utf-8") as avatar_file:
-                        user_avatar = avatar_file.read()
-
-                status_code = 200
-                response_msg = {
-                    "code": 0,
-                    "message": "SUCCESS",
-                    "data": {
-                        "id": user.id,
-                        "user_name": user.user_name,
-                        "signature": user.signature,
-                        "tags": user_tags[:10],
-                        "mail": user.mail,
-                        "avatar": user_avatar,
-                    }
-                }
-
-                return JsonResponse(
-                    response_msg,
-                    status=status_code,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
-            except Exception as error:
-                print(error)
-                return internal_error_response(error=str(error))
         if request.method == "GET":
-            return return_user_info(user=user)
-        if request.method == "POST":
-            try:
-                request_data = json.loads(request.body.decode())
-            except Exception as error:
-                print(error)
-                return JsonResponse(
-                    {
-                        "code": 8,
-                        "message": "POST_DATA_FORMAT_ERROR",
-                        "data": {
-                            "error": error
-                        }
-                    },
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
-            if "avatar" in request_data:
-                user.avatar = request_data["avatar"]
-            if "mail" in request_data:
-                user.mail = request_data["mail"]
-            if "signature" in request_data:
-                user.signature = request_data["signature"]
-            try:
-                user.full_clean()
-                user.save()
-            except Exception as error:
-                print(error)
-                return JsonResponse(
-                    {
-                        "code": 8,
-                        "message": "POST_DATA_FORMAT_ERROR",
-                        "data": {
-                            "error": error
-                        }
-                    },
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
-            return return_user_info(user=user)
+            return tools.return_user_info(user=user)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
@@ -409,7 +431,7 @@ def news_response(request):
                 connection=connection,
                 filter_command="category='{category}'".format(category=category),
                 select=["title","news_url","first_img_url","media","pub_time","id"],
-                order_command="ORDER BY pub_time",
+                order_command="ORDER BY pub_time DESC",
                 limit=200
             )
 
@@ -523,6 +545,45 @@ def user_modify_password(request):
             print(error)
             return internal_error_response(error=str(error))
     return internal_error_response()
+
+
+# modify a user's avatar
+@csrf_exempt
+def modify_avatar(request):
+    """
+        request:
+            form:
+                avatar: bin
+    """
+    if request.method == "POST":
+        try:
+            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+            token = tools.decode_token(encoded_token)
+            if not tools.check_token_in_white_list(encoded_token=encoded_token):
+                return unauthorized_response()
+            user_name = token["user_name"]
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if not user:  # user name not existed yet.
+                return unauthorized_response()
+        except Exception as error:
+            print(error)
+            return unauthorized_response()
+
+        if not request.FILES.items():
+            return post_data_format_error_response("avatar file not found.")
+        for (_, file) in request.FILES.items():
+            resized_image = tools.resize_image(file.file)
+            user.avatar = "data:image/png;base64," + tools.pil_to_base64(resized_image)
+            # print("user.avatar :", user.avatar)
+            try:
+                user.full_clean()
+                user.save()
+            except Exception as error:
+                print(error)
+                return post_data_format_error_response(str(error))
+            break
+        return tools.return_user_info(user=user)
+    return not_found_response()
 
 
 # modify a user's username
