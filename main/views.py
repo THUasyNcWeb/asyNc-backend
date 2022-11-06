@@ -401,7 +401,7 @@ def news_response(request):
                 connection=connection,
                 filter_command="category='{category}'".format(category=category),
                 select=["title","news_url","first_img_url","media","pub_time","id"],
-                order_command="ORDER BY pub_time",
+                order_command="ORDER BY pub_time DESC",
                 limit=200
             )
 
