@@ -5,8 +5,12 @@ Created by sxx
 """
 import hashlib
 import time
+import base64
+from io import BytesIO
+
 import jwt
 import psycopg2
+from PIL import Image
 from django.http import JsonResponse
 from .responses import internal_error_response
 
@@ -42,6 +46,25 @@ CATEGORY_FRONT_TO_BACKEND = {
     "fashion": "women",
     "health": "health",
 }
+
+
+def resize_image(image, size=(512, 512)):
+    """
+        cut image
+    """
+    img = Image.open(image)
+    cropped_image = img.resize(size, Image.ANTIALIAS)
+    return cropped_image
+
+
+def pil_to_base64(image):
+    """
+        transfer pil image to base64
+    """
+    buffer = BytesIO()
+    image.save(buffer, format='PNG')
+    byte_data = buffer.getvalue()
+    return base64.b64encode(byte_data).decode()
 
 
 def connect_to_db(configure):
