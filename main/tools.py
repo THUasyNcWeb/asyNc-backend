@@ -8,7 +8,7 @@ import time
 import jwt
 import psycopg2
 from django.http import JsonResponse
-from .responses import internal_error_response, unauthorized_response, not_found_response
+from .responses import internal_error_response
 
 EXPIRE_TIME = 7 * 86400  # 30s for testing. 7 days for deploy.
 SECRET_KEY = "A good coder is all you need."
@@ -86,8 +86,6 @@ def return_user_info(user):
 
         status_code = 200
         response_msg = {
-            "code": 0,
-            "message": "SUCCESS",
             "data": {
                 "id": user.id,
                 "user_name": user.user_name,
@@ -95,17 +93,20 @@ def return_user_info(user):
                 "tags": user_tags[:10],
                 "mail": user.mail,
                 "avatar": user_avatar,
-            }
+            },
+            "code": 0,
+            "message": "SUCCESS",
         }
 
         return JsonResponse(
-            response_msg,
+            data=response_msg,
             status=status_code,
             headers={'Access-Control-Allow-Origin':'*'}
         )
-    except Exception as error:
-        print(error)
-        return internal_error_response(error=str(error))
+
+    except Exception as internal_error:
+        print(internal_error)
+        return internal_error_response(error=str(internal_error))
 
 
 def get_data_from_db(connection, select="*", filter_command="", order_command="", limit=200):

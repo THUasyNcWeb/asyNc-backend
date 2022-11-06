@@ -227,6 +227,19 @@ def modify_user_info(request):
     }
     """
     try:
+        encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+        token = tools.decode_token(encoded_token)
+        if not tools.check_token_in_white_list(encoded_token=encoded_token):
+            return unauthorized_response()
+        user_name = token["user_name"]
+        user = UserBasicInfo.objects.filter(user_name=user_name).first()
+        if not user:  # user name not existed yet.
+            return unauthorized_response()
+    except Exception as error:
+        print(error)
+        return unauthorized_response()
+
+    try:
         if request.method == "POST":
             try:
                 request_data = json.loads(request.body.decode())
@@ -265,11 +278,12 @@ def modify_user_info(request):
                     status=400,
                     headers={'Access-Control-Allow-Origin':'*'}
                 )
-            return return_user_info(user=user)
+            return tools.return_user_info(user=user)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
     return not_found_response()
+
 
 # return user info
 @csrf_exempt
@@ -315,7 +329,7 @@ def user_info(request):
 
     try:
         if request.method == "GET":
-            return return_user_info(user=user)
+            return tools.return_user_info(user=user)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
