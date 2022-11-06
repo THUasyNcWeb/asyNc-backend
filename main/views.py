@@ -3,7 +3,6 @@
 """
 import json
 import re
-import base64
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -523,11 +522,10 @@ def modify_avatar(request):
 
         if not request.FILES.items():
             return post_data_format_error_response("avatar file not found.")
-        for (file_name, file) in request.FILES.items():
-            print("file_name :", file_name)
-            file_content = file.file.read()
-            print(base64.b64encode(file_content).decode()[:100])
-            user.avatar = "data:image/png;base64," + base64.b64encode(file_content).decode()
+        for (_, file) in request.FILES.items():
+            resized_image = tools.resize_image(file.file)
+            user.avatar = "data:image/png;base64," + tools.pil_to_base64(resized_image)
+            # print("user.avatar :", user.avatar)
             try:
                 user.full_clean()
                 user.save()
