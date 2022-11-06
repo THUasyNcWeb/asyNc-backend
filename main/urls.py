@@ -18,4 +18,5 @@ urlpatterns = [
     path('modifyusername', views.user_modify_username),
     path('userinfo', views.user_info),
     path('modifyavatar', views.modify_avatar),
+    path('modifyuserinfo', views.modify_user_info),
 ]

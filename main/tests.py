@@ -565,9 +565,9 @@ class ViewsTests(TestCase):
             self.assertEqual(isinstance(response_data["tags"],list), True)
             self.assertEqual(response_data["tags"], self.user_tags)
 
-    def test_user_info_post_method(self):
+    def test_modify_user_info_post_method(self):
         """
-            test post method of userinfo api
+            test post method of modifyuserinfo api
         """
         response = self.client.get(
             '/userinfo',
@@ -584,7 +584,7 @@ class ViewsTests(TestCase):
             mail = "mail" + str(i) + "@mail.com"
             signature = "signature" + str(i)
             response = self.client.post(
-                '/userinfo',
+                '/modifyuserinfo',
                 data={
                     "mail": mail,
                     "avatar": "data:image/jpeg;base64,",
@@ -599,7 +599,7 @@ class ViewsTests(TestCase):
             self.assertEqual(response_data["signature"], signature)
             self.assertEqual(response_data["avatar"], "data:image/jpeg;base64,")
             response = self.client.post(
-                '/userinfo',
+                '/modifyuserinfo',
                 data={
                     "signature": signature + str(i),
                     "avatar": "",
