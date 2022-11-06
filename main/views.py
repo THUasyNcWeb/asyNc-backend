@@ -222,6 +222,8 @@ def modify_user_info(request):
     status_code = 200
     post request:
     {
+        "old_user_name": "Alice",
+        "new_user_name": "Bob",
         "signature": "This is my signature.",
         "avatar": "",
         "mail": "waifu@diffusion.com"
@@ -229,6 +231,7 @@ def modify_user_info(request):
     """
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+        user_token = encoded_token
         token = tools.decode_token(encoded_token)
         if not tools.check_token_in_white_list(encoded_token=encoded_token):
             return unauthorized_response()
@@ -247,6 +250,51 @@ def modify_user_info(request):
             except Exception as error:
                 print(error)
                 return post_data_format_error_response(error)
+            if "new_user_name" in request_data:
+                try:
+                    old_user_name = user_name
+                    new_user_name = request_data["new_user_name"]
+                except Exception as error:
+                    print(error)
+                    return internal_error_response(error=str(error))
+
+                if not old_user_name == new_user_name:
+                    try:
+                        user = UserBasicInfo.objects.filter(user_name=old_user_name).first()
+                        if not user:  # user name not existed yet.
+                            status_code = 400
+                            response_msg = {
+                                "code": 6,
+                                "message": "WRONG_USERNAME",
+                                "data": {}
+                            }
+                            return JsonResponse(
+                                response_msg,
+                                status=status_code,
+                                headers={'Access-Control-Allow-Origin':'*'}
+                            )
+                        if not isinstance(new_user_name, str):
+                            status_code = 400
+                            response_msg = {
+                                "code": 3,
+                                "message": "INVALID_USERNAME_FORMAT",
+                                "data": {}
+                            }
+                            return JsonResponse(
+                                response_msg,
+                                status=status_code,
+                                headers={'Access-Control-Allow-Origin':'*'}
+                            )
+                        tools.del_all_token_of_an_user(user_id=user.id)
+                        user.user_name = new_user_name
+                        user.full_clean()
+                        user.save()
+                        user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
+                        tools.add_token_to_white_list(encoded_token=user_token)
+                    except Exception as error:
+                        print(error)
+                        return internal_error_response(error=str(error))
+
             if "avatar" in request_data:
                 user.avatar = request_data["avatar"]
             if "mail" in request_data:
@@ -259,7 +307,7 @@ def modify_user_info(request):
             except Exception as error:
                 print(error)
                 return post_data_format_error_response(error)
-            return tools.return_user_info(user=user)
+            return tools.return_user_info(user=user, user_token=user_token)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
