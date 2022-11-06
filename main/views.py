@@ -314,45 +314,6 @@ def user_info(request):
         return unauthorized_response()
 
     try:
-        def return_user_info(user):
-            try:
-                user_tags = []
-                if user.tags:
-                    user_tags_dict = user.tags
-                    for key_value in sorted(
-                        user_tags_dict.items(),
-                        key=lambda kv:(kv[1], kv[0]),
-                        reverse=True
-                    ):
-                        user_tags.append(key_value[0])
-
-                user_avatar = user.avatar
-                if not user_avatar:
-                    with open("data/default_avatar.base64", "r", encoding="utf-8") as avatar_file:
-                        user_avatar = avatar_file.read()
-
-                status_code = 200
-                response_msg = {
-                    "code": 0,
-                    "message": "SUCCESS",
-                    "data": {
-                        "id": user.id,
-                        "user_name": user.user_name,
-                        "signature": user.signature,
-                        "tags": user_tags[:10],
-                        "mail": user.mail,
-                        "avatar": user_avatar,
-                    }
-                }
-
-                return JsonResponse(
-                    response_msg,
-                    status=status_code,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
-            except Exception as error:
-                print(error)
-                return internal_error_response(error=str(error))
         if request.method == "GET":
             return return_user_info(user=user)
     except Exception as error:
