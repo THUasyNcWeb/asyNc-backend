@@ -214,6 +214,77 @@ def user_register(request):
     return not_found_response()
 
 
+# modify user info
+@csrf_exempt
+def modify_user_info(request):
+    """
+    status_code = 200
+    post request:
+    {
+        "signature": "This is my signature.",
+        "avatar": "",
+        "mail": "waifu@diffusion.com"
+    }
+    """
+    try:
+        encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+        token = tools.decode_token(encoded_token)
+        if not tools.check_token_in_white_list(encoded_token=encoded_token):
+            return unauthorized_response()
+        user_name = token["user_name"]
+        user = UserBasicInfo.objects.filter(user_name=user_name).first()
+        if not user:  # user name not existed yet.
+            return unauthorized_response()
+    except Exception as error:
+        print(error)
+        return unauthorized_response()
+
+    try:
+        if request.method == "POST":
+            try:
+                request_data = json.loads(request.body.decode())
+            except Exception as error:
+                print(error)
+                return JsonResponse(
+                    {
+                        "code": 8,
+                        "message": "POST_DATA_FORMAT_ERROR",
+                        "data": {
+                            "error": error
+                        }
+                    },
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            if "avatar" in request_data:
+                user.avatar = request_data["avatar"]
+            if "mail" in request_data:
+                user.mail = request_data["mail"]
+            if "signature" in request_data:
+                user.signature = request_data["signature"]
+            try:
+                user.full_clean()
+                user.save()
+            except Exception as error:
+                print(error)
+                return JsonResponse(
+                    {
+                        "code": 8,
+                        "message": "POST_DATA_FORMAT_ERROR",
+                        "data": {
+                            "error": error
+                        }
+                    },
+                    status=400,
+                    headers={'Access-Control-Allow-Origin':'*'}
+                )
+            return tools.return_user_info(user=user)
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
+    return not_found_response()
+
+
 # return user info
 @csrf_exempt
 def user_info(request):
@@ -257,86 +328,8 @@ def user_info(request):
         return unauthorized_response()
 
     try:
-        def return_user_info(user):
-            try:
-                user_tags = []
-                if user.tags:
-                    user_tags_dict = user.tags
-                    for key_value in sorted(
-                        user_tags_dict.items(),
-                        key=lambda kv:(kv[1], kv[0]),
-                        reverse=True
-                    ):
-                        user_tags.append(key_value[0])
-
-                user_avatar = user.avatar
-                if not user_avatar:
-                    with open("data/default_avatar.base64", "r", encoding="utf-8") as avatar_file:
-                        user_avatar = avatar_file.read()
-
-                status_code = 200
-                response_msg = {
-                    "code": 0,
-                    "message": "SUCCESS",
-                    "data": {
-                        "id": user.id,
-                        "user_name": user.user_name,
-                        "signature": user.signature,
-                        "tags": user_tags[:10],
-                        "mail": user.mail,
-                        "avatar": user_avatar,
-                    }
-                }
-
-                return JsonResponse(
-                    response_msg,
-                    status=status_code,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
-            except Exception as error:
-                print(error)
-                return internal_error_response(error=str(error))
         if request.method == "GET":
-            return return_user_info(user=user)
-        if request.method == "POST":
-            try:
-                request_data = json.loads(request.body.decode())
-            except Exception as error:
-                print(error)
-                return JsonResponse(
-                    {
-                        "code": 8,
-                        "message": "POST_DATA_FORMAT_ERROR",
-                        "data": {
-                            "error": error
-                        }
-                    },
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
-            if "avatar" in request_data:
-                user.avatar = request_data["avatar"]
-            if "mail" in request_data:
-                user.mail = request_data["mail"]
-            if "signature" in request_data:
-                user.signature = request_data["signature"]
-            try:
-                user.full_clean()
-                user.save()
-            except Exception as error:
-                print(error)
-                return JsonResponse(
-                    {
-                        "code": 8,
-                        "message": "POST_DATA_FORMAT_ERROR",
-                        "data": {
-                            "error": error
-                        }
-                    },
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
-            return return_user_info(user=user)
+            return tools.return_user_info(user=user)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
