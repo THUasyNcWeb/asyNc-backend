@@ -769,3 +769,44 @@ class FavoritesTests(TestCase):
             self.assertEqual(len(response_data), 10)
             for news in response_data:
                 self.assertEqual(type(news["id"]), int)
+
+    def test_get_favorites(self):
+        """
+            test post favorites
+        """
+        for i in range(self.test_user_num):
+            user_name = self.user_name_list[i]
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            user = UserBasicInfo.objects.get(user_name=user_name)
+            tools.clear_favorites(user)
+            for news_id in range(1, 50 + 1):
+                add_to_favorites(
+                    user=user,
+                    news={
+                        "id": news_id,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            for page in range(5):
+                response = self.client.get(
+                    '/favorites?page={page}'.format(page=page + 1),
+                    data={},
+                    content_type="application/json",
+                    HTTP_AUTHORIZATION=encoded_token
+                )
+                response_data = response.json()["data"]
+                self.assertEqual(len(response_data), 10)
+                for news in response_data:
+                    self.assertEqual(type(news["id"]), int)
+                    begin = page * tools.FAVORITES_PRE_PAGE
+                    end = (page + 1) * tools.FAVORITES_PRE_PAGE
+                    self.assertEqual(
+                        bool(begin <= news["id"] <= end),
+                        True
+                    )

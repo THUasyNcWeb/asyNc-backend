@@ -72,3 +72,37 @@ def post_data_format_error_response(error=""):
         status=400,
         headers={'Access-Control-Allow-Origin':'*'}
     )
+
+
+def invalid_page(error=""):
+    """
+        invalid_page response
+    """
+    return JsonResponse(
+        {
+            "code": 5,
+            "message": "INVALID_PAGE",
+            "data": {
+                "error": error
+            }
+        },
+        status=400,
+        headers={'Access-Control-Allow-Origin':'*'}
+    )
+
+
+def news_not_found(error=""):
+    """
+        invalid_page response
+    """
+    return JsonResponse(
+        {
+            "code": 9,
+            "message": "NEWS_NOT_FOUND",
+            "data": {
+                "error": error
+            }
+        },
+        status=400,
+        headers={'Access-Control-Allow-Origin':'*'}
+    )
