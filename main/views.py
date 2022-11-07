@@ -392,49 +392,79 @@ def user_favorites(request):
     except Exception as error:
         print(error)
         return unauthorized_response()
-
-    if request.method == "POST":
-        try:
-            news_id = int(request.GET.get("id"))
-        except Exception as error:
-            print(error)
-            return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
-        db_news_list = tools.get_data_from_db(
-            connection=tools.CRAWLER_DB_CONNECTION,
-            filter_command="id={id}".format(id=news_id),
-            select=["title","news_url","first_img_url","media","pub_time","id"],
-            limit=200
-        )
-        if len(db_news_list) == 0:
-            return news_not_found(error="[id not found]:\n" + str(error))
-        for news in db_news_list:
-            tools.add_to_favorites(
-                user=user,
-                news={
-                    "id": int(news["id"]),
-                    "title": news["title"],
-                    "media": news["media"],
-                    "url": news["news_url"],
-                    "pub_time": str(news["pub_time"]),
-                    "picture_url": news["first_img_url"]
-                }
+    try:
+        if request.method == "POST":
+            try:
+                news_id = int(request.GET.get("id"))
+            except Exception as error:
+                print(error)
+                return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
+            db_news_list = tools.get_data_from_db(
+                connection=tools.CRAWLER_DB_CONNECTION,
+                filter_command="id={id}".format(id=news_id),
+                select=["title","news_url","first_img_url","media","pub_time","id"],
+                limit=200
             )
-        return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, 0)},
-            status=200,
-            headers={'Access-Control-Allow-Origin': '*'}
-        )
-    if request.method == "GET":
-        try:
-            page = int(request.GET.get("page"))
-        except Exception as error:
-            print(error)
-            return invalid_page(error="[URL FORMAT ERROR]:\n" + str(error))
-        return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, page - 1)},
-            status=200,
-            headers={'Access-Control-Allow-Origin': '*'}
-        )
+            if len(db_news_list) == 0:
+                return news_not_found(error="[id not found]:\n" + str(error))
+            for news in db_news_list:
+                tools.add_to_favorites(
+                    user=user,
+                    news={
+                        "id": int(news["id"]),
+                        "title": news["title"],
+                        "media": news["media"],
+                        "url": news["news_url"],
+                        "pub_time": str(news["pub_time"]),
+                        "picture_url": news["first_img_url"]
+                    }
+                )
+            return JsonResponse(
+                {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, 0)},
+                status=200,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+        if request.method == "GET":
+            try:
+                page = int(request.GET.get("page"))
+            except Exception as error:
+                print(error)
+                return invalid_page(error="[URL FORMAT ERROR]:\n" + str(error))
+            return JsonResponse(
+                {
+                    "code": 0, "message": "SUCCESS",
+                    "data": tools.user_favorites_pages(user, page - 1)
+                },
+                status=200,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+        if request.method == "DELETE":
+            try:
+                news_id = int(request.GET.get("id"))
+            except Exception as error:
+                print(error)
+                return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
+            db_news_list = tools.get_data_from_db(
+                connection=tools.CRAWLER_DB_CONNECTION,
+                filter_command="id={id}".format(id=news_id),
+                select=["title","news_url","first_img_url","media","pub_time","id"],
+                limit=200
+            )
+            if len(db_news_list) == 0:
+                return news_not_found(error="[id not found]:\n" + str(error))
+            for news in db_news_list:
+                tools.remove_favorites(
+                    user=user,
+                    news_id=news_id
+                )
+            return JsonResponse(
+                {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, 0)},
+                status=200,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+    except Exception as error:
+        print(error)
+        return internal_error_response(error=str(error))
     return not_found_response()
 
 
