@@ -62,7 +62,7 @@ def add_to_favorites(user: UserBasicInfo, news: dict):
         return
     if not user.favorites:
         user.favorites = {}
-    user.favorites[news["id"]] = news
+    user.favorites[str(news["id"])] = news
     user.full_clean()
     user.save()
 
@@ -82,9 +82,13 @@ def remove_favorites(user: UserBasicInfo, news_id: int):
     """
     if not user.favorites:
         user.favorites = {}
-    user.favorites.pop(news_id)
-    user.full_clean()
-    user.save()
+        return False
+    if str(news_id) in user.favorites:
+        user.favorites.pop(str(news_id))
+        user.full_clean()
+        user.save()
+        return True
+    return False
 
 
 def clear_favorites(user: UserBasicInfo):
