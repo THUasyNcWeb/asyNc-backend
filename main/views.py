@@ -15,8 +15,7 @@ from tinyrpc.transports.http import HttpPostClientTransport
 
 from . import tools
 from .models import UserBasicInfo
-from .responses import internal_error_response, unauthorized_response, not_found_response
-from .responses import post_data_format_error_response
+from .responses import *
 
 # Create your views here.
 
@@ -420,6 +419,17 @@ def user_favorites(request):
             )
         return JsonResponse(
             {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, 0)},
+            status=200,
+            headers={'Access-Control-Allow-Origin': '*'}
+        )
+    if request.method == "GET":
+        try:
+            page = int(request.GET.get("page"))
+        except Exception as error:
+            print(error)
+            return invalid_page(error="[URL FORMAT ERROR]:\n" + str(error))
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, page - 1)},
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
