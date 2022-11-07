@@ -71,13 +71,13 @@ def get_favorites(user: UserBasicInfo):
     return list(user.favorites.values())
 
 
-def remove_favorites(user: UserBasicInfo, new_id: int):
+def remove_favorites(user: UserBasicInfo, news_id: int):
     """
         remove a news from user's favorites
     """
     if not user.favorites:
         user.favorites = {}
-    user.favorites.pop(new_id)
+    user.favorites.pop(news_id)
     user.full_clean()
     user.save()
 

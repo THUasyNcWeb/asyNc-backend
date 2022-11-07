@@ -43,10 +43,51 @@ class ToolsTests(TestCase):
                         "content": ""
                     }
                 )
+            for i in range(5):
+                add_to_favorites(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
             favorites = get_favorites(user)
             self.assertEqual(len(favorites),5)
             for i in range(5):
                 self.assertEqual(favorites[i]["id"],i)
+
+    def test_remove_favorites(self):
+        """
+            test remove_favorites()
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo(user_name=user_name, password=md5("password"))
+            for i in range(5):
+                add_to_favorites(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            favorites = get_favorites(user)
+            self.assertEqual(len(favorites),5)
+            for i in range(5):
+                self.assertEqual(favorites[i]["id"],i)
+            for i in range(5):
+                remove_favorites(user=user, news_id=i)
+            favorites = get_favorites(user)
+            self.assertEqual(len(favorites),0)
 
     def test_tools_md5(self):
         """
