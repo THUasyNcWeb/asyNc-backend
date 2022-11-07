@@ -419,7 +419,7 @@ def user_favorites(request):
                 }
             )
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": []},
+            {"code": 0, "message": "SUCCESS", "data": user_favorites_pages(user, 0)},
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )

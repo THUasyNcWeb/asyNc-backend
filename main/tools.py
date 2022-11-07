@@ -51,6 +51,8 @@ CATEGORY_FRONT_TO_BACKEND = {
 
 CRAWLER_DB_CONNECTION = None
 
+FAVORITES_PRE_PAGE = 10
+
 
 def add_to_favorites(user: UserBasicInfo, news: dict):
     """
@@ -83,6 +85,20 @@ def remove_favorites(user: UserBasicInfo, news_id: int):
     user.favorites.pop(news_id)
     user.full_clean()
     user.save()
+
+
+def user_favorites_pages(user: UserBasicInfo, page: int):
+    """
+        favorites pages for user
+        page start from 0
+    """
+    if not user.favorites:
+        return []
+    favorites_page = []
+    begin = page * FAVORITES_PRE_PAGE
+    end = (page + 1) * FAVORITES_PRE_PAGE
+    favorites_page = get_favorites(user)[begin:end]
+    return favorites_page
 
 
 def resize_image(image, size=(512, 512)):
