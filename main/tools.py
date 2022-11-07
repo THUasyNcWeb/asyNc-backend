@@ -6,6 +6,7 @@ Created by sxx
 import hashlib
 import time
 import base64
+import json
 from io import BytesIO
 
 import jwt
@@ -47,6 +48,8 @@ CATEGORY_FRONT_TO_BACKEND = {
     "fashion": "women",
     "health": "health",
 }
+
+CRAWLER_DB_CONNECTION = None
 
 
 def add_to_favorites(user: UserBasicInfo, news: dict):
@@ -312,3 +315,8 @@ def del_all_token_of_an_user(user_id):
     """
     if user_id in TOKEN_WHITE_LIST:
         TOKEN_WHITE_LIST[user_id] = []
+
+
+with open("config/config.json","r",encoding="utf-8") as config_file:
+    config = json.load(config_file)
+CRAWLER_DB_CONNECTION = connect_to_db(config["crawler-db"])
