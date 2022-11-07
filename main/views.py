@@ -405,6 +405,8 @@ def user_favorites(request):
             select=["title","news_url","first_img_url","media","pub_time","id"],
             limit=200
         )
+        if len(db_news_list) == 0:
+            return news_not_found(error="[id not found]:\n" + str(error))
         for news in db_news_list:
             tools.add_to_favorites(
                 user=user,

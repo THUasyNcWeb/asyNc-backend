@@ -87,6 +87,15 @@ def remove_favorites(user: UserBasicInfo, news_id: int):
     user.save()
 
 
+def clear_favorites(user: UserBasicInfo):
+    """
+        remove all news from user's favorites
+    """
+    user.favorites = {}
+    user.full_clean()
+    user.save()
+
+
 def user_favorites_pages(user: UserBasicInfo, page: int):
     """
         favorites pages for user
