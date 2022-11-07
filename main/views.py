@@ -398,7 +398,7 @@ def user_favorites(request):
             news_id = int(request.GET.get("id"))
         except Exception as error:
             print(error)
-            return internal_error_response(error="[URL FORMAT ERROR]:\n" + str(error))
+            return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
         db_news_list = tools.get_data_from_db(
             connection=tools.CRAWLER_DB_CONNECTION,
             filter_command="id={id}".format(id=news_id),

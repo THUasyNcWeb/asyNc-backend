@@ -67,7 +67,7 @@ class UserBasicInfo(models.Model):
     # register_date = DateTimeField(auto_now_add=True)
 
     # favorites
-    favorites = JSONField(null=True, blank=True, default={})
+    favorites = JSONField(null=True, blank=True, default=dict)
 
     def __str__(self):
         return str(self.user_name)
