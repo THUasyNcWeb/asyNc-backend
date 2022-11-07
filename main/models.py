@@ -66,6 +66,9 @@ class UserBasicInfo(models.Model):
     avatar = TextField(blank=True)
     # register_date = DateTimeField(auto_now_add=True)
 
+    # favorites
+    favorites = JSONField(null=True, blank=True, default={})
+
     def __str__(self):
         return str(self.user_name)
 

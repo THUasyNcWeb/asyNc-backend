@@ -12,6 +12,7 @@ import jwt
 import psycopg2
 from PIL import Image
 from django.http import JsonResponse
+from .models import UserBasicInfo
 from .responses import internal_error_response
 
 EXPIRE_TIME = 7 * 86400  # 30s for testing. 7 days for deploy.
@@ -46,6 +47,39 @@ CATEGORY_FRONT_TO_BACKEND = {
     "fashion": "women",
     "health": "health",
 }
+
+
+def add_to_favorites(user: UserBasicInfo, news: dict):
+    """
+        add a news to user's favorites
+    """
+    if "id" not in news:
+        return
+    if not user.favorites:
+        user.favorites = {}
+    user.favorites[news["id"]] = news
+    user.full_clean()
+    user.save()
+
+
+def get_favorites(user: UserBasicInfo):
+    """
+        get favorites list from a user
+    """
+    if not user.favorites:
+        user.favorites = {}
+    return list(user.favorites.values())
+
+
+def remove_favorites(user: UserBasicInfo, news_id: int):
+    """
+        remove a news from user's favorites
+    """
+    if not user.favorites:
+        user.favorites = {}
+    user.favorites.pop(news_id)
+    user.full_clean()
+    user.save()
 
 
 def resize_image(image, size=(512, 512)):
