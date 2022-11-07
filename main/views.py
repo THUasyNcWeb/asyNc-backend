@@ -410,16 +410,16 @@ def user_favorites(request):
             tools.add_to_favorites(
                 user=user,
                 news={
-                    "id": news["id"],
+                    "id": int(news["id"]),
                     "title": news["title"],
                     "media": news["media"],
                     "url": news["news_url"],
-                    "pub_time": news["pub_time"],
+                    "pub_time": str(news["pub_time"]),
                     "picture_url": news["first_img_url"]
                 }
             )
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": user_favorites_pages(user, 0)},
+            {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, 0)},
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
