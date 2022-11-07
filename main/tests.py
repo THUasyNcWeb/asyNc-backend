@@ -760,6 +760,7 @@ class FavoritesTests(TestCase):
                     content_type="application/json",
                     HTTP_AUTHORIZATION=encoded_token
                 )
+                self.assertEqual(response.status_code, 200)
             user = UserBasicInfo.objects.get(user_name=user_name)
             favorites = get_favorites(user)
             self.assertEqual(len(favorites),15)
@@ -800,6 +801,7 @@ class FavoritesTests(TestCase):
                     content_type="application/json",
                     HTTP_AUTHORIZATION=encoded_token
                 )
+                self.assertEqual(response.status_code, 200)
                 response_data = response.json()["data"]
                 self.assertEqual(len(response_data), 10)
                 for news in response_data:
@@ -810,3 +812,45 @@ class FavoritesTests(TestCase):
                         bool(begin <= news["id"] <= end),
                         True
                     )
+
+    def test_delete_favorites(self):
+        """
+            test delete favorites
+        """
+        for i in range(self.test_user_num):
+            user_name = self.user_name_list[i]
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            user = UserBasicInfo.objects.get(user_name=user_name)
+            tools.clear_favorites(user)
+            favorites = get_favorites(user)
+            self.assertEqual(len(favorites), 0)
+            for news_id in range(1, 10 + 1):
+                add_to_favorites(
+                    user=user,
+                    news={
+                        "id": news_id,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            favorites = get_favorites(user)
+            self.assertEqual(len(favorites),10)
+
+            for news_id in range(1, 10 + 1):
+                response = self.client.delete(
+                    '/favorites?id={news_id}'.format(news_id=str(news_id)),
+                    data={},
+                    content_type="application/json",
+                    HTTP_AUTHORIZATION=encoded_token
+                )
+                self.assertEqual(response.status_code, 200)
+                response_data = response.json()["data"]
+                self.assertEqual(len(response_data), 10 - news_id)
+            user = UserBasicInfo.objects.get(user_name=user_name)
+            favorites = get_favorites(user)
+            self.assertEqual(len(favorites), 0)
