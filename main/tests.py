@@ -713,3 +713,59 @@ class ViewsTests(TestCase):
             self.assertEqual(response_data["signature"], signature)
             self.assertEqual(response_data["avatar"], "data:image/jpeg;base64,")
             self.assertEqual(check_token_in_white_list(response_data['token']), True)
+
+
+class FavoritesTests(TestCase):
+    """
+        test functions for favorites
+    """
+    databases = "__all__"
+
+    def setUp(self):
+        """
+            set up a test set
+        """
+
+        self.test_user_num = 2
+
+        self.user_name_list = ["AliceTester", "BobTester"]
+        self.user_password = ["Alcie", "password"]
+        self.user_tags = ["用户", "Tag", "パスワード"]
+        self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
+        self.user_id = []
+        self.default_avatar = ""
+        with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
+            self.default_avatar = f.read()
+        for i in range(self.test_user_num):
+            user_name = self.user_name_list[i]
+            password = self.user_password[i]
+            user = UserBasicInfo.objects.create(user_name=user_name, password=md5(password))
+            user.tags = self.user_tags_dict
+            user.full_clean()
+            user.save()
+            self.user_id.append(user.id)
+
+    def test_post_favorites(self):
+        """
+            test post favorites
+        """
+        for i in range(self.test_user_num):
+            user_name = self.user_name_list[i]
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            for news_id in range(1,16):
+                response = self.client.post(
+                    '/favorites?id={news_id}'.format(news_id=news_id),
+                    data={},
+                    content_type="application/json",
+                    HTTP_AUTHORIZATION=encoded_token
+                )
+            user = UserBasicInfo.objects.get(user_name=user_name)
+            favorites = get_favorites(user)
+            self.assertEqual(len(favorites),15)
+            for i in range(15):
+                self.assertEqual(favorites[i]["id"],i + 1)
+            response_data = response.json()["data"]
+            self.assertEqual(len(response_data), 10)
+            for news in response_data:
+                self.assertEqual(type(news["id"]), int)

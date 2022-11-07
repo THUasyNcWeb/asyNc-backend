@@ -19,4 +19,5 @@ urlpatterns = [
     path('userinfo', views.user_info),
     path('modifyavatar', views.modify_avatar),
     path('modifyuserinfo', views.modify_user_info),
+    path('favorites', views.user_favorites),
 ]

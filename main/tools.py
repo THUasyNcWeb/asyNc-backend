@@ -6,6 +6,7 @@ Created by sxx
 import hashlib
 import time
 import base64
+import json
 from io import BytesIO
 
 import jwt
@@ -48,6 +49,10 @@ CATEGORY_FRONT_TO_BACKEND = {
     "health": "health",
 }
 
+CRAWLER_DB_CONNECTION = None
+
+FAVORITES_PRE_PAGE = 10
+
 
 def add_to_favorites(user: UserBasicInfo, news: dict):
     """
@@ -80,6 +85,20 @@ def remove_favorites(user: UserBasicInfo, news_id: int):
     user.favorites.pop(news_id)
     user.full_clean()
     user.save()
+
+
+def user_favorites_pages(user: UserBasicInfo, page: int):
+    """
+        favorites pages for user
+        page start from 0
+    """
+    if not user.favorites:
+        return []
+    favorites_page = []
+    begin = page * FAVORITES_PRE_PAGE
+    end = (page + 1) * FAVORITES_PRE_PAGE
+    favorites_page = get_favorites(user)[begin:end]
+    return favorites_page
 
 
 def resize_image(image, size=(512, 512)):
@@ -312,3 +331,8 @@ def del_all_token_of_an_user(user_id):
     """
     if user_id in TOKEN_WHITE_LIST:
         TOKEN_WHITE_LIST[user_id] = []
+
+
+with open("config/config.json","r",encoding="utf-8") as config_file:
+    config = json.load(config_file)
+CRAWLER_DB_CONNECTION = connect_to_db(config["crawler-db"])
