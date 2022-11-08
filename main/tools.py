@@ -54,6 +54,67 @@ CRAWLER_DB_CONNECTION = None
 FAVORITES_PRE_PAGE = 10
 
 
+def add_to_read_history(user: UserBasicInfo, news: dict):
+    """
+        add a news to user's read history
+    """
+    if "id" not in news:
+        return
+    if not user.read_history:
+        user.read_history = {}
+    user.read_history[str(news["id"])] = news
+    user.full_clean()
+    user.save()
+
+
+def get_read_history(user: UserBasicInfo):
+    """
+        get read history list from a user
+    """
+    if not user.read_history:
+        user.read_history = {}
+    return list(user.read_history.values())
+
+
+def remove_read_history(user: UserBasicInfo, news_id):
+    """
+        remove a news from user's read_history
+    """
+    if not user.read_history:
+        user.read_history = {}
+        return False
+    if str(news_id) in user.read_history:
+        user.read_history.pop(str(news_id))
+        user.full_clean()
+        user.save()
+        return True
+    return False
+
+
+def clear_read_history(user: UserBasicInfo):
+    """
+        remove all news from user's read history
+    """
+    user.read_history = {}
+    user.full_clean()
+    user.save()
+
+
+def user_read_history_pages(user: UserBasicInfo, page: int):
+    """
+        read history pages for user
+        page start from 0
+    """
+    if not user.read_history:
+        return [], 0
+    read_history_page = []
+    begin = page * FAVORITES_PRE_PAGE
+    end = (page + 1) * FAVORITES_PRE_PAGE
+    read_history_list = get_read_history(user)
+    read_history_page = read_history_list[begin:end]
+    return read_history_page, len(read_history_list)
+
+
 def add_to_readlist(user: UserBasicInfo, news: dict):
     """
         add a news to user's readlist
