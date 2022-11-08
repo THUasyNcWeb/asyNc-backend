@@ -7,6 +7,7 @@ from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
+from elasticsearch_dsl import Document, Date, Keyword, Text, connections, Completion
 import jieba
 
 from tinyrpc import RPCClient
@@ -846,6 +847,52 @@ class ElasticSearch():
     def __init__(self):
         self.client = Elasticsearch(hosts=["43.143.147.5"])
 
+    class ArticleType(Document):
+        '''
+        Define the article type
+        '''
+        connections.create_connection(hosts=["43.143.147.5"])
+        title = Text(analyzer="ik_max_word", search_analyzer="ik_smart")
+        content = Text(analyzer="ik_max_word", search_analyzer="ik_smart")
+        tags = Text(analyzer="ik_max_word", search_analyzer="ik_smart")
+        category = Text(analyzer="ik_max_word", search_analyzer="ik_smart")
+        first_img_url = Keyword()
+        news_url = Keyword()
+        front_image_path = Keyword()
+        media = Keyword()
+        create_date = Date()
+        suggest = Completion(analyzer="ik_max_word")
+
+        def get_url(self):
+            """
+            return article's url
+            """
+            return self.news_url
+
+        def get_content(self):
+            """
+            return content
+            """
+            return self.content
+
+        class Index:
+            """
+            Index to connect
+            """
+            name = "tencent_news"
+
+            def get_index(self):
+                """
+                return index's name
+                """
+                return self.name
+
+            def set_index(self, index_name):
+                """
+                set index
+                """
+                self.name = index_name
+
     def search(self,key_words,sorted_by="_score",operator="or", start=0, size=10):
         """
         Args:
@@ -917,6 +964,68 @@ class ElasticSearch():
         }
         response = self.client.search(index="tencent_news", body=query_json)
         return response["hits"]
+
+    def suggest(self,keywords,excludes):
+        """_summary_
+
+        Args:
+            keywords (_type_): need to search
+            excludes (_type_): exclude words
+            include (_type_): must include words
+
+        Returns:
+            _type_: list of suggestions
+        """
+        response = self.client.search(
+            index="tencent_news",
+            body={
+                "size":10,
+                "suggest": {
+                    "input-suggester": {
+                        "prefix": keywords,
+                        "completion": {
+                            "field": "suggest"
+                        }
+                    }
+                }
+            }
+        )
+        responses = response['suggest']['input-suggester'][0]['options']
+        results = []
+        for result in responses:
+            sentences = re.split(r'(\.|\!|\?|。|！|？|\.{6}|\n|，|_)', str(result['text']))
+            flag = True
+            for exclude in excludes:
+                if sentences[0].find(exclude) != -1:
+                    flag = False
+            if flag:
+                results += [sentences[0]]
+        return list(set(results))
+
+    def completion(self,keywords):
+        """_summary_
+
+        Args:
+            keywords (_type_): words to search
+        """
+        search = self.ArticleType.search()
+        re_data = []
+        completion = {
+            "field":"suggest",
+            "fuzzy":{
+                "fuzziness":2
+            },
+            "size":10
+        }
+        # print(keywords)
+        search = search.suggest('my_suggest',keywords,completion=completion)
+        # print(s.to_dict())
+        suggestions = search.execute().suggest
+        for match in suggestions.my_suggest[0].options:
+            source = match._source
+            print(source['content'])
+            re_data.append(source['title'])
+        return re_data
 
 
 @csrf_exempt
@@ -1215,3 +1324,45 @@ def keyword_search(request):
             headers={'Access-Control-Allow-Origin':'*'}
         )
     return internal_error_response()
+
+
+@csrf_exempt
+def search_suggest(request):
+    """
+        keyword_search
+    """
+    if request.method == "POST":
+        exclude = []
+        try:
+            body = json.loads(request.body)
+            key_word = body["query"]
+            if "exclude" in body:
+                exclude = body["exclude"]
+
+        except Exception as error:
+            print(error)
+            return JsonResponse(
+                {"code": 1005, "message": "INVALID_FORMAT", "data": {"page_count": 0, "news": []}},
+                status=400,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+
+        esearch = ElasticSearch()
+        results = esearch.suggest(key_word,exclude)
+        data = {
+            "suggestions":results
+        }
+
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": data},
+            status=200,
+            headers={'Access-Control-Allow-Origin':'*'}
+        )
+    data = {
+        "suggestions":[]
+    }
+    return JsonResponse(
+        {"code": 0, "message": "SUCCESS", "data": data},
+        status=200,
+        headers={'Access-Control-Allow-Origin':'*'}
+    )
