@@ -368,6 +368,38 @@ def user_info(request):
 
 # return a news list
 @csrf_exempt
+def user_readlater(request):
+    """
+        add, get, remove user favorites
+        news format:
+        {
+            "id": 114,
+            "title": "Breaking News",
+            "media": "Foobar News",
+            "url": "https://breaking.news",
+            "pub_time": "2022-10-21T19:02:16.305Z",
+            "picture_url": "https://breaking.news/picture.png"
+        }
+    """
+    try:
+        encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+        token = tools.decode_token(encoded_token)
+        if not tools.check_token_in_white_list(encoded_token=encoded_token):
+            return unauthorized_response()
+        user_name = token["user_name"]
+        user = UserBasicInfo.objects.filter(user_name=user_name).first()
+        if not user:  # user name not existed yet.
+            return unauthorized_response()
+    except Exception as error:
+        print(error)
+        return unauthorized_response()
+
+
+    return not_found_response()
+
+
+# return a news list
+@csrf_exempt
 def user_favorites(request):
     """
         add, get, remove user favorites
