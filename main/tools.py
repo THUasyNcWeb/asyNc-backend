@@ -67,6 +67,54 @@ def add_to_readlist(user: UserBasicInfo, news: dict):
     user.save()
 
 
+def get_readlist(user: UserBasicInfo):
+    """
+        get readlist list from a user
+    """
+    if not user.readlist:
+        user.readlist = {}
+    return list(user.readlist.values())
+
+
+def remove_readlist(user: UserBasicInfo, news_id):
+    """
+        remove a news from user's readlist
+    """
+    if not user.readlist:
+        user.readlist = {}
+        return False
+    if str(news_id) in user.readlist:
+        user.readlist.pop(str(news_id))
+        user.full_clean()
+        user.save()
+        return True
+    return False
+
+
+def clear_readlist(user: UserBasicInfo):
+    """
+        remove all news from user's readlist
+    """
+    user.readlist = {}
+    user.full_clean()
+    user.save()
+
+
+def user_readlist_pages(user: UserBasicInfo, page: int):
+    """
+        readlist pages for user
+        page start from 0
+    """
+    if not user.readlist:
+        return [], 0
+    readlist_page = []
+    begin = page * FAVORITES_PRE_PAGE
+    end = (page + 1) * FAVORITES_PRE_PAGE
+    readlist_list = get_readlist(user)
+    readlist_page = readlist_list[begin:end]
+    return readlist_page, len(readlist_list)
+
+
 def add_to_favorites(user: UserBasicInfo, news: dict):
     """
         add a news to user's favorites
