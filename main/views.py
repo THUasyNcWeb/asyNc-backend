@@ -440,7 +440,7 @@ def user_readlater(request):
             page = int(request.GET.get("page"))
         except Exception as error:
             print(error)
-            return invalid_page(error="[URL FORMAT ERROR]:\n" + str(error))
+            return invalid_page(error="[URL FORMAT ERROR IN READLATER]:\n" + str(error))
         readlist_list, pages = tools.user_readlist_pages(user, page - 1)
         return JsonResponse(
             {
@@ -450,6 +450,25 @@ def user_readlater(request):
                     "news": readlist_list
                 }
             },
+            status=200,
+            headers={'Access-Control-Allow-Origin': '*'}
+        )
+
+    if request.method == "DELETE":
+        try:
+            news_id = int(request.GET.get("id"))
+        except Exception as error:
+            print(error)
+            return internal_error_response(error="[URL FORMAT ERROR IN READLATER]:\n" + str(error))
+        status = tools.remove_readlist(user=user, news_id=news_id)
+        if not status:
+            return news_not_found(error="[id not found in user's readlist list]:\n")
+        readlist_list, pages = tools.user_readlist_pages(user, 0)
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": {
+                "page_count": pages,
+                "news": readlist_list
+            }},
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
