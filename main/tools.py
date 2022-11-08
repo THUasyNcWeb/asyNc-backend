@@ -119,12 +119,13 @@ def user_favorites_pages(user: UserBasicInfo, page: int):
         page start from 0
     """
     if not user.favorites:
-        return []
+        return [], 0
     favorites_page = []
     begin = page * FAVORITES_PRE_PAGE
     end = (page + 1) * FAVORITES_PRE_PAGE
-    favorites_page = get_favorites(user)[begin:end]
-    return favorites_page
+    favorites_list = get_favorites(user)
+    favorites_page = favorites_list[begin:end]
+    return favorites_page, len(favorites_list)
 
 
 def resize_image(image, size=(512, 512)):

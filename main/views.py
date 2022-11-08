@@ -394,7 +394,6 @@ def user_readlater(request):
         print(error)
         return unauthorized_response()
 
-
     return not_found_response()
 
 
@@ -453,8 +452,13 @@ def user_favorites(request):
                         "picture_url": news["first_img_url"]
                     }
                 )
+
+            favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, 0)},
+                {"code": 0, "message": "SUCCESS", "data": {
+                    "page_count": pages,
+                    "news": favorites_list
+                }},
                 status=200,
                 headers={'Access-Control-Allow-Origin': '*'}
             )
@@ -467,10 +471,14 @@ def user_favorites(request):
         except Exception as error:
             print(error)
             return invalid_page(error="[URL FORMAT ERROR]:\n" + str(error))
+        favorites_list, pages = tools.user_favorites_pages(user, page - 1)
         return JsonResponse(
             {
                 "code": 0, "message": "SUCCESS",
-                "data": tools.user_favorites_pages(user, page - 1)
+                "data": {
+                    "page_count": pages,
+                    "news": favorites_list
+                }
             },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
@@ -496,8 +504,12 @@ def user_favorites(request):
         status = tools.remove_favorites(user=user, news_id=news_id)
         if not status:
             return news_not_found(error="[id not found in user's favorites list]:\n")
+        favorites_list, pages = tools.user_favorites_pages(user, 0)
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, 0)},
+            {"code": 0, "message": "SUCCESS", "data": {
+                "page_count": pages,
+                "news": favorites_list
+            }},
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )

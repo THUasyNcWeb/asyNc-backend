@@ -774,9 +774,9 @@ class FavoritesTests(TestCase):
             self.assertEqual(len(favorites), len(news_id_list))
             for i in range(len(news_id_list)):
                 self.assertEqual(bool(int(favorites[i]["id"]) in news_id_list), True)
-            if response_data:
-                self.assertEqual(len(response_data), min(10, len(news_id_list)))
-                for news in response_data:
+            if response_data["news"]:
+                self.assertEqual(len(response_data["news"]), min(10, len(news_id_list)))
+                for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
 
     def test_get_favorites(self):
@@ -811,8 +811,8 @@ class FavoritesTests(TestCase):
                 )
                 self.assertEqual(response.status_code, 200)
                 response_data = response.json()["data"]
-                self.assertEqual(len(response_data), 10)
-                for news in response_data:
+                self.assertEqual(len(response_data["news"]), 10)
+                for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
                     begin = page * tools.FAVORITES_PRE_PAGE
                     end = (page + 1) * tools.FAVORITES_PRE_PAGE
@@ -858,7 +858,7 @@ class FavoritesTests(TestCase):
                 )
                 self.assertEqual(response.status_code, 200)
                 response_data = response.json()["data"]
-                self.assertEqual(len(response_data), 10 - news_id)
+                self.assertEqual(len(response_data["news"]), 10 - news_id)
             user = UserBasicInfo.objects.get(user_name=user_name)
             favorites = get_favorites(user)
             self.assertEqual(len(favorites), 0)
