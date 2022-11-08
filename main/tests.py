@@ -24,6 +24,71 @@ class ToolsTests(TestCase):
         self.user_num = 5
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
 
+    def test_add_to_readlist_and_get_readlist(self):
+        """
+            test add_to_readlist() and get_readlist()
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo(user_name=user_name, password=md5("password"))
+            for i in range(5):
+                add_to_readlist(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            for i in range(5):
+                add_to_readlist(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            readlist = get_readlist(user)
+            self.assertEqual(len(readlist),5)
+            for i in range(5):
+                self.assertEqual(readlist[i]["id"],i)
+
+    def test_remove_readlist(self):
+        """
+            test remove_readlist()
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo(user_name=user_name, password=md5("password"))
+            for i in range(5):
+                add_to_readlist(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            readlist = get_readlist(user)
+            self.assertEqual(len(readlist),5)
+            for i in range(5):
+                self.assertEqual(readlist[i]["id"],i)
+            for i in range(5):
+                remove_readlist(user=user, news_id=i)
+            readlist = get_readlist(user)
+            self.assertEqual(len(readlist),0)
+
     def test_add_to_favorites_and_get_favorites(self):
         """
             test add_to_favorites() and get_favorites()
