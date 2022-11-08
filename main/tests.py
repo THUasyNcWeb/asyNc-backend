@@ -24,6 +24,71 @@ class ToolsTests(TestCase):
         self.user_num = 5
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
 
+    def test_add_to_readlist_and_get_readlist(self):
+        """
+            test add_to_readlist() and get_readlist()
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo(user_name=user_name, password=md5("password"))
+            for i in range(5):
+                add_to_readlist(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            for i in range(5):
+                add_to_readlist(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            readlist = get_readlist(user)
+            self.assertEqual(len(readlist),5)
+            for i in range(5):
+                self.assertEqual(readlist[i]["id"],i)
+
+    def test_remove_readlist(self):
+        """
+            test remove_readlist()
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo(user_name=user_name, password=md5("password"))
+            for i in range(5):
+                add_to_readlist(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            readlist = get_readlist(user)
+            self.assertEqual(len(readlist),5)
+            for i in range(5):
+                self.assertEqual(readlist[i]["id"],i)
+            for i in range(5):
+                remove_readlist(user=user, news_id=i)
+            readlist = get_readlist(user)
+            self.assertEqual(len(readlist),0)
+
     def test_add_to_favorites_and_get_favorites(self):
         """
             test add_to_favorites() and get_favorites()
@@ -730,7 +795,7 @@ class FavoritesTests(TestCase):
 
         self.test_user_num = 2
 
-        self.user_name_list = ["AliceTester", "BobTester"]
+        self.user_name_list = ["AliceFTester", "BobFTester"]
         self.user_password = ["Alcie", "password"]
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
@@ -774,9 +839,9 @@ class FavoritesTests(TestCase):
             self.assertEqual(len(favorites), len(news_id_list))
             for i in range(len(news_id_list)):
                 self.assertEqual(bool(int(favorites[i]["id"]) in news_id_list), True)
-            if response_data:
-                self.assertEqual(len(response_data), min(10, len(news_id_list)))
-                for news in response_data:
+            if response_data["news"]:
+                self.assertEqual(len(response_data["news"]), min(10, len(news_id_list)))
+                for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
 
     def test_get_favorites(self):
@@ -811,8 +876,8 @@ class FavoritesTests(TestCase):
                 )
                 self.assertEqual(response.status_code, 200)
                 response_data = response.json()["data"]
-                self.assertEqual(len(response_data), 10)
-                for news in response_data:
+                self.assertEqual(len(response_data["news"]), 10)
+                for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
                     begin = page * tools.FAVORITES_PRE_PAGE
                     end = (page + 1) * tools.FAVORITES_PRE_PAGE
@@ -858,7 +923,154 @@ class FavoritesTests(TestCase):
                 )
                 self.assertEqual(response.status_code, 200)
                 response_data = response.json()["data"]
-                self.assertEqual(len(response_data), 10 - news_id)
+                self.assertEqual(len(response_data["news"]), 10 - news_id)
             user = UserBasicInfo.objects.get(user_name=user_name)
             favorites = get_favorites(user)
             self.assertEqual(len(favorites), 0)
+
+
+class ReadlistTests(TestCase):
+    """
+        test functions for readlist
+    """
+    databases = "__all__"
+
+    def setUp(self):
+        """
+            set up a test set
+        """
+
+        self.test_user_num = 2
+
+        self.user_name_list = ["AliceRTester", "BobRTester"]
+        self.user_password = ["Alcie", "password"]
+        self.user_tags = ["用户", "Tag", "パスワード"]
+        self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
+        self.user_id = []
+        self.default_avatar = ""
+        with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
+            self.default_avatar = f.read()
+        for i in range(self.test_user_num):
+            user_name = self.user_name_list[i]
+            password = self.user_password[i]
+            user = UserBasicInfo.objects.create(user_name=user_name, password=md5(password))
+            user.tags = self.user_tags_dict
+            user.full_clean()
+            user.save()
+            self.user_id.append(user.id)
+
+    def test_post_readlist(self):
+        """
+            test post readlist
+        """
+        for i in range(self.test_user_num):
+            user_name = self.user_name_list[i]
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            news_id_list = []
+            response_data = []
+            for news_id in range(1,16):
+                response = self.client.post(
+                    '/readlater?id={news_id}'.format(news_id=str(news_id)),
+                    data={},
+                    content_type="application/json",
+                    HTTP_AUTHORIZATION=encoded_token
+                )
+                if response.status_code == 200:
+                    news_id_list.append(news_id)
+                    response_data = response.json()["data"]
+                else:
+                    self.assertEqual(response.status_code, 404)
+            user = UserBasicInfo.objects.get(user_name=user_name)
+            readlist = get_readlist(user)
+            self.assertEqual(len(readlist), len(news_id_list))
+            for i in range(len(news_id_list)):
+                self.assertEqual(bool(int(readlist[i]["id"]) in news_id_list), True)
+            if response_data["news"]:
+                self.assertEqual(len(response_data["news"]), min(10, len(news_id_list)))
+                for news in response_data["news"]:
+                    self.assertEqual(type(news["id"]), int)
+
+    def test_get_readlist(self):
+        """
+            test post readlist
+        """
+        for i in range(self.test_user_num):
+            user_name = self.user_name_list[i]
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            user = UserBasicInfo.objects.get(user_name=user_name)
+            tools.clear_readlist(user)
+            for news_id in range(1, 50 + 1):
+                add_to_readlist(
+                    user=user,
+                    news={
+                        "id": news_id,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            for page in range(5):
+                response = self.client.get(
+                    '/readlater?page={page}'.format(page=page + 1),
+                    data={},
+                    content_type="application/json",
+                    HTTP_AUTHORIZATION=encoded_token
+                )
+                self.assertEqual(response.status_code, 200)
+                response_data = response.json()["data"]
+                self.assertEqual(len(response_data["news"]), 10)
+                for news in response_data["news"]:
+                    self.assertEqual(type(news["id"]), int)
+                    begin = page * tools.FAVORITES_PRE_PAGE
+                    end = (page + 1) * tools.FAVORITES_PRE_PAGE
+                    self.assertEqual(
+                        bool(begin <= news["id"] <= end),
+                        True
+                    )
+
+    def test_delete_readlist(self):
+        """
+            test delete readlist
+        """
+        for i in range(self.test_user_num):
+            user_name = self.user_name_list[i]
+            encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
+            add_token_to_white_list(encoded_token)
+            user = UserBasicInfo.objects.get(user_name=user_name)
+            tools.clear_readlist(user)
+            readlist = get_readlist(user)
+            self.assertEqual(len(readlist), 0)
+            for news_id in range(1, 10 + 1):
+                add_to_readlist(
+                    user=user,
+                    news={
+                        "id": news_id,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            readlist = get_readlist(user)
+            self.assertEqual(len(readlist),10)
+
+            for news_id in range(1, 10 + 1):
+                response = self.client.delete(
+                    '/readlater?id={news_id}'.format(news_id=str(news_id)),
+                    data={},
+                    content_type="application/json",
+                    HTTP_AUTHORIZATION=encoded_token
+                )
+                self.assertEqual(response.status_code, 200)
+                response_data = response.json()["data"]
+                self.assertEqual(len(response_data["news"]), 10 - news_id)
+            user = UserBasicInfo.objects.get(user_name=user_name)
+            readlist = get_readlist(user)
+            self.assertEqual(len(readlist), 0)

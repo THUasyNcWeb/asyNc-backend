@@ -368,6 +368,115 @@ def user_info(request):
 
 # return a news list
 @csrf_exempt
+def user_readlater(request):
+    """
+        add, get, remove user readlist
+        news format:
+        {
+            "id": 114,
+            "title": "Breaking News",
+            "media": "Foobar News",
+            "url": "https://breaking.news",
+            "pub_time": "2022-10-21T19:02:16.305Z",
+            "picture_url": "https://breaking.news/picture.png"
+        }
+    """
+    try:
+        encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+        token = tools.decode_token(encoded_token)
+        if not tools.check_token_in_white_list(encoded_token=encoded_token):
+            return unauthorized_response()
+        user_name = token["user_name"]
+        user = UserBasicInfo.objects.filter(user_name=user_name).first()
+        if not user:  # user name not existed yet.
+            return unauthorized_response()
+    except Exception as error:
+        print(error)
+        return unauthorized_response()
+
+    if request.method == "POST":
+        try:
+            news_id = int(request.GET.get("id"))
+        except Exception as error:
+            print(error)
+            return news_not_found(error="[URL FORMAT ERROR IN READLATER]:\n" + str(error))
+        try:
+            db_news_list = tools.get_data_from_db(
+                connection=tools.CRAWLER_DB_CONNECTION,
+                filter_command="id={id}".format(id=news_id),
+                select=["title","news_url","first_img_url","media","pub_time","id"],
+                limit=200
+            )
+            if len(db_news_list) == 0:
+                return news_not_found(error="[id not found]:\n")
+            for news in db_news_list:
+                tools.add_to_readlist(
+                    user=user,
+                    news={
+                        "id": int(news["id"]),
+                        "title": news["title"],
+                        "media": news["media"],
+                        "url": news["news_url"],
+                        "pub_time": str(news["pub_time"]),
+                        "picture_url": news["first_img_url"]
+                    }
+                )
+
+            readlist_list, pages = tools.user_readlist_pages(user, 0)
+            return JsonResponse(
+                {"code": 0, "message": "SUCCESS", "data": {
+                    "page_count": pages,
+                    "news": readlist_list
+                }},
+                status=200,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+        except Exception as error:
+            print(error)
+            return internal_error_response(error="[db error]" + str(error))
+
+    if request.method == "GET":
+        try:
+            page = int(request.GET.get("page"))
+        except Exception as error:
+            print(error)
+            return invalid_page(error="[URL FORMAT ERROR IN READLATER]:\n" + str(error))
+        readlist_list, pages = tools.user_readlist_pages(user, page - 1)
+        return JsonResponse(
+            {
+                "code": 0, "message": "SUCCESS",
+                "data": {
+                    "page_count": pages,
+                    "news": readlist_list
+                }
+            },
+            status=200,
+            headers={'Access-Control-Allow-Origin': '*'}
+        )
+
+    if request.method == "DELETE":
+        try:
+            news_id = int(request.GET.get("id"))
+        except Exception as error:
+            print(error)
+            return internal_error_response(error="[URL FORMAT ERROR IN READLATER]:\n" + str(error))
+        status = tools.remove_readlist(user=user, news_id=news_id)
+        if not status:
+            return news_not_found(error="[id not found in user's readlist list]:\n")
+        readlist_list, pages = tools.user_readlist_pages(user, 0)
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": {
+                "page_count": pages,
+                "news": readlist_list
+            }},
+            status=200,
+            headers={'Access-Control-Allow-Origin': '*'}
+        )
+    return not_found_response()
+
+
+# return a news list
+@csrf_exempt
 def user_favorites(request):
     """
         add, get, remove user favorites
@@ -421,8 +530,13 @@ def user_favorites(request):
                         "picture_url": news["first_img_url"]
                     }
                 )
+
+            favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, 0)},
+                {"code": 0, "message": "SUCCESS", "data": {
+                    "page_count": pages,
+                    "news": favorites_list
+                }},
                 status=200,
                 headers={'Access-Control-Allow-Origin': '*'}
             )
@@ -435,10 +549,14 @@ def user_favorites(request):
         except Exception as error:
             print(error)
             return invalid_page(error="[URL FORMAT ERROR]:\n" + str(error))
+        favorites_list, pages = tools.user_favorites_pages(user, page - 1)
         return JsonResponse(
             {
                 "code": 0, "message": "SUCCESS",
-                "data": tools.user_favorites_pages(user, page - 1)
+                "data": {
+                    "page_count": pages,
+                    "news": favorites_list
+                }
             },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
@@ -449,23 +567,15 @@ def user_favorites(request):
         except Exception as error:
             print(error)
             return internal_error_response(error="[URL FORMAT ERROR]:\n" + str(error))
-        # try:
-        #     db_news_list = tools.get_data_from_db(
-        #         connection=tools.CRAWLER_DB_CONNECTION,
-        #         filter_command="id={id}".format(id=news_id),
-        #         select=["title","news_url","first_img_url","media","pub_time","id"],
-        #         limit=200
-        #     )
-        # except Exception as error:
-        #     print(error)
-        #     return internal_error_response(error="[db error]" + str(error))
-        # if db_news_list == None or len(db_news_list) == 0:
-        #     return news_not_found(error="[id not found]:\n")
         status = tools.remove_favorites(user=user, news_id=news_id)
         if not status:
             return news_not_found(error="[id not found in user's favorites list]:\n")
+        favorites_list, pages = tools.user_favorites_pages(user, 0)
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": tools.user_favorites_pages(user, 0)},
+            {"code": 0, "message": "SUCCESS", "data": {
+                "page_count": pages,
+                "news": favorites_list
+            }},
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
