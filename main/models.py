@@ -69,7 +69,7 @@ class UserBasicInfo(models.Model):
     # favorites
     favorites = JSONField(null=True, blank=True, default=dict)
     # readlater
-    readlater_list = JSONField(null=True, blank=True, default=dict)
+    readlist = JSONField(null=True, blank=True, default=dict)
 
     def __str__(self):
         return str(self.user_name)

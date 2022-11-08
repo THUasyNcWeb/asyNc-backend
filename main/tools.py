@@ -54,6 +54,19 @@ CRAWLER_DB_CONNECTION = None
 FAVORITES_PRE_PAGE = 10
 
 
+def add_to_readlist(user: UserBasicInfo, news: dict):
+    """
+        add a news to user's readlist
+    """
+    if "id" not in news:
+        return
+    if not user.readlist:
+        user.readlist = {}
+    user.readlist[str(news["id"])] = news
+    user.full_clean()
+    user.save()
+
+
 def add_to_favorites(user: UserBasicInfo, news: dict):
     """
         add a news to user's favorites
