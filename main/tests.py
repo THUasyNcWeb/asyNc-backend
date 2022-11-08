@@ -24,6 +24,71 @@ class ToolsTests(TestCase):
         self.user_num = 5
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
 
+    def test_add_to_read_history_and_get_read_history(self):
+        """
+            test add_to_read_history() and get_read_history()
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo(user_name=user_name, password=md5("password"))
+            for i in range(5):
+                add_to_read_history(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            for i in range(5):
+                add_to_read_history(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            read_history = get_read_history(user)
+            self.assertEqual(len(read_history),5)
+            for i in range(5):
+                self.assertEqual(read_history[i]["id"],i)
+
+    def test_remove_read_history(self):
+        """
+            test remove_read_history()
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo(user_name=user_name, password=md5("password"))
+            for i in range(5):
+                add_to_read_history(
+                    user=user,
+                    news={
+                        "id": i,
+                        "title": "Breaking News",
+                        "media": "Foobar News",
+                        "url": "https://breaking.news",
+                        "pub_time": "2022-10-21T19:02:16.305Z",
+                        "picture_url": "https://breaking.news/picture.png",
+                        "content": ""
+                    }
+                )
+            read_history = get_read_history(user)
+            self.assertEqual(len(read_history),5)
+            for i in range(5):
+                self.assertEqual(read_history[i]["id"],i)
+            for i in range(5):
+                remove_read_history(user=user, news_id=i)
+            read_history = get_read_history(user)
+            self.assertEqual(len(read_history),0)
+
     def test_add_to_readlist_and_get_readlist(self):
         """
             test add_to_readlist() and get_readlist()
