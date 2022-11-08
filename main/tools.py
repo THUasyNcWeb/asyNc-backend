@@ -76,7 +76,7 @@ def get_favorites(user: UserBasicInfo):
     return list(user.favorites.values())
 
 
-def remove_favorites(user: UserBasicInfo, news_id: int):
+def remove_favorites(user: UserBasicInfo, news_id):
     """
         remove a news from user's favorites
     """
