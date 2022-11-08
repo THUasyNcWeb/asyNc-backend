@@ -103,6 +103,6 @@ def news_not_found(error=""):
                 "error": error
             }
         },
-        status=400,
+        status=404,
         headers={'Access-Control-Allow-Origin':'*'}
     )

@@ -159,7 +159,9 @@ class ToolsTests(TestCase):
         title = "Tools Test"
         content = "test add_token_to_white_list() function in tools"
         self.assertEqual(type(tools.TOKEN_WHITE_LIST), dict)
+        tools.TOKEN_WHITE_LIST = {}
         for user_id in range(self.user_num):
+            del_all_token_of_an_user(user_id)
             user_name = self.user_name_list[user_id]
             encoded_token = create_token(user_name=user_name, user_id=user_id)
             encoded_expired_token = "Bearer " + jwt.encode(
@@ -753,23 +755,29 @@ class FavoritesTests(TestCase):
             user_name = self.user_name_list[i]
             encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
             add_token_to_white_list(encoded_token)
+            news_id_list = []
+            response_data = []
             for news_id in range(1,16):
                 response = self.client.post(
-                    '/favorites?id={news_id}'.format(news_id=news_id),
+                    '/favorites?id={news_id}'.format(news_id=str(news_id)),
                     data={},
                     content_type="application/json",
                     HTTP_AUTHORIZATION=encoded_token
                 )
-                self.assertEqual(response.status_code, 200)
+                if response.status_code == 200:
+                    news_id_list.append(news_id)
+                    response_data = response.json()["data"]
+                else:
+                    self.assertEqual(response.status_code, 404)
             user = UserBasicInfo.objects.get(user_name=user_name)
             favorites = get_favorites(user)
-            self.assertEqual(len(favorites),15)
-            for i in range(15):
-                self.assertEqual(favorites[i]["id"],i + 1)
-            response_data = response.json()["data"]
-            self.assertEqual(len(response_data), 10)
-            for news in response_data:
-                self.assertEqual(type(news["id"]), int)
+            self.assertEqual(len(favorites), len(news_id_list))
+            for i in range(len(news_id_list)):
+                self.assertEqual(bool(int(favorites[i]["id"]) in news_id_list), True)
+            if response_data:
+                self.assertEqual(len(response_data), min(10, len(news_id_list)))
+                for news in response_data:
+                    self.assertEqual(type(news["id"]), int)
 
     def test_get_favorites(self):
         """
