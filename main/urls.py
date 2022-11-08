@@ -21,5 +21,6 @@ urlpatterns = [
     path('modifyuserinfo', views.modify_user_info),
     path('favorites', views.user_favorites),
     path('readlater', views.user_readlater),
+    path('history', views.user_read_history),
     path('search/suggest', views.search_suggest)
 ]
