@@ -370,7 +370,7 @@ def user_info(request):
 @csrf_exempt
 def user_readlater(request):
     """
-        add, get, remove user favorites
+        add, get, remove user readlist
         news format:
         {
             "id": 114,
@@ -394,6 +394,46 @@ def user_readlater(request):
         print(error)
         return unauthorized_response()
 
+    if request.method == "POST":
+        try:
+            news_id = int(request.GET.get("id"))
+        except Exception as error:
+            print(error)
+            return news_not_found(error="[URL FORMAT ERROR IN READLATER]:\n" + str(error))
+        try:
+            db_news_list = tools.get_data_from_db(
+                connection=tools.CRAWLER_DB_CONNECTION,
+                filter_command="id={id}".format(id=news_id),
+                select=["title","news_url","first_img_url","media","pub_time","id"],
+                limit=200
+            )
+            if len(db_news_list) == 0:
+                return news_not_found(error="[id not found]:\n")
+            for news in db_news_list:
+                tools.add_to_readlist(
+                    user=user,
+                    news={
+                        "id": int(news["id"]),
+                        "title": news["title"],
+                        "media": news["media"],
+                        "url": news["news_url"],
+                        "pub_time": str(news["pub_time"]),
+                        "picture_url": news["first_img_url"]
+                    }
+                )
+
+            readlist_list, pages = tools.user_readlist_pages(user, 0)
+            return JsonResponse(
+                {"code": 0, "message": "SUCCESS", "data": {
+                    "page_count": pages,
+                    "news": readlist_list
+                }},
+                status=200,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+        except Exception as error:
+            print(error)
+            return internal_error_response(error="[db error]" + str(error))
     return not_found_response()
 
 
