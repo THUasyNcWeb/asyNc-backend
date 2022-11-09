@@ -1529,6 +1529,10 @@ def keyword_search(request):
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
                     and data['tags'] != [""]:
                 tags += data['tags']
+        if len(include) != 0 or len(exclude) != 0:
+            start_num = start_page * 10
+            end_num = min(start_num + 10, len(news))
+            news = news[start_num:end_num]
         data = {
             "page_count": total_num,
             "news": news
