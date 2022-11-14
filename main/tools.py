@@ -64,19 +64,61 @@ CRAWLER_DB_CONNECTION = None
 FAVORITES_PRE_PAGE = 10
 
 
+def get_user_from_request(request):
+    """
+        Get user from a request.
+        Return None if user not found or token not exist.
+    """
+    user = None
+    username = ""
+    try:
+        encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+        token = decode_token(encoded_token)
+        if check_token_in_white_list(encoded_token=encoded_token):
+            username = token["user_name"]
+            user = UserBasicInfo.objects.filter(user_name=username).first()
+    except Exception as error:
+        print(error)
+    return user
+
+
 def in_favorite_check(favorites: dict, news_id: int):
     """
         check if in favorites list
     """
+    if not favorites:
+        return False
     if news_id in favorites:
         return True
     return False
 
 
-def get_user_favorites(user: UserBasicInfo):
+def get_user_favorites_dict(user: UserBasicInfo):
     """
         get user favorites dict
     """
+    if not user:
+        return {}
+    return dict(user.readlist)
+
+
+def in_readlist_check(readlist: dict, news_id: int):
+    """
+        check if in favorites list
+    """
+    if not readlist:
+        return False
+    if news_id in readlist:
+        return True
+    return False
+
+
+def get_user_readlist_dict(user: UserBasicInfo):
+    """
+        get user readlist dict
+    """
+    if not user:
+        return {}
     return dict(user.readlist)
 
 
