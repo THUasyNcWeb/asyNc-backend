@@ -376,15 +376,16 @@ class ViewsTests(TestCase):
             set up a test set
         """
 
-        self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
-        self.user_password = ["Alcie", "password", "123456", "密码", "パスワード"]
+        self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "uユーザー名"]
+        self.user_password = ["Alice123", "password", "pass123456", "123456_-", "Alic_-e12"]
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []
         self.default_avatar = ""
+        self.user_num = len(self.user_name_list)
         with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
             self.default_avatar = f.read()
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             password = self.user_password[i]
             user = UserBasicInfo.objects.create(user_name=user_name, password=md5(password))
@@ -407,7 +408,7 @@ class ViewsTests(TestCase):
         """
             test user login with get method
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             password = self.user_password[i]
 
@@ -448,7 +449,7 @@ class ViewsTests(TestCase):
         """
             test user login
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             password = self.user_password[i]
 
@@ -464,7 +465,7 @@ class ViewsTests(TestCase):
         """
             test login with wrong password
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             requests = {
                 "user_name": user_name,
@@ -569,7 +570,7 @@ class ViewsTests(TestCase):
         """
             test user modify password
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             old_password = self.user_password[i]
             new_password = "new_" + self.user_password[i]
@@ -605,7 +606,7 @@ class ViewsTests(TestCase):
         """
             test modify without token
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             old_password = self.user_password[i]
             new_password = self.user_password[i] + "new"
@@ -628,7 +629,7 @@ class ViewsTests(TestCase):
         """
             test modify password when user not exist
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i] + "new"
             old_password = self.user_password[i]
             new_password = self.user_password[i] + "new"
@@ -650,7 +651,7 @@ class ViewsTests(TestCase):
         """
             test modify password when old password is wrong
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             old_password = self.user_password[i - 1]
             new_password = self.user_password[i] + "new"
@@ -672,7 +673,7 @@ class ViewsTests(TestCase):
         """
             test check login state function
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             encoded_token = create_token(user_name=user_name, user_id=i)
             response = self.client.post('/checklogin', data={},
@@ -689,7 +690,7 @@ class ViewsTests(TestCase):
         """
             test user logout function
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             response = self.client.post('/logout', data={},
                                         content_type="application/json",
@@ -714,7 +715,7 @@ class ViewsTests(TestCase):
         """
             test modifyusername api
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             new_user_name = "new_" + user_name
             encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
@@ -743,7 +744,7 @@ class ViewsTests(TestCase):
         )
         self.assertEqual(response.status_code, 401)
 
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
             add_token_to_white_list(encoded_token)
@@ -774,7 +775,7 @@ class ViewsTests(TestCase):
         )
         self.assertEqual(response.status_code, 401)
 
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
             add_token_to_white_list(encoded_token)
@@ -819,7 +820,7 @@ class ViewsTests(TestCase):
         """
             test modify username in modifyuserinfo api
         """
-        for i in range(5):
+        for i in range(self.user_num):
             user_name = self.user_name_list[i]
             new_user_name = "new_" + user_name
             encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
@@ -861,7 +862,7 @@ class FavoritesTests(TestCase):
         self.test_user_num = 2
 
         self.user_name_list = ["AliceFTester", "BobFTester"]
-        self.user_password = ["Alcie", "password"]
+        self.user_password = ["AlcieFTester", "password"]
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []

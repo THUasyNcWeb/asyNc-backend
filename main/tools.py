@@ -80,13 +80,15 @@ def is_chinese(char: str):
     return re.match(".*[\u3400-\u4DB5\u4E00-\u9FCB\uF900-\uFA6A].*", char)
 
 
-def user_username_checker(user_name: str):
+def user_username_checker(username: str):
     """
         check user's username
     """
-    if len(user_name) > 14:
+    if not isinstance(username, str):
         return False
-    if not (is_english(user_name[0]) or is_chinese(user_name[0])):
+    if len(username) > 14:
+        return False
+    if not (is_english(username[0]) or is_chinese(username[0])):
         return False
     return True
 
@@ -95,6 +97,8 @@ def user_password_checker(password: str):
     """
         check user's password
     """
+    if not isinstance(password, str):
+        return False
     if not 8 <= len(password) <= 14:
         return False
     if len(re.findall('[-A-Za-z0-9_]',password)) < len(password):
