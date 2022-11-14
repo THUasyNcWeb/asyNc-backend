@@ -102,6 +102,26 @@ def get_user_favorites_dict(user: UserBasicInfo):
     return dict(user.readlist)
 
 
+def in_readlist_check(readlist: dict, news_id: int):
+    """
+        check if in favorites list
+    """
+    if not readlist:
+        return False
+    if news_id in readlist:
+        return True
+    return False
+
+
+def get_user_readlist_dict(user: UserBasicInfo):
+    """
+        get user readlist dict
+    """
+    if not user:
+        return {}
+    return dict(user.readlist)
+
+
 def is_english(char: str):
     """
         char is english
