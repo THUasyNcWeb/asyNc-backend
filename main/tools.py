@@ -41,12 +41,21 @@ CATEGORY_LIST = [
 CATEGORY_FRONT_TO_BACKEND = {
     "": "",
     "home": "",
-    "ent": "ent",
     "sport": "sports",
-    "tech": "tech",
-    "game": "game",
     "fashion": "women",
+    "ent": "ent",
+    "sports": "sports",
+    "mil": "mil",
+    "politics": "politics",
+    "tech": "tech",
+    "social": "social",
+    "finance": "finance",
+    "auto": "auto",
+    "game": "game",
+    "women": "women",
     "health": "health",
+    "history": "history",
+    "edu": "edu",
 }
 
 CRAWLER_DB_CONNECTION = None

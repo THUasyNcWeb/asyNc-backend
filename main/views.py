@@ -710,16 +710,11 @@ def news_response(request):
         "message": "SUCCESS",
         "data": [
             {
-                category:"科技",
-                news:[
-                    {
-                        "title": "Breaking News",
-                        "url": "https://breaking.news",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "media": "Foobar News",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                    }
-                ]
+                "title": "Breaking News",
+                "url": "https://breaking.news",
+                "picture_url": "https://breaking.news/picture.png",
+                "media": "Foobar News",
+                "pub_time": "2022-10-21T19:02:16.305Z",
             }
         ]
     }
