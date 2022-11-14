@@ -162,14 +162,14 @@ def user_register(request):
             except Exception as error:
                 print(error)
                 return internal_error_response(error=str(error))
-            if not isinstance(user_name, str):  # format check.
+            if not tools.user_username_checker(user_name):
                 status_code = 400
                 response_msg = {
                     "code": 2,
                     "message": "INVALID_USER_NAME_FORMAT",
                     "data": {}
                 }
-            elif not isinstance(password, str):  # format check.
+            elif not tools.user_password_checker(password):
                 status_code = 400
                 response_msg = {
                     "code": 3,
@@ -274,7 +274,7 @@ def modify_user_info(request):
                                 status=status_code,
                                 headers={'Access-Control-Allow-Origin':'*'}
                             )
-                        if not isinstance(new_user_name, str):
+                        if not tools.user_username_checker(new_user_name):
                             status_code = 400
                             response_msg = {
                                 "code": 3,
@@ -843,7 +843,7 @@ def user_modify_password(request):
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
-                elif not isinstance(new_password, str):
+                elif not tools.user_password_checker(new_password):
                     status_code = 400
                     response_msg = {
                         "code": 3,
@@ -962,7 +962,7 @@ def user_modify_username(request):
                     "data": {}
                 }
             else:
-                if not isinstance(new_user_name, str):
+                if not tools.user_username_checker(new_user_name):
                     status_code = 400
                     response_msg = {
                         "code": 3,

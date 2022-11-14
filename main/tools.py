@@ -7,6 +7,7 @@ import hashlib
 import time
 import base64
 import json
+import re
 from io import BytesIO
 
 import jwt
@@ -61,6 +62,48 @@ CATEGORY_FRONT_TO_BACKEND = {
 CRAWLER_DB_CONNECTION = None
 
 FAVORITES_PRE_PAGE = 10
+
+
+def is_english(char: str):
+    """
+        char is english
+    """
+    if re.search('[a-z]', char) or re.search('[A-Z]', char):
+        return True
+    return False
+
+
+def is_chinese(char: str):
+    """
+        char is chinese
+    """
+    return re.match(".*[\u3400-\u4DB5\u4E00-\u9FCB\uF900-\uFA6A].*", char)
+
+
+def user_username_checker(username: str):
+    """
+        check user's username
+    """
+    if not isinstance(username, str):
+        return False
+    if len(username) > 14:
+        return False
+    if not (is_english(username[0]) or is_chinese(username[0])):
+        return False
+    return True
+
+
+def user_password_checker(password: str):
+    """
+        check user's password
+    """
+    if not isinstance(password, str):
+        return False
+    if not 8 <= len(password) <= 14:
+        return False
+    if len(re.findall('[-A-Za-z0-9_]',password)) < len(password):
+        return False
+    return True
 
 
 def add_to_read_history(user: UserBasicInfo, news: dict):
