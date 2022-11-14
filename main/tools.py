@@ -64,6 +64,16 @@ CRAWLER_DB_CONNECTION = None
 FAVORITES_PRE_PAGE = 10
 
 
+def in_favorite_check(favorites: dict, favorite_id: int):
+    if favorite_id in favorites:
+        return True
+    return False
+
+
+def get_user_favorites(user: UserBasicInfo):
+    return dict(user.readlist)
+
+
 def is_english(char: str):
     """
         char is english
