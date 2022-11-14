@@ -746,20 +746,7 @@ def news_response(request):
     }
     """
 
-    user_logged = False  # user logged
-    user = None
-    user_name = ""
-
-    try:
-        encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
-        token = tools.decode_token(encoded_token)
-        if tools.check_token_in_white_list(encoded_token=encoded_token):
-            user_name = token["user_name"]
-            user = UserBasicInfo.objects.filter(user_name=user_name).first()
-            if user:
-                user_logged = True
-    except Exception as error:
-        print(error)
+    user = tools.get_user_from_request(request)
 
     if request.method == "GET":
         try:
@@ -789,7 +776,7 @@ def news_response(request):
 
             try:
                 user_favorites_dict = {}
-                if user_logged and user:
+                if user:
                     user_favorites_dict = tools.get_user_favorites(user=user)
                 news_list = []
                 for news in db_news_list:
@@ -1375,7 +1362,10 @@ def keyword_essearch(request):
         tags = []
 
         # get user favorites dict
-        user_favorites_dict = {}  # tools.get_user_favorites(user=user)
+        user = tools.get_user_from_request(request)
+        user_favorites_dict = {}
+        if user:
+            user_favorites_dict = tools.get_user_favorites(user=user)
 
         for new in all_news["hits"]:
             data = new["_source"]
@@ -1536,7 +1526,10 @@ def keyword_search(request):
         tags = []
 
         # get user favorites dict
-        user_favorites_dict = {}  # tools.get_user_favorites(user=user)
+        user = tools.get_user_from_request(request)
+        user_favorites_dict = {}
+        if user:
+            user_favorites_dict = tools.get_user_favorites(user=user)
 
         for new in all_news["news_list"]:
             data = new
