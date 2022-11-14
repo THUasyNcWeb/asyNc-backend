@@ -410,8 +410,8 @@ def user_read_history(request):
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            user_favorites = tools.get_user_favorites(user=user)
-            
+            user_favorites_dict = tools.get_user_favorites(user=user)
+
             for news in db_news_list:
                 tools.add_to_read_history(
                     user=user,
@@ -422,7 +422,9 @@ def user_read_history(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
-                        "is_favorite": bool(tools.in_favorite_check(user_favorites, int(news["id"]))),
+                        "is_favorite": bool(
+                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
+                        ),
                     }
                 )
 
@@ -524,8 +526,8 @@ def user_readlater(request):
             )
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
-            
-            user_favorites = tools.get_user_favorites(user=user)
+
+            user_favorites_dict = tools.get_user_favorites(user=user)
 
             for news in db_news_list:
                 tools.add_to_readlist(
@@ -537,7 +539,9 @@ def user_readlater(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
-                        "is_favorite": bool(tools.in_favorite_check(user_favorites, int(news["id"]))),
+                        "is_favorite": bool(
+                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
+                        ),
                     }
                 )
 
@@ -638,7 +642,7 @@ def user_favorites(request):
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            user_favorites = tools.get_user_favorites(user=user)
+            user_favorites_dict = tools.get_user_favorites(user=user)
 
             for news in db_news_list:
                 tools.add_to_favorites(
@@ -650,7 +654,9 @@ def user_favorites(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
-                        "is_favorite": bool(tools.in_favorite_check(user_favorites, int(news["id"]))),
+                        "is_favorite": bool(
+                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
+                        ),
                     }
                 )
 
@@ -740,8 +746,20 @@ def news_response(request):
     }
     """
 
-    user_login = False  # user loggined
+    user_logged = False  # user logged
     user = None
+    user_name = ""
+
+    try:
+        encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
+        token = tools.decode_token(encoded_token)
+        if tools.check_token_in_white_list(encoded_token=encoded_token):
+            user_name = token["user_name"]
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            if user:
+                user_logged = True
+    except Exception as error:
+        print(error)
 
     if request.method == "GET":
         try:
@@ -770,9 +788,9 @@ def news_response(request):
             )
 
             try:
-                user_favorites = {}
-                if user_login and user:
-                    user_favorites = tools.get_user_favorites(user=user)
+                user_favorites_dict = {}
+                if user_logged and user:
+                    user_favorites_dict = tools.get_user_favorites(user=user)
                 news_list = []
                 for news in db_news_list:
                     news_list.append(
@@ -783,7 +801,9 @@ def news_response(request):
                             "media": news["media"],
                             "pub_time": news["pub_time"],  # .strftime("%y-%m-%dT%H:%M:%SZ"),
                             "id": news["id"],
-                            "is_favorite": bool(tools.in_favorite_check(user_favorites, int(news["id"]))),
+                            "is_favorite": bool(
+                                tools.in_favorite_check(user_favorites_dict, int(news["id"]))
+                            ),
                         }
                     )
             except Exception as error:
@@ -1355,7 +1375,7 @@ def keyword_essearch(request):
         tags = []
 
         # get user favorites dict
-        user_favorites = tools.get_user_favorites(user=user)
+        user_favorites_dict = {}  # tools.get_user_favorites(user=user)
 
         for new in all_news["hits"]:
             data = new["_source"]
@@ -1377,6 +1397,9 @@ def keyword_essearch(request):
 
                 keywords = get_location(content)
 
+            if "id" not in data:  # 0 stands for no news id
+                data["id"] = 0
+
             piece_new = {
                 "title": data['title'],
                 "url": data['news_url'],
@@ -1386,7 +1409,9 @@ def keyword_essearch(request):
                 "picture_url": data['first_img_url'],
                 "title_keywords": title_keywords,
                 "keywords": keywords,
-                "is_favorite": bool(tools.in_favorite_check(user_favorites, int(news["id"]))),
+                "is_favorite": bool(
+                    tools.in_favorite_check(user_favorites_dict, int(data["id"]))
+                ),
             }
             news += [piece_new]
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
@@ -1511,7 +1536,7 @@ def keyword_search(request):
         tags = []
 
         # get user favorites dict
-        user_favorites = tools.get_user_favorites(user=user)
+        user_favorites_dict = {}  # tools.get_user_favorites(user=user)
 
         for new in all_news["news_list"]:
             data = new
@@ -1525,6 +1550,8 @@ def keyword_search(request):
                 content = ""
             if title is None:
                 title = ""
+            if "id" not in data:  # 0 stands for no news id
+                data["id"] = 0
             piece_new = {
                 "title": title.replace('<span class="szz-type">','').replace('</span>',''),
                 "url": data['url'],
@@ -1534,7 +1561,9 @@ def keyword_search(request):
                 "picture_url": data['picture_url'],
                 "title_keywords": title_keywords,
                 "keywords": keywords,
-                "is_favorite": bool(tools.in_favorite_check(user_favorites, int(news["id"]))),
+                "is_favorite": bool(
+                    tools.in_favorite_check(user_favorites_dict, int(data["id"]))
+                ),
             }
             if len(include) != 0 or len(exclude) != 0:
                 if check_contain(piece_new['title'], piece_new['content'],

@@ -64,13 +64,19 @@ CRAWLER_DB_CONNECTION = None
 FAVORITES_PRE_PAGE = 10
 
 
-def in_favorite_check(favorites: dict, favorite_id: int):
-    if favorite_id in favorites:
+def in_favorite_check(favorites: dict, news_id: int):
+    """
+        check if in favorites list
+    """
+    if news_id in favorites:
         return True
     return False
 
 
 def get_user_favorites(user: UserBasicInfo):
+    """
+        get user favorites dict
+    """
     return dict(user.readlist)
 
 
