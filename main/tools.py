@@ -8,6 +8,7 @@ import time
 import base64
 import json
 import re
+import threading
 from io import BytesIO
 
 import jwt
@@ -65,24 +66,72 @@ FAVORITES_PRE_PAGE = 10
 
 DB_CHECK_INTERVAL = 1
 
-DB_UPDATE_MINIMUM_GUARANTEE_INTERVAL = 60
+DB_UPDATE_MINIMUM_INTERVAL = 300
+
+THREAD_LOCK = threading.Lock()
 
 
 class NewsCache():
     def __init__(self, db_connection) -> None:
         self.db_connection = db_connection
+        self.cache = {}
+        self.new_cache = {}
+        for category in CATEGORY_LIST:
+            self.cache[category] = []
+            self.new_cache[category] = []
+
+    def update_all_cache(self, thread_lock) -> None:
+        for category in CATEGORY_LIST:
+            self.update_cache(category, thread_lock)
+
+    def update_cache(self, category, thread_lock) -> None:
+        db_news_list = get_data_from_db(
+            connection=self.db_connection,
+            filter_command="category='{category}'".format(category=category),
+            select=["title","news_url","first_img_url","media","pub_time","id"],
+            order_command="ORDER BY pub_time DESC",
+            limit=200
+        )
+        if db_news_list:
+            thread_lock.acquire()
+            self.new_cache[category] = db_news_list
+            thread_lock.release()
+        elif (not db_news_list) and (not self.new_cache[category]):
+            self.new_cache[category] = db_news_list
+
+
+class DBScanner(threading.Thread):
+    def __init__(self, db_connection, thread_lock, news_cache: NewsCache) -> None:
+        threading.Thread.__init__(self)
+        self.db_connection = db_connection
+        self.thread_lock = thread_lock
+        self.news_cache = news_cache
         self.last_update_time = 0
         self.last_check_time = 0
-        self.db_update_mark = False
-        self.news_cache = {}
-        for category in CATEGORY_LIST:
-            self.news_cache[category] = []
-    
-    def db_checker() -> None:
-        pass
+        self.news_num = 0
 
-    def update_cache(category) -> None:
-        pass
+    def check_db_update(self) -> bool:
+        global DB_UPDATE_MINIMUM_INTERVAL
+        if time.time() - self.last_update_time > DB_UPDATE_MINIMUM_INTERVAL:
+            return True
+        self.last_check_time = time.time()
+        cursor = self.db_connection.cursor()
+        cursor.execute("select count(*) from news")
+        row = cursor.fetchone()
+        if not self.news_num == row[0]:
+            self.news_num = row[0]
+            return True
+        return False
+
+    def run(self) -> None:
+        global DB_CHECK_INTERVAL
+        while True:
+            # print(time.time())
+            if self.check_db_update():
+                self.last_update_time = time.time()
+                self.news_cache.update_all_cache(self.thread_lock)
+            time.sleep(DB_CHECK_INTERVAL)
+        # return super().run()s
 
 
 def get_user_from_request(request):
@@ -603,3 +652,9 @@ def del_all_token_of_an_user(user_id):
 with open("config/config.json","r",encoding="utf-8") as config_file:
     config = json.load(config_file)
 CRAWLER_DB_CONNECTION = connect_to_db(config["crawler-db"])
+
+NEWS_CACHE = NewsCache(CRAWLER_DB_CONNECTION)
+
+DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, THREAD_LOCK, NEWS_CACHE)
+DB_SCANNER.start()
+# DB_SCANNER.join()
