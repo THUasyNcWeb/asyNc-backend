@@ -9,6 +9,7 @@ import base64
 import json
 import re
 import threading
+import copy
 from io import BytesIO
 
 import jwt
@@ -80,11 +81,13 @@ class NewsCache():
             self.cache[category] = []
             self.new_cache[category] = []
 
-    def update_all_cache(self, thread_lock) -> None:
+    def update_all_cache(self, thread_lock=THREAD_LOCK) -> None:
+        print("Updating all cache", time.time())
         for category in CATEGORY_LIST:
             self.update_cache(category, thread_lock)
 
-    def update_cache(self, category, thread_lock) -> None:
+    def update_cache(self, category, thread_lock=THREAD_LOCK) -> None:
+        print("Updating cache of", category, time.time())
         db_news_list = get_data_from_db(
             connection=self.db_connection,
             filter_command="category='{category}'".format(category=category),
@@ -98,6 +101,14 @@ class NewsCache():
             thread_lock.release()
         elif (not db_news_list) and (not self.new_cache[category]):
             self.new_cache[category] = db_news_list
+
+    def get_cache(self, category, thread_lock=THREAD_LOCK):
+        if not self.new_cache[category]:
+            self.update_cache(category, thread_lock)
+        thread_lock.acquire()
+        news_list = copy.deepcopy(self.new_cache[category])
+        thread_lock.release()
+        return news_list
 
 
 class DBScanner(threading.Thread):

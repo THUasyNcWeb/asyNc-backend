@@ -778,13 +778,15 @@ def news_response(request):
             else:
                 category = tools.CATEGORY_FRONT_TO_BACKEND[""]
 
-            db_news_list = tools.get_data_from_db(
-                connection=connection,
-                filter_command="category='{category}'".format(category=category),
-                select=["title","news_url","first_img_url","media","pub_time","id"],
-                order_command="ORDER BY pub_time DESC",
-                limit=200
-            )
+            # db_news_list = tools.get_data_from_db(
+            #     connection=connection,
+            #     filter_command="category='{category}'".format(category=category),
+            #     select=["title","news_url","first_img_url","media","pub_time","id"],
+            #     order_command="ORDER BY pub_time DESC",
+            #     limit=200
+            # )
+
+            db_news_list = tools.NEWS_CACHE.get_cache(category)
 
             try:
                 user_favorites_dict = tools.get_user_favorites_dict(user=user)
