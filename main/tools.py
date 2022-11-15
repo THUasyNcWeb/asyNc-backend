@@ -8,14 +8,19 @@ import time
 import base64
 import json
 import re
+import pickle
+import copy
 from io import BytesIO
 
+import threadpool
 import jwt
 import psycopg2
 from PIL import Image
 from django.http import JsonResponse
 from .models import UserBasicInfo
 from .responses import internal_error_response
+
+TESTING_MODE = False
 
 EXPIRE_TIME = 7 * 86400  # 30s for testing. 7 days for deploy.
 SECRET_KEY = "A good coder is all you need."
@@ -59,9 +64,133 @@ CATEGORY_FRONT_TO_BACKEND = {
     "edu": "edu",
 }
 
+FRONT_PAGE_NEWS_NUM = 200
+
 CRAWLER_DB_CONNECTION = None
 
 FAVORITES_PRE_PAGE = 10
+
+DB_CHECK_INTERVAL = 1
+
+DB_UPDATE_MAXIMUM_INTERVAL = 60
+
+DB_UPDATE_MINIMUM_INTERVAL = 300
+
+
+class NewsCache():
+    """
+        News Cache
+    """
+    def __init__(self, db_connection) -> None:
+        """
+            init
+        """
+        self.db_connection = db_connection
+        self.cache = {}
+        self.last_update_time = 0
+        self.last_check_time = 0
+        self.last_change_time = time.time()
+        self.category_last_update_time = {}
+        for category in CATEGORY_LIST:
+            self.cache[category] = []
+            self.category_last_update_time[category] = 0
+
+    def update_cache(self, category) -> None:
+        """
+            update news cache of one specific category
+        """
+        if self.last_change_time < self.category_last_update_time[category]:
+            return
+        print("Updating cache of", category, time.time())
+        db_news_list = get_data_from_db(
+            connection=self.db_connection,
+            filter_command="category='{category}'".format(category=category),
+            select=["title","news_url","first_img_url","media","pub_time","id"],
+            order_command="ORDER BY pub_time DESC",
+            limit=FRONT_PAGE_NEWS_NUM
+        )
+        if db_news_list:
+            self.cache[category] = db_news_list
+        elif (not db_news_list) and (not self.cache[category]):
+            self.cache[category] = db_news_list
+        self.category_last_update_time[category] = time.time()
+
+    def get_cache(self, category):
+        """
+            get news cache of one specific category
+        """
+        self.update_cache(category)
+        news_list = copy.deepcopy(self.cache[category])
+        return news_list
+
+
+class DBScanner():
+    """
+        news db scanner
+    """
+    def __init__(self, db_connection, news_cache: NewsCache) -> None:
+        """
+            init
+        """
+        self.db_connection = db_connection
+        self.news_cache = news_cache
+        self.news_num = 0
+
+    def check_db_update(self) -> bool:
+        """
+            check if db updated
+        """
+        try:
+            cursor = self.db_connection.cursor()
+            cursor.execute("select count(*) from news")
+            row = cursor.fetchone()
+        except Exception as error:
+            print(error)
+        self.news_cache.last_check_time = time.time()
+        if not self.news_num == row[0]:
+            self.news_num = row[0]
+            print("news_num:", self.news_num, time.time())
+            self.news_cache.last_change_time = time.time()
+            return True
+        return False
+
+    def update_all_cache(self) -> None:
+        """
+            update all news cache
+        """
+        if time.time() - self.news_cache.last_update_time < DB_UPDATE_MAXIMUM_INTERVAL:
+            return
+        print("Updating all cache", time.time())
+        if TESTING_MODE:
+            with open("data/news_cache.pkl", "rb") as file:
+                self.news_cache.cache = pickle.load(file)
+        else:
+            for category in CATEGORY_LIST:
+                self.news_cache.update_cache(category)
+                time.sleep(DB_CHECK_INTERVAL)
+                self.check_db_update()
+        print("Saving cache to dict", time.time())
+        with open("data/news_cache.pkl", "wb") as file:
+            pickle.dump(self.news_cache.cache, file)
+        print("Saved", time.time())
+        self.news_cache.last_update_time = time.time()
+
+    def run(self, _=None) -> None:
+        """
+            run timer
+        """
+        print("Start runner")
+        print("DB_CHECK_INTERVAL =", DB_CHECK_INTERVAL)
+
+        while True:
+            try:
+                if self.check_db_update():
+                    self.update_all_cache()
+                if time.time() - self.news_cache.last_update_time > DB_UPDATE_MINIMUM_INTERVAL:
+                    self.update_all_cache()
+                time.sleep(DB_CHECK_INTERVAL)
+            except Exception as error:
+                print(error)
 
 
 def get_user_from_request(request):
@@ -579,6 +708,29 @@ def del_all_token_of_an_user(user_id):
         TOKEN_WHITE_LIST[user_id] = []
 
 
+CRAWLER_DB_CONNECTION = None
+NEWS_CACHE = None
+DB_SCANNER = None
+
 with open("config/config.json","r",encoding="utf-8") as config_file:
     config = json.load(config_file)
 CRAWLER_DB_CONNECTION = connect_to_db(config["crawler-db"])
+
+NEWS_CACHE = NewsCache(CRAWLER_DB_CONNECTION)
+
+DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, NEWS_CACHE)
+
+THREAD_POOL = threadpool.ThreadPool(1)
+
+
+def start_db_scanner(_):
+    """
+        start db scanner
+    """
+    print("Start db scanner")
+    DB_SCANNER.run()
+
+
+for REQUEST in threadpool.makeRequests(start_db_scanner, [0]):
+    THREAD_POOL.putRequest(REQUEST)
+# THREAD_POOL.wait()

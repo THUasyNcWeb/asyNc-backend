@@ -21,6 +21,7 @@ class ToolsTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
         self.user_num = 5
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
 
@@ -375,6 +376,7 @@ class ViewsTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
 
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "uユーザー名"]
         self.user_password = ["Alice123", "password", "pass123456", "123456_-", "Alic_-e12"]
@@ -858,6 +860,7 @@ class FavoritesTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
 
         self.test_user_num = 2
 
