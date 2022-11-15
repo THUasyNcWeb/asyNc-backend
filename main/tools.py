@@ -64,6 +64,8 @@ CATEGORY_FRONT_TO_BACKEND = {
     "edu": "edu",
 }
 
+FRONT_PAGE_NEWS_NUM = 200
+
 CRAWLER_DB_CONNECTION = None
 
 FAVORITES_PRE_PAGE = 10
@@ -105,7 +107,7 @@ class NewsCache():
             filter_command="category='{category}'".format(category=category),
             select=["title","news_url","first_img_url","media","pub_time","id"],
             order_command="ORDER BY pub_time DESC",
-            limit=200
+            limit=FRONT_PAGE_NEWS_NUM
         )
         if db_news_list:
             self.cache[category] = db_news_list
