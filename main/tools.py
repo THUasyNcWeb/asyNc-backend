@@ -63,6 +63,27 @@ CRAWLER_DB_CONNECTION = None
 
 FAVORITES_PRE_PAGE = 10
 
+DB_CHECK_INTERVAL = 1
+
+DB_UPDATE_MINIMUM_GUARANTEE_INTERVAL = 60
+
+
+class NewsCache():
+    def __init__(self, db_connection) -> None:
+        self.db_connection = db_connection
+        self.last_update_time = 0
+        self.last_check_time = 0
+        self.db_update_mark = False
+        self.news_cache = {}
+        for category in CATEGORY_LIST:
+            self.news_cache[category] = []
+    
+    def db_checker() -> None:
+        pass
+
+    def update_cache(category) -> None:
+        pass
+
 
 def get_user_from_request(request):
     """
