@@ -8,7 +8,8 @@ import time
 import base64
 import json
 import re
-import threading
+import pickle
+import threadpool
 import copy
 from io import BytesIO
 
@@ -18,6 +19,8 @@ from PIL import Image
 from django.http import JsonResponse
 from .models import UserBasicInfo
 from .responses import internal_error_response
+
+TESTING_MODE = False
 
 EXPIRE_TIME = 7 * 86400  # 30s for testing. 7 days for deploy.
 SECRET_KEY = "A good coder is all you need."
@@ -69,22 +72,31 @@ DB_CHECK_INTERVAL = 1
 
 DB_UPDATE_MINIMUM_INTERVAL = 300
 
-THREAD_LOCK = threading.Lock()
+THREAD_LOCK = None  # threading.Lock()
 
 
 class NewsCache():
     def __init__(self, db_connection) -> None:
         self.db_connection = db_connection
         self.cache = {}
-        self.new_cache = {}
+        self.last_update_time = 0
+        self.last_check_time = 0
         for category in CATEGORY_LIST:
             self.cache[category] = []
-            self.new_cache[category] = []
 
     def update_all_cache(self, thread_lock=THREAD_LOCK) -> None:
+        global TESTING_MODE
         print("Updating all cache", time.time())
-        for category in CATEGORY_LIST:
-            self.update_cache(category, thread_lock)
+        if TESTING_MODE:
+            with open("data/news_cache.pkl", "rb") as f:
+                self.cache = pickle.load(f)
+        else:
+            for category in CATEGORY_LIST:
+                self.update_cache(category, thread_lock)
+        # print("Saving", time.time())
+        # with open("data/news_cache.pkl", "wb") as f:
+        #     pickle.dump(self.cache, f)
+        # print("Cached", time.time())
 
     def update_cache(self, category, thread_lock=THREAD_LOCK) -> None:
         print("Updating cache of", category, time.time())
@@ -96,50 +108,49 @@ class NewsCache():
             limit=200
         )
         if db_news_list:
-            thread_lock.acquire()
-            self.new_cache[category] = db_news_list
-            thread_lock.release()
-        elif (not db_news_list) and (not self.new_cache[category]):
-            self.new_cache[category] = db_news_list
+            # thread_lock.acquire()
+            self.cache[category] = db_news_list
+            # thread_lock.release()
+        elif (not db_news_list) and (not self.cache[category]):
+            self.cache[category] = db_news_list
 
     def get_cache(self, category, thread_lock=THREAD_LOCK):
-        if not self.new_cache[category]:
-            self.update_cache(category, thread_lock)
-        thread_lock.acquire()
-        news_list = copy.deepcopy(self.new_cache[category])
-        thread_lock.release()
+        # if not self.cache[category]:
+        #     self.update_cache(category, thread_lock)
+        # thread_lock.acquire()
+        news_list = copy.deepcopy(self.cache[category])
+        # thread_lock.release()
         return news_list
 
 
-class DBScanner(threading.Thread):
+class DBScanner():
     def __init__(self, db_connection, thread_lock, news_cache: NewsCache) -> None:
-        threading.Thread.__init__(self)
+        # threading.Thread.__init__(self)
         self.db_connection = db_connection
         self.thread_lock = thread_lock
         self.news_cache = news_cache
-        self.last_update_time = 0
-        self.last_check_time = 0
         self.news_num = 0
 
     def check_db_update(self) -> bool:
         global DB_UPDATE_MINIMUM_INTERVAL
-        if time.time() - self.last_update_time > DB_UPDATE_MINIMUM_INTERVAL:
+        if time.time() - self.news_cache.last_update_time > DB_UPDATE_MINIMUM_INTERVAL:
             return True
-        self.last_check_time = time.time()
+        self.news_cache.last_check_time = time.time()
         cursor = self.db_connection.cursor()
         cursor.execute("select count(*) from news")
         row = cursor.fetchone()
         if not self.news_num == row[0]:
             self.news_num = row[0]
+            print("news_num:", self.news_num)
             return True
         return False
 
-    def run(self) -> None:
+    def run(self, _=None) -> None:
         global DB_CHECK_INTERVAL
         while True:
-            # print(time.time())
+            print(time.time())
             if self.check_db_update():
-                self.last_update_time = time.time()
+                self.news_cache.last_update_time = time.time()
                 self.news_cache.update_all_cache(self.thread_lock)
             time.sleep(DB_CHECK_INTERVAL)
         # return super().run()s
@@ -659,13 +670,30 @@ def del_all_token_of_an_user(user_id):
     if user_id in TOKEN_WHITE_LIST:
         TOKEN_WHITE_LIST[user_id] = []
 
+CRAWLER_DB_CONNECTION = None
+NEWS_CACHE = None
+DB_SCANNER = None
 
 with open("config/config.json","r",encoding="utf-8") as config_file:
     config = json.load(config_file)
 CRAWLER_DB_CONNECTION = connect_to_db(config["crawler-db"])
 
 NEWS_CACHE = NewsCache(CRAWLER_DB_CONNECTION)
+# NEWS_CACHE.update_all_cache()
 
 DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, THREAD_LOCK, NEWS_CACHE)
-DB_SCANNER.start()
+
+THREAD_POOL = threadpool.ThreadPool(1)
+
+def db_scan(_):
+    global DB_SCANNER
+    print("start db scan")
+    DB_SCANNER.run()
+
+[THREAD_POOL.putRequest(request) for request in threadpool.makeRequests(db_scan, [0])] 
+# THREAD_POOL.wait() 
+
+# DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, THREAD_LOCK, NEWS_CACHE)
+# DB_SCANNER.setDaemon(False)
+# DB_SCANNER.start()
 # DB_SCANNER.join()
