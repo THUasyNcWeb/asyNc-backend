@@ -72,8 +72,6 @@ DB_CHECK_INTERVAL = 1
 
 DB_UPDATE_MINIMUM_INTERVAL = 300
 
-THREAD_LOCK = None  # threading.Lock()
-
 
 class NewsCache():
     def __init__(self, db_connection) -> None:
@@ -84,7 +82,7 @@ class NewsCache():
         for category in CATEGORY_LIST:
             self.cache[category] = []
 
-    def update_all_cache(self, thread_lock=THREAD_LOCK) -> None:
+    def update_all_cache(self) -> None:
         global TESTING_MODE
         print("Updating all cache", time.time())
         if TESTING_MODE:
@@ -92,13 +90,13 @@ class NewsCache():
                 self.cache = pickle.load(f)
         else:
             for category in CATEGORY_LIST:
-                self.update_cache(category, thread_lock)
-        # print("Saving", time.time())
-        # with open("data/news_cache.pkl", "wb") as f:
-        #     pickle.dump(self.cache, f)
-        # print("Cached", time.time())
+                self.update_cache(category)
+        print("Saving cache to dict", time.time())
+        with open("data/news_cache.pkl", "wb") as f:
+            pickle.dump(self.cache, f)
+        print("Saved", time.time())
 
-    def update_cache(self, category, thread_lock=THREAD_LOCK) -> None:
+    def update_cache(self, category) -> None:
         print("Updating cache of", category, time.time())
         db_news_list = get_data_from_db(
             connection=self.db_connection,
@@ -108,26 +106,18 @@ class NewsCache():
             limit=200
         )
         if db_news_list:
-            # thread_lock.acquire()
             self.cache[category] = db_news_list
-            # thread_lock.release()
         elif (not db_news_list) and (not self.cache[category]):
             self.cache[category] = db_news_list
 
-    def get_cache(self, category, thread_lock=THREAD_LOCK):
-        # if not self.cache[category]:
-        #     self.update_cache(category, thread_lock)
-        # thread_lock.acquire()
+    def get_cache(self, category):
         news_list = copy.deepcopy(self.cache[category])
-        # thread_lock.release()
         return news_list
 
 
 class DBScanner():
-    def __init__(self, db_connection, thread_lock, news_cache: NewsCache) -> None:
-        # threading.Thread.__init__(self)
+    def __init__(self, db_connection, news_cache: NewsCache) -> None:
         self.db_connection = db_connection
-        self.thread_lock = thread_lock
         self.news_cache = news_cache
         self.news_num = 0
 
@@ -679,21 +669,15 @@ with open("config/config.json","r",encoding="utf-8") as config_file:
 CRAWLER_DB_CONNECTION = connect_to_db(config["crawler-db"])
 
 NEWS_CACHE = NewsCache(CRAWLER_DB_CONNECTION)
-# NEWS_CACHE.update_all_cache()
 
-DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, THREAD_LOCK, NEWS_CACHE)
+DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, NEWS_CACHE)
 
 THREAD_POOL = threadpool.ThreadPool(1)
 
-def db_scan(_):
+def db_scanner(_):
     global DB_SCANNER
-    print("start db scan")
+    print("Start db scanner")
     DB_SCANNER.run()
 
-[THREAD_POOL.putRequest(request) for request in threadpool.makeRequests(db_scan, [0])] 
-# THREAD_POOL.wait() 
-
-# DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, THREAD_LOCK, NEWS_CACHE)
-# DB_SCANNER.setDaemon(False)
-# DB_SCANNER.start()
-# DB_SCANNER.join()
+[THREAD_POOL.putRequest(request) for request in threadpool.makeRequests(db_scanner, [0])] 
+# THREAD_POOL.wait()
