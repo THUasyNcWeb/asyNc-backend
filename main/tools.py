@@ -9,10 +9,10 @@ import base64
 import json
 import re
 import pickle
-import threadpool
 import copy
 from io import BytesIO
 
+import threadpool
 import jwt
 import psycopg2
 from PIL import Image
@@ -74,7 +74,13 @@ DB_UPDATE_MINIMUM_INTERVAL = 300
 
 
 class NewsCache():
+    """
+        News Cache
+    """
     def __init__(self, db_connection) -> None:
+        """
+            init
+        """
         self.db_connection = db_connection
         self.cache = {}
         self.last_update_time = 0
@@ -83,20 +89,25 @@ class NewsCache():
             self.cache[category] = []
 
     def update_all_cache(self) -> None:
-        global TESTING_MODE
+        """
+            update all news cache
+        """
         print("Updating all cache", time.time())
         if TESTING_MODE:
-            with open("data/news_cache.pkl", "rb") as f:
-                self.cache = pickle.load(f)
+            with open("data/news_cache.pkl", "rb") as file:
+                self.cache = pickle.load(file)
         else:
             for category in CATEGORY_LIST:
                 self.update_cache(category)
         print("Saving cache to dict", time.time())
-        with open("data/news_cache.pkl", "wb") as f:
-            pickle.dump(self.cache, f)
+        with open("data/news_cache.pkl", "wb") as file:
+            pickle.dump(self.cache, file)
         print("Saved", time.time())
 
     def update_cache(self, category) -> None:
+        """
+            update news cache of one specific category
+        """
         print("Updating cache of", category, time.time())
         db_news_list = get_data_from_db(
             connection=self.db_connection,
@@ -111,18 +122,29 @@ class NewsCache():
             self.cache[category] = db_news_list
 
     def get_cache(self, category):
+        """
+            get news cache of one specific category
+        """
         news_list = copy.deepcopy(self.cache[category])
         return news_list
 
 
 class DBScanner():
+    """
+        news db scanner
+    """
     def __init__(self, db_connection, news_cache: NewsCache) -> None:
+        """
+            init
+        """
         self.db_connection = db_connection
         self.news_cache = news_cache
         self.news_num = 0
 
     def check_db_update(self) -> bool:
-        global DB_UPDATE_MINIMUM_INTERVAL
+        """
+            check if db updated
+        """
         if time.time() - self.news_cache.last_update_time > DB_UPDATE_MINIMUM_INTERVAL:
             return True
         self.news_cache.last_check_time = time.time()
@@ -136,14 +158,15 @@ class DBScanner():
         return False
 
     def run(self, _=None) -> None:
-        global DB_CHECK_INTERVAL
+        """
+            run timer
+        """
         while True:
             print(time.time())
             if self.check_db_update():
                 self.news_cache.last_update_time = time.time()
                 self.news_cache.update_all_cache(self.thread_lock)
             time.sleep(DB_CHECK_INTERVAL)
-        # return super().run()s
 
 
 def get_user_from_request(request):
@@ -660,6 +683,7 @@ def del_all_token_of_an_user(user_id):
     if user_id in TOKEN_WHITE_LIST:
         TOKEN_WHITE_LIST[user_id] = []
 
+
 CRAWLER_DB_CONNECTION = None
 NEWS_CACHE = None
 DB_SCANNER = None
@@ -674,10 +698,15 @@ DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, NEWS_CACHE)
 
 THREAD_POOL = threadpool.ThreadPool(1)
 
-def db_scanner(_):
-    global DB_SCANNER
+
+def start_db_scanner(_=0):
+    """
+        start db scanner
+    """
     print("Start db scanner")
     DB_SCANNER.run()
 
-[THREAD_POOL.putRequest(request) for request in threadpool.makeRequests(db_scanner, [0])] 
+
+for REQUEST in threadpool.makeRequests(start_db_scanner, [0]):
+    THREAD_POOL.putRequest(REQUEST)
 # THREAD_POOL.wait()
