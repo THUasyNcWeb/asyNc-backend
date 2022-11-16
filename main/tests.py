@@ -862,7 +862,7 @@ class FavoritesTests(TestCase):
         """
         tools.TESTING_MODE = True
 
-        self.test_user_num = 2
+        self.test_user_num = 1
 
         self.user_name_list = ["AliceFTester", "BobFTester"]
         self.user_password = ["AlcieFTester", "password"]
@@ -1008,8 +1008,9 @@ class ReadlistTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
 
-        self.test_user_num = 2
+        self.test_user_num = 1
 
         self.user_name_list = ["AliceRTester", "BobRTester"]
         self.user_password = ["Alcie", "password"]
@@ -1155,8 +1156,9 @@ class ReadHistoryTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
 
-        self.test_user_num = 2
+        self.test_user_num = 1
 
         self.user_name_list = ["AliceHTester", "BobHTester"]
         self.user_password = ["Alcie", "password"]
@@ -1290,3 +1292,80 @@ class ReadHistoryTests(TestCase):
             user = UserBasicInfo.objects.get(user_name=user_name)
             read_history = get_read_history(user)
             self.assertEqual(len(read_history), 0)
+
+
+class SearchHistoryToolsTests(TestCase):
+    """
+        test tool functions for search history
+    """
+    databases = "__all__"
+
+    def setUp(self):
+        """
+            set up a test set
+        """
+        tools.TESTING_MODE = True
+        tools.MAX_USER_SEARCH_HISTORY = 10
+
+        self.test_user_num = 1
+
+        self.user_name_list = ["AliSHTester"]
+        self.user_password = ["password"]
+        self.user_tags = ["用户", "Tag", "パスワード"]
+        self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
+        self.user_id = []
+        self.users = []
+        self.default_avatar = ""
+        self.search_history = {
+            "content": "What is AI? No.",
+            "RequiredWords": ["AI"],
+            "ExclusionWords": ["Robot"]
+        }
+        with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
+            self.default_avatar = f.read()
+        for i in range(self.test_user_num):
+            user_name = self.user_name_list[i]
+            password = self.user_password[i]
+            user = UserBasicInfo.objects.create(user_name=user_name, password=md5(password))
+            user.tags = self.user_tags_dict
+            user.full_clean()
+            user.save()
+            self.users.append(user)
+            self.user_id.append(user.id)
+
+    def test_add_to_search_history(self):
+        """
+            test add_to_search_history function
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            add_to_search_history(user, self.search_history)
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            self.assertEqual(len(user.search_history), 1)
+            for i in range(12):
+                add_to_search_history(user, self.search_history)
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            self.assertEqual(len(user.search_history), 10)
+
+    def test_get_search_history(self):
+        """
+            test get_search_history function
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            clear_search_history(user)
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            self.assertEqual(len(user.search_history), 0)
+
+    def test_pop_search_history(self):
+        """
+            test pop_search_history function
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            clear_search_history(user)
+            add_to_search_history(user, self.search_history)
+            self.assertEqual(len(user.search_history), 1)
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            pop_search_history(user)
+            self.assertEqual(len(user.search_history), 0)
