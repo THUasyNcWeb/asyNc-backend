@@ -78,6 +78,54 @@ DB_UPDATE_MINIMUM_INTERVAL = 300
 
 MAX_RETURN_USER_TAG = 128
 
+MAX_USER_SEARCH_HISTORY = 256
+
+
+def add_to_search_history(user: UserBasicInfo, search_history: dict):
+    """
+        add a news to user's search history
+    """
+    if not search_history:
+        return
+    if not user.search_history:
+        user.search_history = []
+    if len(user.search_history) >= MAX_USER_SEARCH_HISTORY:
+        pop_search_history(user)
+    user.search_history.append(search_history)
+    user.full_clean()
+    user.save()
+
+
+def get_search_history(user: UserBasicInfo):
+    """
+        get search history list from a user
+    """
+    if not user.search_history:
+        user.search_history = []
+    return user.search_history
+
+
+def pop_search_history(user: UserBasicInfo) -> dict:
+    """
+        pop a news from user's search history
+    """
+    if not user.search_history:
+        user.search_history = []
+        return False
+    search_history = user.search_history.pop(0)
+    user.full_clean()
+    user.save()
+    return search_history
+
+
+def clear_search_history(user: UserBasicInfo):
+    """
+        remove all news from user's search history
+    """
+    user.search_history = []
+    user.full_clean()
+    user.save()
+
 
 class NewsCache():
     """
