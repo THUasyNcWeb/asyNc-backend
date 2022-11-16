@@ -9,6 +9,10 @@ import base64
 import json
 from io import BytesIO
 
+from tinyrpc import RPCClient
+from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
+from tinyrpc.transports.http import HttpPostClientTransport
+
 import jwt
 import psycopg2
 from PIL import Image
@@ -472,3 +476,11 @@ def del_all_token_of_an_user(user_id):
 with open("config/config.json","r",encoding="utf-8") as config_file:
     config = json.load(config_file)
 CRAWLER_DB_CONNECTION = connect_to_db(config["crawler-db"])
+
+with open("config/lucene.json","r",encoding="utf-8") as config_file:
+    config = json.load(config_file)
+rpc_client = RPCClient(
+    JSONRPCProtocol(),
+    HttpPostClientTransport('http://' + config['url'] + ':' + str(config['port']))
+)
+SEARCH_CONNECTION = rpc_client.get_proxy()

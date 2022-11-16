@@ -8,11 +8,6 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Document, Date, Keyword, Text, connections, Completion
-import jieba
-
-from tinyrpc import RPCClient
-from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
-from tinyrpc.transports.http import HttpPostClientTransport
 
 from . import tools
 from .models import UserBasicInfo
@@ -1464,27 +1459,23 @@ def keyword_search(request):
                 status=400,
                 headers={'Access-Control-Allow-Origin':'*'}
             )
-        with open("config/lucene.json","r",encoding="utf-8") as config_file:
-            config = json.load(config_file)
-        rpc_client = RPCClient(
-            JSONRPCProtocol(),
-            HttpPostClientTransport('http://' + config['url'] + ':' + str(config['port']))
-        )
-        str_server = rpc_client.get_proxy()
-        str_server = rpc_client.get_proxy()
+        str_server = tools.SEARCH_CONNECTION
         if len(include) != 0 or len(exclude) != 0:
-            keyword_list = list(jieba.cut_for_search(key_word))
-            include_list = []
-            exclude_list = []
-            for must in include:
-                include_list += jieba.cut_for_search(must)
-            for must_not in exclude:
-                exclude_list += jieba.cut_for_search(must_not)
-            include_list = list(set(include_list))
-            exclude_list = list(set(exclude_list))
-            all_news = str_server.search_keywords(keyword_list,
-                                                  list(include_list),
-                                                  list(exclude_list),0)
+            all_news = str_server.search_keywords(key_word,
+                                                  list(include),
+                                                  list(exclude),0)
+            # keyword_list = list(jieba.cut_for_search(key_word))
+            # include_list = []
+            # exclude_list = []
+            # for must in include:
+            #     include_list += jieba.cut_for_search(must)
+            # for must_not in exclude:
+            #     exclude_list += jieba.cut_for_search(must_not)
+            # include_list = list(set(include_list))
+            # exclude_list = list(set(exclude_list))
+            # all_news = str_server.search_keywords(keyword_list,
+            #                                       list(include_list),
+            #                                       list(exclude_list),0)
         else:
             all_news = str_server.search_news(key_word,start_page)
         total_num = ceil(all_news['total'] / 10)
@@ -1518,10 +1509,14 @@ def keyword_search(request):
                 "title_keywords": title_keywords,
                 "keywords": keywords
             }
+            # if len(include) != 0 or len(exclude) != 0:
+            #     if check_contain(piece_new['title'], piece_new['content'],
+            #                      piece_new['title_keywords'], piece_new['keywords'],
+            #                      list(include_list), list(exclude_list)) is True:
             if len(include) != 0 or len(exclude) != 0:
                 if check_contain(piece_new['title'], piece_new['content'],
                                  piece_new['title_keywords'], piece_new['keywords'],
-                                 list(include_list), list(exclude_list)) is True:
+                                 list(include), list(exclude)) is True:
                     news += [piece_new]
                 total_num = ceil(len(news) / 10)
             else:
