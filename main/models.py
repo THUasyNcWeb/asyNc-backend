@@ -64,7 +64,7 @@ class UserBasicInfo(models.Model):
     signature = CharField(max_length=200, blank=True)
     mail = CharField(max_length=100, blank=True)
     avatar = TextField(blank=True)
-    # register_date = DateTimeField(auto_now_add=True)
+    register_date = DateTimeField(auto_now_add=True)
 
     # favorites
     favorites = JSONField(null=True, blank=True, default=dict)
@@ -72,6 +72,8 @@ class UserBasicInfo(models.Model):
     readlist = JSONField(null=True, blank=True, default=dict)
     # read history
     read_history = JSONField(null=True, blank=True, default=dict)
+    # search history
+    search_history = JSONField(null=True, blank=True, default=dict)
 
     def __str__(self):
         return str(self.user_name)
