@@ -862,7 +862,7 @@ class FavoritesTests(TestCase):
         """
         tools.TESTING_MODE = True
 
-        self.test_user_num = 2
+        self.test_user_num = 1
 
         self.user_name_list = ["AliceFTester", "BobFTester"]
         self.user_password = ["AlcieFTester", "password"]
@@ -1010,7 +1010,7 @@ class ReadlistTests(TestCase):
         """
         tools.TESTING_MODE = True
 
-        self.test_user_num = 2
+        self.test_user_num = 1
 
         self.user_name_list = ["AliceRTester", "BobRTester"]
         self.user_password = ["Alcie", "password"]
@@ -1158,7 +1158,7 @@ class ReadHistoryTests(TestCase):
         """
         tools.TESTING_MODE = True
 
-        self.test_user_num = 2
+        self.test_user_num = 1
 
         self.user_name_list = ["AliceHTester", "BobHTester"]
         self.user_password = ["Alcie", "password"]
@@ -1332,3 +1332,40 @@ class SearchHistoryToolsTests(TestCase):
             user.save()
             self.users.append(user)
             self.user_id.append(user.id)
+
+    def test_add_to_search_history(self):
+        """
+            test add_to_search_history function
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            add_to_search_history(user, self.search_history)
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            self.assertEqual(len(user.search_history), 1)
+            for i in range(12):
+                add_to_search_history(user, self.search_history)
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            self.assertEqual(len(user.search_history), 10)
+
+    def test_get_search_history(self):
+        """
+            test get_search_history function
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            clear_search_history(user)
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            self.assertEqual(len(user.search_history), 0)
+
+    def test_pop_search_history(self):
+        """
+            test pop_search_history function
+        """
+        for user_name in self.user_name_list:
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            clear_search_history(user)
+            add_to_search_history(user, self.search_history)
+            self.assertEqual(len(user.search_history), 1)
+            user = UserBasicInfo.objects.filter(user_name=user_name).first()
+            pop_search_history(user)
+            self.assertEqual(len(user.search_history), 0)
