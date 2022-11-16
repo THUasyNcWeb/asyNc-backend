@@ -1290,3 +1290,34 @@ class ReadHistoryTests(TestCase):
             user = UserBasicInfo.objects.get(user_name=user_name)
             read_history = get_read_history(user)
             self.assertEqual(len(read_history), 0)
+
+
+class SearchHistoryToolsTests(TestCase):
+    """
+        test tool functions for search history
+    """
+    databases = "__all__"
+
+    def setUp(self):
+        """
+            set up a test set
+        """
+
+        self.test_user_num = 2
+
+        self.user_name_list = ["AliSHTester", "BobSHTester"]
+        self.user_password = ["Alcie", "password"]
+        self.user_tags = ["用户", "Tag", "パスワード"]
+        self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
+        self.user_id = []
+        self.default_avatar = ""
+        with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
+            self.default_avatar = f.read()
+        for i in range(self.test_user_num):
+            user_name = self.user_name_list[i]
+            password = self.user_password[i]
+            user = UserBasicInfo.objects.create(user_name=user_name, password=md5(password))
+            user.tags = self.user_tags_dict
+            user.full_clean()
+            user.save()
+            self.user_id.append(user.id)
