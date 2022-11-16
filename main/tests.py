@@ -759,11 +759,11 @@ class ViewsTests(TestCase):
             response_data = response.json()["data"]
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response_data["user_name"], user_name)
-            self.assertEqual(isinstance(response_data["signature"],str), True)
-            self.assertEqual(isinstance(response_data["mail"],str), True)
-            self.assertEqual(isinstance(response_data["avatar"],str), True)
-            self.assertEqual(isinstance(response_data["tags"],list), True)
-            self.assertEqual(response_data["tags"], self.user_tags)
+            self.assertEqual(isinstance(response_data["signature"], str), True)
+            self.assertEqual(isinstance(response_data["mail"], str), True)
+            self.assertEqual(isinstance(response_data["avatar"], str), True)
+            self.assertEqual(isinstance(response_data["tags"], dict), True)
+            self.assertEqual(list(response_data["tags"].keys()), self.user_tags)
 
     def test_modify_user_info_post_method(self):
         """

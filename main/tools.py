@@ -76,6 +76,8 @@ DB_UPDATE_MAXIMUM_INTERVAL = 60
 
 DB_UPDATE_MINIMUM_INTERVAL = 300
 
+MAX_RETURN_USER_TAG = 128
+
 
 class NewsCache():
     """
@@ -515,20 +517,20 @@ def connect_to_db(configure):
     return connection
 
 
-def return_user_info(user, user_token=""):
+def return_user_info(user: UserBasicInfo, user_token=""):
     """
         return user info
     """
     try:
-        user_tags = []
+        user_tags = {}
         if user.tags:
             user_tags_dict = user.tags
             for key_value in sorted(
                 user_tags_dict.items(),
                 key=lambda kv:(kv[1], kv[0]),
                 reverse=True
-            ):
-                user_tags.append(key_value[0])
+            )[:MAX_RETURN_USER_TAG]:
+                user_tags[key_value[0]] = key_value[1]
 
         user_avatar = user.avatar
         if not user_avatar:
@@ -541,7 +543,7 @@ def return_user_info(user, user_token=""):
                 "id": user.id,
                 "user_name": user.user_name,
                 "signature": user.signature,
-                "tags": user_tags[:10],
+                "tags": user_tags,
                 "mail": user.mail,
                 "avatar": user_avatar,
             },
