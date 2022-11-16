@@ -81,6 +81,25 @@ MAX_RETURN_USER_TAG = 128
 MAX_USER_SEARCH_HISTORY = 256
 
 
+def get_news_from_db_by_id(news_id: int) -> bool:
+    """
+        get news from db by id
+    """
+    if TESTING_MODE:
+        with open("data/news_template.pkl", "rb") as file:
+            db_news_list = [pickle.load(file)[0]]
+        db_news_list[0]["id"] = news_id
+        # print(db_news_list)
+    else:
+        db_news_list = get_data_from_db(
+            connection=CRAWLER_DB_CONNECTION,
+            filter_command="id={id}".format(id=news_id),
+            select=["title","news_url","first_img_url","media","pub_time","id"],
+            limit=200
+        )
+    return db_news_list
+
+
 def add_to_search_history(user: UserBasicInfo, search_history: dict):
     """
         add a news to user's search history
@@ -169,7 +188,8 @@ class NewsCache():
         """
             get news cache of one specific category
         """
-        self.update_cache(category)
+        if not TESTING_MODE:
+            self.update_cache(category)
         news_list = copy.deepcopy(self.cache[category])
         return news_list
 
@@ -190,6 +210,8 @@ class DBScanner():
         """
             check if db updated
         """
+        if TESTING_MODE:
+            return False
         try:
             cursor = self.db_connection.cursor()
             cursor.execute("select count(*) from news")

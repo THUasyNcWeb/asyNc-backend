@@ -1008,6 +1008,7 @@ class ReadlistTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
 
         self.test_user_num = 2
 
@@ -1155,6 +1156,7 @@ class ReadHistoryTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
 
         self.test_user_num = 2
 
@@ -1302,15 +1304,23 @@ class SearchHistoryToolsTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
+        tools.MAX_USER_SEARCH_HISTORY = 10
 
-        self.test_user_num = 2
+        self.test_user_num = 1
 
-        self.user_name_list = ["AliSHTester", "BobSHTester"]
-        self.user_password = ["Alcie", "password"]
+        self.user_name_list = ["AliSHTester"]
+        self.user_password = ["password"]
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []
+        self.users = []
         self.default_avatar = ""
+        self.search_history = {
+            "content": "What is AI? No.",
+            "RequiredWords": ["AI"],
+            "ExclusionWords": ["Robot"]
+        }
         with open("data/default_avatar.base64", "r", encoding="utf-8") as f:
             self.default_avatar = f.read()
         for i in range(self.test_user_num):
@@ -1320,4 +1330,5 @@ class SearchHistoryToolsTests(TestCase):
             user.tags = self.user_tags_dict
             user.full_clean()
             user.save()
+            self.users.append(user)
             self.user_id.append(user.id)

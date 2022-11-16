@@ -401,12 +401,7 @@ def user_read_history(request):
             print(error)
             return news_not_found(error="[URL FORMAT ERROR IN READ HISTORY]:\n" + str(error))
         try:
-            db_news_list = tools.get_data_from_db(
-                connection=tools.CRAWLER_DB_CONNECTION,
-                filter_command="id={id}".format(id=news_id),
-                select=["title","news_url","first_img_url","media","pub_time","id"],
-                limit=200
-            )
+            db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
@@ -522,12 +517,7 @@ def user_readlater(request):
             print(error)
             return news_not_found(error="[URL FORMAT ERROR IN READLATER]:\n" + str(error))
         try:
-            db_news_list = tools.get_data_from_db(
-                connection=tools.CRAWLER_DB_CONNECTION,
-                filter_command="id={id}".format(id=news_id),
-                select=["title","news_url","first_img_url","media","pub_time","id"],
-                limit=200
-            )
+            db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
@@ -641,12 +631,7 @@ def user_favorites(request):
             print(error)
             return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
         try:
-            db_news_list = tools.get_data_from_db(
-                connection=tools.CRAWLER_DB_CONNECTION,
-                filter_command="id={id}".format(id=news_id),
-                select=["title","news_url","first_img_url","media","pub_time","id"],
-                limit=200
-            )
+            db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
