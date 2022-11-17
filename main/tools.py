@@ -99,7 +99,10 @@ def get_news_from_db_by_id(news_id: int) -> bool:
         db_news_list = get_data_from_db(
             connection=CRAWLER_DB_CONNECTION,
             filter_command="id={id}".format(id=news_id),
-            select=["title","news_url","first_img_url","media","pub_time","id","category","content"],
+            select=[
+                "title","news_url","first_img_url","media",
+                "pub_time","id","category","content"
+            ],
             limit=200
         )
     return db_news_list
@@ -236,18 +239,18 @@ class NewsCache():
                 self.category_last_update_time[news["category"]] = time.time()
         for category in CATEGORY_LIST:
             self.cache[category] = self.cache[category][-200:]
-        
+
         self.update_max_news_id()
-        
+
         if len(self.newspool) > CACHE_NEWSPOOL_MAX:  # del outdate news
-            self.newspool = self.newspool[- CACHE_NEWSPOOL_MAX // 2 :]
+            self.newspool = self.newspool[- CACHE_NEWSPOOL_MAX // 2:]
 
     def get_cache(self, category):
         """
             get news cache of one specific category
         """
         news_list = copy.deepcopy(self.cache[category])
-        news_list.sort(key=lambda x:x["id"], reverse=True)
+        news_list.sort(key=lambda x:x["pub_time"], reverse=True)
         return news_list[:200]
 
 
@@ -274,7 +277,6 @@ class DBScanner():
         except Exception as error:
             print("[error]", error)
         return row[0]
-
 
     def check_db_update(self) -> bool:
         """
@@ -304,7 +306,10 @@ class DBScanner():
         db_news_list = get_data_from_db(
             connection=self.db_connection,
             filter_command="id > {id}".format(id=self.news_cache.max_news_id),
-            select=["title","news_url","first_img_url","media","pub_time","id","category","content"],
+            select=[
+                "title","news_url","first_img_url","media",
+                "pub_time","id","category","content"
+            ],
             order_command="ORDER BY pub_time DESC",
             limit=65536  # protection
         )
@@ -336,7 +341,10 @@ class DBScanner():
                             id=max(self.news_cache.max_news_id, self.news_num - DB_NEWS_LOOK_BACK),
                             category=category
                         ),
-                        select=["title","news_url","first_img_url","media","pub_time","id","category","content"],
+                        select=[
+                            "title","news_url","first_img_url","media",
+                            "pub_time","id","category","content"
+                        ],
                         order_command="ORDER BY pub_time DESC",
                         limit=FRONT_PAGE_NEWS_NUM
                     )
@@ -894,11 +902,11 @@ DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, NEWS_CACHE)
 THREAD_POOL = threadpool.ThreadPool(1)
 
 
-def start_db_scanner(id):
+def start_db_scanner(thread_id):
     """
         start db scanner
     """
-    print("Start db scanner",id)
+    print("Start db scanner", thread_id)
     DB_SCANNER.run()
 
 
