@@ -3,6 +3,7 @@ This .py file contains most commenly used tools in views.py
 
 Created by sxx
 """
+import os
 import hashlib
 import time
 import base64
@@ -72,13 +73,17 @@ FAVORITES_PRE_PAGE = 10
 
 DB_CHECK_INTERVAL = 1
 
-DB_UPDATE_MAXIMUM_INTERVAL = 60
+# DB_UPDATE_MAXIMUM_INTERVAL = 60
 
 DB_UPDATE_MINIMUM_INTERVAL = 300
 
 MAX_RETURN_USER_TAG = 128
 
 MAX_USER_SEARCH_HISTORY = 256
+
+CACHE_NEWSPOOL_MAX = len(CATEGORY_LIST) * FRONT_PAGE_NEWS_NUM * 8
+
+DB_NEWS_LOOK_BACK = 65536
 
 
 def get_news_from_db_by_id(news_id: int) -> bool:
@@ -94,7 +99,10 @@ def get_news_from_db_by_id(news_id: int) -> bool:
         db_news_list = get_data_from_db(
             connection=CRAWLER_DB_CONNECTION,
             filter_command="id={id}".format(id=news_id),
-            select=["title","news_url","first_img_url","media","pub_time","id"],
+            select=[
+                "title","news_url","first_img_url","media",
+                "pub_time","id","category","content"
+            ],
             limit=200
         )
     return db_news_list
@@ -156,42 +164,94 @@ class NewsCache():
         """
         self.db_connection = db_connection
         self.cache = {}
+        self.newspool = []  # pool of cached news
         self.last_update_time = 0
         self.last_check_time = 0
         self.last_change_time = time.time()
         self.category_last_update_time = {}
+        self.max_news_id = 0
         for category in CATEGORY_LIST:
             self.cache[category] = []
             self.category_last_update_time[category] = 0
 
-    def update_cache(self, category) -> None:
+    def save_local_cache(self):
+        """
+            save cache from file
+        """
+        print("Saving cache to dict", time.time())
+        with open("data/news_cache.pkl", "wb") as file:
+            pickle.dump(self.cache, file)
+        print("Saved", time.time())
+
+    def load_local_cache(self):
+        """
+            load cache from file
+        """
+        print("loading local cache file")
+        if os.path.exists("data/news_cache.pkl"):
+            with open("data/news_cache.pkl", "rb") as file:
+                self.cache = pickle.load(file)
+            self.sort_cache_ascend()
+            self.update_max_news_id()
+            for category in CATEGORY_LIST:
+                self.newspool += self.cache[category]
+            self.newspool.sort(key=lambda x:x["id"])
+            print("local cache loaded")
+        else:
+            print("load cache not found")
+
+    def sort_cache_ascend(self):
+        """
+            sort cache in ascend order
+        """
+        for category in CATEGORY_LIST:
+            self.cache[category].sort(key=lambda x:x["id"])
+
+    def sort_cache_descend(self):
+        """
+            sort cache in descend order
+        """
+        for category in CATEGORY_LIST:
+            self.cache[category].sort(key=lambda x:x["id"], reverse=True)
+
+    def update_max_news_id(self) -> None:
+        """
+            update max news id in cache
+        """
+        for category in CATEGORY_LIST:
+            try:
+                news = self.cache[category][-1]
+                if self.max_news_id < news["id"]:
+                    self.max_news_id = news["id"]
+            except Exception as error:
+                print("[error]", error)
+
+    def update_cache(self, db_news_list) -> None:
         """
             update news cache of one specific category
         """
-        if self.last_change_time < self.category_last_update_time[category]:
-            return
-        print("Updating cache of", category, time.time())
-        db_news_list = get_data_from_db(
-            connection=self.db_connection,
-            filter_command="category='{category}'".format(category=category),
-            select=["title","news_url","first_img_url","media","pub_time","id"],
-            order_command="ORDER BY pub_time DESC",
-            limit=FRONT_PAGE_NEWS_NUM
-        )
-        if db_news_list:
-            self.cache[category] = db_news_list
-        elif (not db_news_list) and (not self.cache[category]):
-            self.cache[category] = db_news_list
-        self.category_last_update_time[category] = time.time()
+        self.last_update_time = time.time()
+        db_news_list.sort(key=lambda x:x["id"])
+        self.newspool += db_news_list
+        for news in db_news_list:
+            if news["category"] in CATEGORY_LIST:
+                self.cache[news["category"]].append(news)
+                self.category_last_update_time[news["category"]] = time.time()
+        for category in CATEGORY_LIST:
+            self.cache[category] = self.cache[category][-200:]
+
+        self.update_max_news_id()
+
+        if len(self.newspool) > CACHE_NEWSPOOL_MAX:  # del outdate news
+            self.newspool = self.newspool[- CACHE_NEWSPOOL_MAX // 2:]
 
     def get_cache(self, category):
         """
             get news cache of one specific category
         """
-        if not TESTING_MODE:
-            self.update_cache(category)
         news_list = copy.deepcopy(self.cache[category])
-        return news_list
+        news_list.sort(key=lambda x:x["pub_time"], reverse=True)
+        return news_list[:200]
 
 
 class DBScanner():
@@ -206,63 +266,110 @@ class DBScanner():
         self.news_cache = news_cache
         self.news_num = 0
 
+    def get_db_news_num(self) -> int:
+        """
+            get db news num
+        """
+        try:
+            cursor = self.db_connection.cursor()
+            cursor.execute("select count(*) from news")
+            row = cursor.fetchone()
+        except Exception as error:
+            print("[error]", error)
+        return row[0]
+
     def check_db_update(self) -> bool:
         """
             check if db updated
         """
         if TESTING_MODE:
             return False
-        try:
-            cursor = self.db_connection.cursor()
-            cursor.execute("select count(*) from news")
-            row = cursor.fetchone()
-        except Exception as error:
-            print(error)
+        db_news_num = self.get_db_news_num()
         self.news_cache.last_check_time = time.time()
-        if not self.news_num == row[0]:
-            self.news_num = row[0]
-            print("news_num:", self.news_num, time.time())
+        if not self.news_num == db_news_num:
+            self.news_num = db_news_num
+            print("db_news_num:", self.news_num, time.time())
             self.news_cache.last_change_time = time.time()
             return True
         return False
 
-    def update_all_cache(self) -> None:
+    def update_cache(self) -> None:
         """
             update all news cache
         """
-        if time.time() - self.news_cache.last_update_time < DB_UPDATE_MAXIMUM_INTERVAL:
-            return
-        print("Updating all cache", time.time())
+        print("Updating cache", time.time())
         if TESTING_MODE:
             with open("data/news_cache.pkl", "rb") as file:
                 self.news_cache.cache = pickle.load(file)
-        else:
-            for category in CATEGORY_LIST:
-                self.news_cache.update_cache(category)
-                time.sleep(DB_CHECK_INTERVAL)
-                self.check_db_update()
-        print("Saving cache to dict", time.time())
-        with open("data/news_cache.pkl", "wb") as file:
-            pickle.dump(self.news_cache.cache, file)
-        print("Saved", time.time())
-        self.news_cache.last_update_time = time.time()
+            self.news_cache.last_update_time = time.time()
+            return
+        db_news_list = get_data_from_db(
+            connection=self.db_connection,
+            filter_command="id > {id}".format(id=self.news_cache.max_news_id),
+            select=[
+                "title","news_url","first_img_url","media",
+                "pub_time","id","category","content"
+            ],
+            order_command="ORDER BY pub_time DESC",
+            limit=65536  # protection
+        )
+        self.news_cache.update_cache(db_news_list=db_news_list)
+        print("cache shape:", [len(x) for x in self.news_cache.cache.values()])
+        self.news_cache.save_local_cache()
 
     def run(self, _=None) -> None:
         """
             run timer
         """
-        print("Start runner")
-        print("DB_CHECK_INTERVAL =", DB_CHECK_INTERVAL)
+        try:
+            print("Starting runner")
+            print("DB_CHECK_INTERVAL =", DB_CHECK_INTERVAL)
+            self.news_cache.load_local_cache()
+            print("cache shape", [len(x) for x in self.news_cache.cache.values()])
 
-        while True:
-            try:
-                if self.check_db_update():
-                    self.update_all_cache()
-                if time.time() - self.news_cache.last_update_time > DB_UPDATE_MINIMUM_INTERVAL:
-                    self.update_all_cache()
+            print("Cache initialization:")
+
+            if not TESTING_MODE:
+                self.check_db_update()
+
+                db_news_list = []
+                for category in CATEGORY_LIST:
+                    print("init category", category, "from db...")
+                    db_news_list += get_data_from_db(
+                        connection=self.db_connection,
+                        filter_command="id > {id} AND category='{category}'".format(
+                            id=max(self.news_cache.max_news_id, self.news_num - DB_NEWS_LOOK_BACK),
+                            category=category
+                        ),
+                        select=[
+                            "title","news_url","first_img_url","media",
+                            "pub_time","id","category","content"
+                        ],
+                        order_command="ORDER BY pub_time DESC",
+                        limit=FRONT_PAGE_NEWS_NUM
+                    )
+                self.news_cache.update_cache(db_news_list)
+                print("cache shape:", [len(x) for x in self.news_cache.cache.values()])
+
+            print("Cache initialization completed.")
+
+            self.news_cache.save_local_cache()
+
+            print("cache checker loop begin")
+
+            while True:
+                try:
+                    if self.check_db_update():
+                        self.update_cache()
+                    if time.time() - self.news_cache.last_update_time > DB_UPDATE_MINIMUM_INTERVAL:
+                        self.update_cache()
+                except Exception as error:
+                    print("[error]", error)
                 time.sleep(DB_CHECK_INTERVAL)
-            except Exception as error:
-                print(error)
+
+        except Exception as error:
+            print("[error]", error)
+        time.sleep(DB_CHECK_INTERVAL)
 
 
 def get_user_from_request(request):
@@ -279,7 +386,7 @@ def get_user_from_request(request):
             username = token["user_name"]
             user = UserBasicInfo.objects.filter(user_name=username).first()
     except Exception as error:
-        print(error)
+        print("[error]", error)
     return user
 
 
@@ -795,11 +902,11 @@ DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, NEWS_CACHE)
 THREAD_POOL = threadpool.ThreadPool(1)
 
 
-def start_db_scanner(_):
+def start_db_scanner(thread_id):
     """
         start db scanner
     """
-    print("Start db scanner")
+    print("Start db scanner", thread_id)
     DB_SCANNER.run()
 
 
