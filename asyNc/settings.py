@@ -94,7 +94,7 @@ DATABASES = {
         'HOST': config["backend-db"]['hostname'],
         'PORT': config["backend-db"]['port'],
         'TEST': {
-            'NAME': 'backend_test',
+            'NAME': 'backend_test_db',
         },
     },
     # 'news':
