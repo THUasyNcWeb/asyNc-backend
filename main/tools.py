@@ -99,7 +99,7 @@ def get_news_from_db_by_id(news_id: int) -> bool:
         db_news_list = get_data_from_db(
             connection=CRAWLER_DB_CONNECTION,
             filter_command="id={id}".format(id=news_id),
-            select=["title","news_url","first_img_url","media","pub_time","id"],
+            select=["title","news_url","first_img_url","media","pub_time","id","category","content"],
             limit=200
         )
     return db_news_list
@@ -184,7 +184,7 @@ class NewsCache():
         """
             load cache from file
         """
-        print("load local cache file")
+        print("loading local cache file")
         if os.path.exists("data/news_cache.pkl"):
             with open("data/news_cache.pkl", "rb") as file:
                 self.cache = pickle.load(file)
@@ -193,7 +193,9 @@ class NewsCache():
             for category in CATEGORY_LIST:
                 self.newspool += self.cache[category]
             self.newspool.sort(key=lambda x:x["id"])
-        print("local cache loaded")
+            print("local cache loaded")
+        else:
+            print("load cache not found")
 
     def sort_cache_ascend(self):
         """
@@ -219,7 +221,7 @@ class NewsCache():
                 if self.max_news_id < news["id"]:
                     self.max_news_id = news["id"]
             except Exception as error:
-                print(error)
+                print("[error]", error)
 
     def update_cache(self, db_news_list) -> None:
         """
@@ -229,8 +231,9 @@ class NewsCache():
         db_news_list.sort(key=lambda x:x["id"])
         self.newspool += db_news_list
         for news in db_news_list:
-            self.cache[news["category"]].append(news)
-            self.category_last_update_time[news["category"]] = time.time()
+            if news["category"] in CATEGORY_LIST:
+                self.cache[news["category"]].append(news)
+                self.category_last_update_time[news["category"]] = time.time()
         for category in CATEGORY_LIST:
             self.cache[category] = self.cache[category][-200:]
         
@@ -269,7 +272,7 @@ class DBScanner():
             cursor.execute("select count(*) from news")
             row = cursor.fetchone()
         except Exception as error:
-            print(error)
+            print("[error]", error)
         return row[0]
 
 
@@ -301,11 +304,12 @@ class DBScanner():
         db_news_list = get_data_from_db(
             connection=self.db_connection,
             filter_command="id > {id}".format(id=self.news_cache.max_news_id),
-            select=["title","news_url","first_img_url","media","pub_time","id"],
+            select=["title","news_url","first_img_url","media","pub_time","id","category","content"],
             order_command="ORDER BY pub_time DESC",
             limit=65536  # protection
         )
         self.news_cache.update_cache(db_news_list=db_news_list)
+        print("cache shape:", [len(x) for x in self.news_cache.cache.values()])
         self.news_cache.save_local_cache()
 
     def run(self, _=None) -> None:
@@ -313,31 +317,34 @@ class DBScanner():
             run timer
         """
         try:
-            print("Start runner")
+            print("Starting runner")
             print("DB_CHECK_INTERVAL =", DB_CHECK_INTERVAL)
             self.news_cache.load_local_cache()
+            print("cache shape", [len(x) for x in self.news_cache.cache.values()])
 
-            # print(self.news_cache.cache)
-            self.check_db_update()
-            # self.news_num = self.get_db_news_num()
-            # print("db_news_num:", self.news_num, time.time())
+            print("Cache initialization:")
 
-            db_news_list = []
-            for category in CATEGORY_LIST:
-                print("init category", category, "from db...")
-                db_news_list += get_data_from_db(
-                    connection=self.db_connection,
-                    filter_command="id > {id} AND category='{category}'".format(
-                        id=max(0, self.news_num - DB_NEWS_LOOK_BACK),
-                        category=category
-                    ),
-                    select=["title","news_url","first_img_url","media","pub_time","id"],
-                    order_command="ORDER BY pub_time DESC",
-                    limit=FRONT_PAGE_NEWS_NUM
-                )
-            self.news_cache.update_cache(db_news_list)
+            if not TESTING_MODE:
+                self.check_db_update()
 
-            self.news_cache.update_max_news_id()
+                db_news_list = []
+                for category in CATEGORY_LIST:
+                    print("init category", category, "from db...")
+                    db_news_list += get_data_from_db(
+                        connection=self.db_connection,
+                        filter_command="id > {id} AND category='{category}'".format(
+                            id=max(self.news_cache.max_news_id, self.news_num - DB_NEWS_LOOK_BACK),
+                            category=category
+                        ),
+                        select=["title","news_url","first_img_url","media","pub_time","id","category","content"],
+                        order_command="ORDER BY pub_time DESC",
+                        limit=FRONT_PAGE_NEWS_NUM
+                    )
+                self.news_cache.update_cache(db_news_list)
+                print("cache shape:", [len(x) for x in self.news_cache.cache.values()])
+
+            print("Cache initialization completed.")
+
             self.news_cache.save_local_cache()
 
             print("cache checker loop begin")
@@ -349,11 +356,11 @@ class DBScanner():
                     if time.time() - self.news_cache.last_update_time > DB_UPDATE_MINIMUM_INTERVAL:
                         self.update_cache()
                 except Exception as error:
-                    print(error)
+                    print("[error]", error)
                 time.sleep(DB_CHECK_INTERVAL)
 
         except Exception as error:
-            print(error)
+            print("[error]", error)
         time.sleep(DB_CHECK_INTERVAL)
 
 
@@ -371,7 +378,7 @@ def get_user_from_request(request):
             username = token["user_name"]
             user = UserBasicInfo.objects.filter(user_name=username).first()
     except Exception as error:
-        print(error)
+        print("[error]", error)
     return user
 
 
