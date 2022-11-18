@@ -723,6 +723,7 @@ def return_user_info(user: UserBasicInfo, user_token=""):
                 "tags": user_tags,
                 "mail": user.mail,
                 "avatar": user_avatar,
+                "register_date": user.register_date,
             },
             "code": 0,
             "message": "SUCCESS",

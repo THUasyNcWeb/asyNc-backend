@@ -9,6 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Document, Date, Keyword, Text, connections, Completion
 import jieba
+from django.middleware.csrf import get_token
+from django.core.handlers.wsgi import WSGIRequest
 
 from tinyrpc import RPCClient
 from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
@@ -19,6 +21,57 @@ from .models import UserBasicInfo
 from .responses import *
 
 # Create your views here.
+
+# @csrf_exempt
+def ai_news(request: WSGIRequest):
+    """
+        ai news summary
+    """
+    if request.method == "GET":
+        status_code = 200
+        response_msg = {
+            "code": 0,
+            "message": "SUCCESS",
+            "data": [
+                {
+                    "id": 114,
+                    "title": "为亚太和世界发展繁荣贡献正能量",
+                    "media": "Foobar News",
+                    "url": "https://baijiahao.baidu.com/s?id=1749782470764021746",
+                    "pub_time": "2022-10-21T19:02:16.305Z",
+                    "first_img_url": "",
+                    "full_content": "11月17日下午，国家主席习近平在泰国曼谷举行的亚太经合组织(APEC)工商领导人峰会上，发表题为《坚守初心 共促发展 开启亚太合作新篇章》的书面演讲。习近平主席的书面演讲备受瞩目。接受采访的与会人士表示，习近平主席从亚太和世界前途命运出发，为亚太合作把舵领航，为世界发展再开良方，推动构建亚太命运共同体走深走实。",
+                }
+            ],
+            "csrf_token": get_token(request=request)
+        }
+        return JsonResponse(
+            response_msg,
+            status=status_code,
+            headers={'Access-Control-Allow-Origin': '*'}
+        )
+    elif request.method == "POST":
+        # print(request.META)
+        # print(request.headers)
+        # print(request.body)
+        request_data = json.loads(request.body.decode())
+        # print(dict(request_data))
+        news_list = request_data["data"]
+        print(news_list)
+        for news in news_list:
+            print(news)
+        status_code = 200
+        response_msg = {
+            "code": 0,
+            "message": "SUCCESS",
+            "data": {}
+        }
+        return JsonResponse(
+            response_msg,
+            status=status_code,
+            headers={'Access-Control-Allow-Origin': '*'}
+        )
+    return not_found_response()
 
 
 # This funtion is for testing only, please delete this funcion before deploying.
