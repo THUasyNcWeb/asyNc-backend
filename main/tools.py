@@ -193,7 +193,10 @@ class LocalNewsManager():
                         local_news.full_clean()
                         local_news.save()
                     else:
-                        local_news = LocalNews(data=news, news_id=news["id"], ai_processed=True)
+                        local_news = LocalNews(
+                            data=news, news_id=news["id"],
+                            ai_processed=True, cite_count=1
+                        )
                         local_news.full_clean()
                         local_news.save()
         except Exception as error:
@@ -201,37 +204,74 @@ class LocalNewsManager():
             return False
         return True
 
-
     def add_to_cache(self, news: dict):
         self.local_news_list_cache[news["id"]] = news
         if len(self.local_news_list_cache) > MAX_LOCAL_NEWS_LIST_CACHE:
             news_id = self.local_news_list_cache.keys[0]
             self.local_news_list_cache.pop(news_id)
 
-    def save_to_local_news(self, news):
+    def del_from_cache(self, news: dict):
+        if news["id"] in self.local_news_list_cache:
+            self.local_news_list_cache.pop(news["id"])
+
+    def del_one_local_news(self, news) -> bool:
+        if isinstance(news, dict):
+            try:
+                self.del_from_cache(news)
+                local_news = LocalNews.objects.get(news_id=news["id"])
+                if local_news:
+                    local_news.cite_count -= 1
+                    if local_news.cite_count <= 0:
+                        LocalNews.objects.get(news_id=news["id"]).delete()
+                        return True
+                    local_news.full_clean()
+                    local_news.save()
+            except Exception as error:
+                print(error)
+                return False
+            return True
+        return False
+
+    def del_local_news(self, news) -> bool:
+        if isinstance(news, dict):
+            return self.del_one_local_news(news)
+        elif isinstance(news, list):
+            news_list = news
+            for news in news_list:
+                if not self.del_one_local_news(news):
+                    return False
+            return True
+        return False
+
+    def save_one_local_news(self, news) -> bool:
         if isinstance(news, dict):
             try:
                 self.add_to_cache(news)
-                local_news = LocalNews(data=news, news_id=news["id"], ai_processed=False)
+                local_news = LocalNews.objects.get(news_id=news["id"])
+                if local_news:
+                    local_news.cite_count += 1
+                    local_news.full_clean()
+                    local_news.save()
+                    return True
+                local_news = LocalNews(
+                    data=news, news_id=news["id"],
+                    ai_processed=False, cite_count=1
+                )
                 local_news.full_clean()
                 local_news.save()
             except Exception as error:
                 print(error)
                 return False
             return True
+        return False
+
+    def save_local_news(self, news) -> bool:
+        if isinstance(news, dict):
+            return self.save_one_local_news(news)
         elif isinstance(news, list):
             news_list = news
             for news in news_list:
-                if isinstance(news, dict):
-                    try:
-                        self.add_to_cache(news)
-                        local_news = LocalNews(data=news, news_id=news["id"], ai_processed=False)
-                        local_news.full_clean()
-                        local_news.save()
-                    except Exception as error:
-                        print(error)
-                        return False
-                else:
+                if not self.save_one_local_news(news):
                     return False
             return True
         return False

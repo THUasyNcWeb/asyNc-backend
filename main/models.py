@@ -38,6 +38,7 @@ class LocalNews(models.Model):
     """
     id = AutoField(primary_key=True, db_index=True)
     news_id = IntegerField(default=0)
+    cite_cound = IntegerField(default=0)
     ai_processed = BooleanField(default=False)
     data = JSONField(null=True, blank=True, default=dict)
 
