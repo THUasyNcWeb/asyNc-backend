@@ -744,7 +744,6 @@ def news_response(request):
 
     user = tools.get_user_from_request(request)
 
-
     if request.method == "GET":
         try:
             news_category = request.GET.get("category")
@@ -1501,24 +1500,14 @@ def keyword_search(request):
             all_news = str_server.search_keywords(key_word,
                                                   list(include),
                                                   list(exclude),0)
-            # keyword_list = list(jieba.cut_for_search(key_word))
-            # include_list = []
-            # exclude_list = []
-            # for must in include:
-            #     include_list += jieba.cut_for_search(must)
-            # for must_not in exclude:
-            #     exclude_list += jieba.cut_for_search(must_not)
-            # include_list = list(set(include_list))
-            # exclude_list = list(set(exclude_list))
-            # all_news = str_server.search_keywords(keyword_list,
-            #                                       list(include_list),
-            #                                       list(exclude_list),0)
+
         else:
-            all_news = str_server.search_news(key_word)
+            all_news = str_server.search_news(key_word, start_page)
         all_news_list = all_news['news_list']
-        all_news_list = sorted(all_news_list,key=lambda x: x['score'],reverse=True)
+        all_news_list = sorted(all_news_list, key=lambda x: x['score'], reverse=True)
         total_num = ceil(all_news['total'] / 10)
-        all_news_list = all_news_list[start_page * 10: min(start_page * 10 + 10, all_news['total'])]
+        all_news_list = all_news_list[(start_page % 10) * 10: min((start_page % 10) * 10 + 10,
+                                                                  all_news['total'])]
         if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
@@ -1533,7 +1522,7 @@ def keyword_search(request):
         user_favorites_dict = tools.get_user_favorites_dict(user=user)
         user_readlist_dict = tools.get_user_readlist_dict(user=user)
 
-        for new in all_news["news_list"]:
+        for new in all_news_list:
             data = new
             title_keywords = []
             keywords = []
@@ -1545,8 +1534,8 @@ def keyword_search(request):
                 content = ""
             if title is None:
                 title = ""
-            if "id" not in data:  # 0 stands for no news id
-                data["id"] = 0
+            if "news_id" not in data:  # 0 stands for no news id
+                data["news_id"] = 0
             piece_new = {
                 "title": title.replace('<span class="szz-type">','').replace('</span>',''),
                 "url": data['url'],
@@ -1557,16 +1546,12 @@ def keyword_search(request):
                 "title_keywords": title_keywords,
                 "keywords": keywords,
                 "is_favorite": bool(
-                    tools.in_favorite_check(user_favorites_dict, int(data["id"]))
+                    tools.in_favorite_check(user_favorites_dict, int(data["news_id"]))
                 ),
                 "is_readlater": bool(
-                    tools.in_favorite_check(user_readlist_dict, int(data["id"]))
+                    tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
                 ),
             }
-            # if len(include) != 0 or len(exclude) != 0:
-            #     if check_contain(piece_new['title'], piece_new['content'],
-            #                      piece_new['title_keywords'], piece_new['keywords'],
-            #                      list(include_list), list(exclude_list)) is True:
             if len(include) != 0 or len(exclude) != 0:
                 if check_contain(piece_new['title'], piece_new['content'],
                                  piece_new['title_keywords'], piece_new['keywords'],
