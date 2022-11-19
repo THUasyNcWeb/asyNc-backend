@@ -47,7 +47,7 @@ def ai_news(request: WSGIRequest):
         response_msg = {
             "code": 0,
             "message": "SUCCESS",
-            "data": tools.LOCAL_NEWS_MANAGER.get_none_ai_processed_news(4),
+            "data": tools.LOCAL_NEWS_MANAGER.get_none_ai_processed_news(num=4),
             "csrf_token": get_token(request=request)
         }
         return JsonResponse(
@@ -478,7 +478,7 @@ def user_read_history(request):
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
                         "is_readlater": bool(
-                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                            tools.in_readlist_check(user_readlist_dict, int(news["id"]))
                         ),
                     }
                 )
@@ -595,7 +595,7 @@ def user_readlater(request):
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
                         "is_readlater": bool(
-                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                            tools.in_readlist_check(user_readlist_dict, int(news["id"]))
                         ),
                     }
                 )
@@ -682,6 +682,7 @@ def user_favorites(request):
         return unauthorized_response()
     # try:
     if request.method == "POST":
+        # print("Recieve POST", time.time())
         try:
             news_id = int(request.GET.get("id"))
         except Exception as error:
@@ -689,11 +690,14 @@ def user_favorites(request):
             return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
         try:
             db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
+            # print("get db_news_list", time.time())
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
             user_favorites_dict = tools.get_user_favorites_dict(user=user)
             user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
+            print(db_news_list)
 
             for news in db_news_list:
                 tools.add_to_favorites(
@@ -710,10 +714,12 @@ def user_favorites(request):
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
                         "is_readlater": bool(
-                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                            tools.in_readlist_check(user_readlist_dict, int(news["id"]))
                         ),
                     }
                 )
+                print("news:")
+                print(news)
 
             favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(
@@ -824,6 +830,7 @@ def news_response(request):
             try:
                 db_news_list = tools.NEWS_CACHE.get_cache(category)
             except Exception as error:
+                print("can't get cache")
                 print(error)
                 db_news_list = tools.get_data_from_db(
                     connection=connection,
@@ -851,7 +858,7 @@ def news_response(request):
                                 tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                             ),
                             "is_readlater": bool(
-                                tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                                tools.in_readlist_check(user_readlist_dict, int(news["id"]))
                             ),
                         }
                     )
@@ -1464,7 +1471,7 @@ def keyword_essearch(request):
                     tools.in_favorite_check(user_favorites_dict, int(data["id"]))
                 ),
                 "is_readlater": bool(
-                    tools.in_favorite_check(user_readlist_dict, int(data["id"]))
+                    tools.in_readlist_check(user_readlist_dict, int(data["id"]))
                 ),
             }
             news += [piece_new]
@@ -1622,7 +1629,7 @@ def keyword_search(request):
                     tools.in_favorite_check(user_favorites_dict, int(data["id"]))
                 ),
                 "is_readlater": bool(
-                    tools.in_favorite_check(user_readlist_dict, int(data["id"]))
+                    tools.in_readlist_check(user_readlist_dict, int(data["id"]))
                 ),
             }
             if len(include) != 0 or len(exclude) != 0:
