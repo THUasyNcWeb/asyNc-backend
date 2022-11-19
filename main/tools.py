@@ -164,9 +164,10 @@ class LocalNewsManager():
         self.none_ai_processed_news_dict = {}
         self.min_batch = 256
 
-    def get_none_ai_processed_news(self, num:int) -> list:
+    def get_none_ai_processed_news(self, num = 1) -> list:
         if len(self.none_ai_processed_news_dict) < num:
-            news_object_list = LocalNews.objects.filter(ai_processed=False)[:max(num, self.min_batch)]
+            batch_size = max(num, self.min_batch)
+            news_object_list = LocalNews.objects.filter(ai_processed=False)[:batch_size]
             for news_object in news_object_list:
                 news = news_object.data
                 if news["id"] not in self.none_ai_processed_news_dict:
@@ -176,10 +177,30 @@ class LocalNewsManager():
             self.none_ai_processed_news_dict.pop(news["id"])
         return news_list
 
-    def update_ai_processed_news(self, news_list) -> None:
-        for news in news_list:
-            if news["id"] in self.none_ai_processed_news_dict:
-                self.none_ai_processed_news_dict.pop(news["id"])
+    def update_ai_processed_news(self, news_list) -> bool:
+        try:
+            for news in news_list:
+                if (
+                    news["id"] in self.none_ai_processed_news_dict and (
+                        "summary" in news and news["summary"]
+                    )
+                ):
+                    self.none_ai_processed_news_dict.pop(news["id"])
+                    local_news = LocalNews.objects.get(news_id=news["id"])
+                    if local_news:
+                        local_news.ai_processed = True
+                        local_news.data["summary"] = news["summary"]
+                        local_news.full_clean()
+                        local_news.save()
+                    else:
+                        local_news = LocalNews(data=news, news_id=news["id"], ai_processed=True)
+                        local_news.full_clean()
+                        local_news.save()
+        except Exception as error:
+            print(error)
+            return False
+        return True
+
 
     def add_to_cache(self, news: dict):
         self.local_news_list_cache[news["id"]] = news
@@ -214,6 +235,7 @@ class LocalNewsManager():
                     return False
             return True
         return False
+
 
 class NewsCache():
     """
@@ -962,6 +984,8 @@ NEWS_CACHE = NewsCache(CRAWLER_DB_CONNECTION)
 DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, NEWS_CACHE)
 
 THREAD_POOL = threadpool.ThreadPool(1)
+
+LOCAL_NEWS_MANAGER = LocalNewsManager()
 
 
 def start_db_scanner(thread_id):

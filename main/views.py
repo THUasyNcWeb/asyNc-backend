@@ -26,23 +26,27 @@ from .responses import *
 def ai_news(request: WSGIRequest):
     """
         ai news summary
+        news_list_format
+        [
+            {
+                "id": 114,
+                "title": "为亚太和世界发展繁荣贡献正能量",
+                "media": "Foobar News",
+                "url": "https://baijiahao.baidu.com/s?id=1749782470764021746",
+                "pub_time": "2022-10-21T19:02:16.305Z",
+                "first_img_url": "",
+                "full_content": "11月17日下午，国家主席习近平在泰国曼谷举行的亚太经合组织(APEC)工商领导人峰会上，
+                发表题为《坚守初心 共促发展 开启亚太合作新篇章》的书面演讲。习近平主席的书面演讲备受瞩目。接受采访的与会人士表示，
+                习近平主席从亚太和世界前途命运出发，为亚太合作把舵领航，为世界发展再开良方，推动构建亚太命运共同体走深走实。",
+            }
+        ],
     """
     if request.method == "GET":
         status_code = 200
         response_msg = {
             "code": 0,
             "message": "SUCCESS",
-            "data": [
-                {
-                    "id": 114,
-                    "title": "为亚太和世界发展繁荣贡献正能量",
-                    "media": "Foobar News",
-                    "url": "https://baijiahao.baidu.com/s?id=1749782470764021746",
-                    "pub_time": "2022-10-21T19:02:16.305Z",
-                    "first_img_url": "",
-                    "full_content": "11月17日下午，国家主席习近平在泰国曼谷举行的亚太经合组织(APEC)工商领导人峰会上，发表题为《坚守初心 共促发展 开启亚太合作新篇章》的书面演讲。习近平主席的书面演讲备受瞩目。接受采访的与会人士表示，习近平主席从亚太和世界前途命运出发，为亚太合作把舵领航，为世界发展再开良方，推动构建亚太命运共同体走深走实。",
-                }
-            ],
+            "data": tools.LOCAL_NEWS_MANAGER.get_none_ai_processed_news(4),
             "csrf_token": get_token(request=request)
         }
         return JsonResponse(
