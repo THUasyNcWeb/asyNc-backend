@@ -13,6 +13,9 @@ import pickle
 import copy
 from io import BytesIO
 
+from tinyrpc import RPCClient
+from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
+from tinyrpc.transports.http import HttpPostClientTransport
 import threadpool
 import jwt
 import psycopg2
@@ -913,3 +916,14 @@ def start_db_scanner(thread_id):
 for REQUEST in threadpool.makeRequests(start_db_scanner, [0]):
     THREAD_POOL.putRequest(REQUEST)
 # THREAD_POOL.wait()
+
+try:
+    with open("config/lucene.json","r",encoding="utf-8") as config_file:
+        config = json.load(config_file)
+    rpc_client = RPCClient(
+        JSONRPCProtocol(),
+        HttpPostClientTransport('http://' + config['url'] + ':' + str(config['port']))
+    )
+    SEARCH_CONNECTION = rpc_client.get_proxy()
+except Exception as error:
+    print(error)

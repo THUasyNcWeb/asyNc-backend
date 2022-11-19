@@ -8,11 +8,6 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Document, Date, Keyword, Text, connections, Completion
-import jieba
-
-from tinyrpc import RPCClient
-from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
-from tinyrpc.transports.http import HttpPostClientTransport
 
 from . import tools
 from .models import UserBasicInfo
@@ -402,9 +397,9 @@ def user_read_history(request):
             return news_not_found(error="[URL FORMAT ERROR IN READ HISTORY]:\n" + str(error))
         try:
             db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
+
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
-
             user_favorites_dict = tools.get_user_favorites_dict(user=user)
             user_readlist_dict = tools.get_user_readlist_dict(user=user)
 
@@ -634,7 +629,6 @@ def user_favorites(request):
             db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
-
             user_favorites_dict = tools.get_user_favorites_dict(user=user)
             user_readlist_dict = tools.get_user_readlist_dict(user=user)
 
@@ -725,11 +719,16 @@ def news_response(request):
         "message": "SUCCESS",
         "data": [
             {
+                category:"科技",
+                news:[
+                    {
                 "title": "Breaking News",
                 "url": "https://breaking.news",
                 "picture_url": "https://breaking.news/picture.png",
                 "media": "Foobar News",
                 "pub_time": "2022-10-21T19:02:16.305Z",
+            }
+                ]
             }
         ]
     }
@@ -744,6 +743,7 @@ def news_response(request):
     """
 
     user = tools.get_user_from_request(request)
+
 
     if request.method == "GET":
         try:
@@ -1364,7 +1364,6 @@ def keyword_essearch(request):
             )
         news = []
         tags = []
-
         # get user favorites dict
         user = tools.get_user_from_request(request)
         user_favorites_dict = tools.get_user_favorites_dict(user=user)
@@ -1392,7 +1391,6 @@ def keyword_essearch(request):
 
             if "id" not in data:  # 0 stands for no news id
                 data["id"] = 0
-
             piece_new = {
                 "title": data['title'],
                 "url": data['news_url'],
@@ -1498,30 +1496,29 @@ def keyword_search(request):
                 status=400,
                 headers={'Access-Control-Allow-Origin':'*'}
             )
-        with open("config/lucene.json","r",encoding="utf-8") as config_file:
-            config = json.load(config_file)
-        rpc_client = RPCClient(
-            JSONRPCProtocol(),
-            HttpPostClientTransport('http://' + config['url'] + ':' + str(config['port']))
-        )
-        str_server = rpc_client.get_proxy()
-        str_server = rpc_client.get_proxy()
+        str_server = tools.SEARCH_CONNECTION
         if len(include) != 0 or len(exclude) != 0:
-            keyword_list = list(jieba.cut_for_search(key_word))
-            include_list = []
-            exclude_list = []
-            for must in include:
-                include_list += jieba.cut_for_search(must)
-            for must_not in exclude:
-                exclude_list += jieba.cut_for_search(must_not)
-            include_list = list(set(include_list))
-            exclude_list = list(set(exclude_list))
-            all_news = str_server.search_keywords(keyword_list,
-                                                  list(include_list),
-                                                  list(exclude_list),0)
+            all_news = str_server.search_keywords(key_word,
+                                                  list(include),
+                                                  list(exclude),0)
+            # keyword_list = list(jieba.cut_for_search(key_word))
+            # include_list = []
+            # exclude_list = []
+            # for must in include:
+            #     include_list += jieba.cut_for_search(must)
+            # for must_not in exclude:
+            #     exclude_list += jieba.cut_for_search(must_not)
+            # include_list = list(set(include_list))
+            # exclude_list = list(set(exclude_list))
+            # all_news = str_server.search_keywords(keyword_list,
+            #                                       list(include_list),
+            #                                       list(exclude_list),0)
         else:
-            all_news = str_server.search_news(key_word,start_page)
+            all_news = str_server.search_news(key_word)
+        all_news_list = all_news['news_list']
+        all_news_list = sorted(all_news_list,key=lambda x: x['score'],reverse=True)
         total_num = ceil(all_news['total'] / 10)
+        all_news_list = all_news_list[start_page * 10: min(start_page * 10 + 10, all_news['total'])]
         if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
@@ -1530,7 +1527,6 @@ def keyword_search(request):
             )
         news = []
         tags = []
-
         # get user favorites dict
         user = tools.get_user_from_request(request)
         user_favorites_dict = {}
@@ -1567,10 +1563,14 @@ def keyword_search(request):
                     tools.in_favorite_check(user_readlist_dict, int(data["id"]))
                 ),
             }
+            # if len(include) != 0 or len(exclude) != 0:
+            #     if check_contain(piece_new['title'], piece_new['content'],
+            #                      piece_new['title_keywords'], piece_new['keywords'],
+            #                      list(include_list), list(exclude_list)) is True:
             if len(include) != 0 or len(exclude) != 0:
                 if check_contain(piece_new['title'], piece_new['content'],
                                  piece_new['title_keywords'], piece_new['keywords'],
-                                 list(include_list), list(exclude_list)) is True:
+                                 list(include), list(exclude)) is True:
                     news += [piece_new]
                 total_num = ceil(len(news) / 10)
             else:
@@ -1578,6 +1578,10 @@ def keyword_search(request):
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
                     and data['tags'] != [""]:
                 tags += data['tags']
+        if len(include) != 0 or len(exclude) != 0:
+            start_num = start_page * 10
+            end_num = min(start_num + 10, len(news))
+            news = news[start_num:end_num]
         data = {
             "page_count": total_num,
             "news": news
