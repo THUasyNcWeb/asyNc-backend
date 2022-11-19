@@ -73,8 +73,6 @@ FAVORITES_PRE_PAGE = 10
 
 DB_CHECK_INTERVAL = 1
 
-# DB_UPDATE_MAXIMUM_INTERVAL = 60
-
 DB_UPDATE_MINIMUM_INTERVAL = 300
 
 MAX_RETURN_USER_TAG = 128
@@ -152,6 +150,15 @@ def clear_search_history(user: UserBasicInfo):
     user.search_history = []
     user.full_clean()
     user.save()
+
+
+class LocalNewsManager():
+    """
+        News favorited by users will be storaged to local.
+        This class manages local news.
+    """
+    def __init__(self) -> None:
+        self.local_news_list = []
 
 
 class NewsCache():

@@ -51,11 +51,7 @@ def ai_news(request: WSGIRequest):
             headers={'Access-Control-Allow-Origin': '*'}
         )
     elif request.method == "POST":
-        # print(request.META)
-        # print(request.headers)
-        # print(request.body)
         request_data = json.loads(request.body.decode())
-        # print(dict(request_data))
         news_list = request_data["data"]
         print(news_list)
         for news in news_list:

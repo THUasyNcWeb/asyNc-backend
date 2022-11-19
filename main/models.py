@@ -31,6 +31,20 @@ class News(models.Model):
         db_table = "news"
 
 
+class LocalNews(models.Model):
+    """
+        model for news
+    """
+    id = AutoField(primary_key=True, db_index=True)
+    data = JSONField(null=True, blank=True, default=dict)
+
+    class Meta:
+        """
+            set table name in db
+        """
+        db_table = "local_news"
+
+
 class HomeNews(models.Model):
     """
         model for news
