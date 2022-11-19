@@ -157,14 +157,14 @@ def user_register(request):
             except Exception as error:
                 print(error)
                 return internal_error_response(error=str(error))
-            if not isinstance(user_name, str):  # format check.
+            if not tools.user_username_checker(user_name):
                 status_code = 400
                 response_msg = {
                     "code": 2,
                     "message": "INVALID_USER_NAME_FORMAT",
                     "data": {}
                 }
-            elif not isinstance(password, str):  # format check.
+            elif not tools.user_password_checker(password):
                 status_code = 400
                 response_msg = {
                     "code": 3,
@@ -269,7 +269,7 @@ def modify_user_info(request):
                                 status=status_code,
                                 headers={'Access-Control-Allow-Origin':'*'}
                             )
-                        if not isinstance(new_user_name, str):
+                        if not tools.user_username_checker(new_user_name):
                             status_code = 400
                             response_msg = {
                                 "code": 3,
@@ -396,14 +396,13 @@ def user_read_history(request):
             print(error)
             return news_not_found(error="[URL FORMAT ERROR IN READ HISTORY]:\n" + str(error))
         try:
-            db_news_list = tools.get_data_from_db(
-                connection=tools.CRAWLER_DB_CONNECTION,
-                filter_command="id={id}".format(id=news_id),
-                select=["title","news_url","first_img_url","media","pub_time","id"],
-                limit=200
-            )
+            db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
+
+            user_favorites_dict = tools.get_user_favorites_dict(user=user)
+            user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
             for news in db_news_list:
                 tools.add_to_read_history(
                     user=user,
@@ -413,7 +412,13 @@ def user_read_history(request):
                         "media": news["media"],
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"]
+                        "picture_url": news["first_img_url"],
+                        "is_favorite": bool(
+                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
+                        ),
+                        "is_readlater": bool(
+                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                        ),
                     }
                 )
 
@@ -507,14 +512,13 @@ def user_readlater(request):
             print(error)
             return news_not_found(error="[URL FORMAT ERROR IN READLATER]:\n" + str(error))
         try:
-            db_news_list = tools.get_data_from_db(
-                connection=tools.CRAWLER_DB_CONNECTION,
-                filter_command="id={id}".format(id=news_id),
-                select=["title","news_url","first_img_url","media","pub_time","id"],
-                limit=200
-            )
+            db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
+
+            user_favorites_dict = tools.get_user_favorites_dict(user=user)
+            user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
             for news in db_news_list:
                 tools.add_to_readlist(
                     user=user,
@@ -524,7 +528,13 @@ def user_readlater(request):
                         "media": news["media"],
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"]
+                        "picture_url": news["first_img_url"],
+                        "is_favorite": bool(
+                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
+                        ),
+                        "is_readlater": bool(
+                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                        ),
                     }
                 )
 
@@ -616,14 +626,13 @@ def user_favorites(request):
             print(error)
             return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
         try:
-            db_news_list = tools.get_data_from_db(
-                connection=tools.CRAWLER_DB_CONNECTION,
-                filter_command="id={id}".format(id=news_id),
-                select=["title","news_url","first_img_url","media","pub_time","id"],
-                limit=200
-            )
+            db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
+
+            user_favorites_dict = tools.get_user_favorites_dict(user=user)
+            user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
             for news in db_news_list:
                 tools.add_to_favorites(
                     user=user,
@@ -633,7 +642,13 @@ def user_favorites(request):
                         "media": news["media"],
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"]
+                        "picture_url": news["first_img_url"],
+                        "is_favorite": bool(
+                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
+                        ),
+                        "is_readlater": bool(
+                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                        ),
                     }
                 )
 
@@ -705,16 +720,11 @@ def news_response(request):
         "message": "SUCCESS",
         "data": [
             {
-                category:"科技",
-                news:[
-                    {
-                        "title": "Breaking News",
-                        "url": "https://breaking.news",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "media": "Foobar News",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                    }
-                ]
+                "title": "Breaking News",
+                "url": "https://breaking.news",
+                "picture_url": "https://breaking.news/picture.png",
+                "media": "Foobar News",
+                "pub_time": "2022-10-21T19:02:16.305Z",
             }
         ]
     }
@@ -728,13 +738,9 @@ def news_response(request):
     }
     """
 
-    if request.method == "GET":
-        # Do not check token until news recommendation is online:
-        # encoded_token = request.META.get("HTTP_AUTHORIZATION")
-        # token = tools.decode_token(encoded_token)
-        # if token_expired(token):
-        #  return 401
+    user = tools.get_user_from_request(request)
 
+    if request.method == "GET":
         try:
             news_category = request.GET.get("category")
             print("news_category :", news_category)
@@ -752,15 +758,22 @@ def news_response(request):
             else:
                 category = tools.CATEGORY_FRONT_TO_BACKEND[""]
 
-            db_news_list = tools.get_data_from_db(
-                connection=connection,
-                filter_command="category='{category}'".format(category=category),
-                select=["title","news_url","first_img_url","media","pub_time","id"],
-                order_command="ORDER BY pub_time DESC",
-                limit=200
-            )
+            try:
+                db_news_list = tools.NEWS_CACHE.get_cache(category)
+            except Exception as error:
+                print(error)
+                db_news_list = tools.get_data_from_db(
+                    connection=connection,
+                    filter_command="category='{category}'".format(category=category),
+                    select=["title","news_url","first_img_url","media","pub_time","id"],
+                    order_command="ORDER BY pub_time DESC",
+                    limit=tools.FRONT_PAGE_NEWS_NUM
+                )
 
             try:
+                user_favorites_dict = tools.get_user_favorites_dict(user=user)
+                user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
                 news_list = []
                 for news in db_news_list:
                     news_list.append(
@@ -770,7 +783,13 @@ def news_response(request):
                             "picture_url": news["first_img_url"],
                             "media": news["media"],
                             "pub_time": news["pub_time"],  # .strftime("%y-%m-%dT%H:%M:%SZ"),
-                            "id": news["id"]
+                            "id": news["id"],
+                            "is_favorite": bool(
+                                tools.in_favorite_check(user_favorites_dict, int(news["id"]))
+                            ),
+                            "is_readlater": bool(
+                                tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                            ),
                         }
                     )
             except Exception as error:
@@ -843,7 +862,7 @@ def user_modify_password(request):
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
-                elif not isinstance(new_password, str):
+                elif not tools.user_password_checker(new_password):
                     status_code = 400
                     response_msg = {
                         "code": 3,
@@ -962,7 +981,7 @@ def user_modify_username(request):
                     "data": {}
                 }
             else:
-                if not isinstance(new_user_name, str):
+                if not tools.user_username_checker(new_user_name):
                     status_code = 400
                     response_msg = {
                         "code": 3,
@@ -1340,6 +1359,12 @@ def keyword_essearch(request):
             )
         news = []
         tags = []
+
+        # get user favorites dict
+        user = tools.get_user_from_request(request)
+        user_favorites_dict = tools.get_user_favorites_dict(user=user)
+        user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
         for new in all_news["hits"]:
             data = new["_source"]
             highlights = new["highlight"]
@@ -1360,6 +1385,9 @@ def keyword_essearch(request):
 
                 keywords = get_location(content)
 
+            if "id" not in data:  # 0 stands for no news id
+                data["id"] = 0
+
             piece_new = {
                 "title": data['title'],
                 "url": data['news_url'],
@@ -1368,7 +1396,13 @@ def keyword_essearch(request):
                 "content": content.replace('<span class="szz-type">','').replace('</span>',''),
                 "picture_url": data['first_img_url'],
                 "title_keywords": title_keywords,
-                "keywords": keywords
+                "keywords": keywords,
+                "is_favorite": bool(
+                    tools.in_favorite_check(user_favorites_dict, int(data["id"]))
+                ),
+                "is_readlater": bool(
+                    tools.in_favorite_check(user_readlist_dict, int(data["id"]))
+                ),
             }
             news += [piece_new]
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
@@ -1477,8 +1511,11 @@ def keyword_search(request):
             #                                       list(include_list),
             #                                       list(exclude_list),0)
         else:
-            all_news = str_server.search_news(key_word,start_page)
+            all_news = str_server.search_news(key_word)
+        all_news_list = all_news['news_list']
+        all_news_list = sorted(all_news_list,key=lambda x: x['score'],reverse=True)
         total_num = ceil(all_news['total'] / 10)
+        all_news_list = all_news_list[start_page * 10: min(start_page * 10 + 10, all_news['total'])]
         if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
@@ -1487,6 +1524,12 @@ def keyword_search(request):
             )
         news = []
         tags = []
+        # get user favorites dict
+        user = tools.get_user_from_request(request)
+        user_favorites_dict = {}
+        user_favorites_dict = tools.get_user_favorites_dict(user=user)
+        user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
         for new in all_news["news_list"]:
             data = new
             title_keywords = []
@@ -1499,6 +1542,8 @@ def keyword_search(request):
                 content = ""
             if title is None:
                 title = ""
+            if "id" not in data:  # 0 stands for no news id
+                data["id"] = 0
             piece_new = {
                 "title": title.replace('<span class="szz-type">','').replace('</span>',''),
                 "url": data['url'],
@@ -1507,7 +1552,13 @@ def keyword_search(request):
                 "content": content.replace('<span class="szz-type">','').replace('</span>',''),
                 "picture_url": data['picture_url'],
                 "title_keywords": title_keywords,
-                "keywords": keywords
+                "keywords": keywords,
+                "is_favorite": bool(
+                    tools.in_favorite_check(user_favorites_dict, int(data["id"]))
+                ),
+                "is_readlater": bool(
+                    tools.in_favorite_check(user_readlist_dict, int(data["id"]))
+                ),
             }
             # if len(include) != 0 or len(exclude) != 0:
             #     if check_contain(piece_new['title'], piece_new['content'],

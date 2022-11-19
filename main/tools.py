@@ -477,10 +477,13 @@ with open("config/config.json","r",encoding="utf-8") as config_file:
     config = json.load(config_file)
 CRAWLER_DB_CONNECTION = connect_to_db(config["crawler-db"])
 
-with open("config/lucene.json","r",encoding="utf-8") as config_file:
-    config = json.load(config_file)
-rpc_client = RPCClient(
-    JSONRPCProtocol(),
-    HttpPostClientTransport('http://' + config['url'] + ':' + str(config['port']))
-)
-SEARCH_CONNECTION = rpc_client.get_proxy()
+try:
+    with open("config/lucene.json","r",encoding="utf-8") as config_file:
+        config = json.load(config_file)
+    rpc_client = RPCClient(
+        JSONRPCProtocol(),
+        HttpPostClientTransport('http://' + config['url'] + ':' + str(config['port']))
+    )
+    SEARCH_CONNECTION = rpc_client.get_proxy()
+except Exception as error:
+    print(error)
