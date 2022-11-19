@@ -161,18 +161,37 @@ class LocalNewsManager():
     """
     def __init__(self) -> None:
         self.local_news_list_cache = {}
+        self.none_ai_processed_news_dict = {}
+        self.min_batch = 256
+
+    def get_none_ai_processed_news(self, num:int) -> list:
+        if len(self.none_ai_processed_news_dict) < num:
+            news_object_list = LocalNews.objects.filter(ai_processed=False)[:max(num, self.min_batch)]
+            for news_object in news_object_list:
+                news = news_object.data
+                if news["id"] not in self.none_ai_processed_news_dict:
+                    self.none_ai_processed_news_dict[news["id"]] = news
+        news_list = self.none_ai_processed_news_dict.values[:num]
+        for news in self.none_ai_processed_news_dict:
+            self.none_ai_processed_news_dict.pop(news["id"])
+        return news_list
+
+    def update_ai_processed_news(self, news_list) -> None:
+        for news in news_list:
+            if news["id"] in self.none_ai_processed_news_dict:
+                self.none_ai_processed_news_dict.pop(news["id"])
 
     def add_to_cache(self, news: dict):
         self.local_news_list_cache[news["id"]] = news
         if len(self.local_news_list_cache) > MAX_LOCAL_NEWS_LIST_CACHE:
-            key = self.local_news_list_cache.keys[0]
-            self.local_news_list_cache.pop(key)
+            news_id = self.local_news_list_cache.keys[0]
+            self.local_news_list_cache.pop(news_id)
 
     def save_to_local_news(self, news):
         if isinstance(news, dict):
             try:
                 self.add_to_cache(news)
-                local_news = LocalNews(news)
+                local_news = LocalNews(data=news, news_id=news["id"], ai_processed=False)
                 local_news.full_clean()
                 local_news.save()
             except Exception as error:
@@ -185,7 +204,7 @@ class LocalNewsManager():
                 if isinstance(news, dict):
                     try:
                         self.add_to_cache(news)
-                        local_news = LocalNews(news)
+                        local_news = LocalNews(data=news, news_id=news["id"], ai_processed=False)
                         local_news.full_clean()
                         local_news.save()
                     except Exception as error:
