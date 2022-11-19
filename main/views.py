@@ -6,11 +6,11 @@ import re
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
+from django.core.handlers.wsgi import WSGIRequest
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Document, Date, Keyword, Text, connections, Completion
 import jieba
-from django.middleware.csrf import get_token
-from django.core.handlers.wsgi import WSGIRequest
 
 from tinyrpc import RPCClient
 from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
@@ -21,6 +21,7 @@ from .models import UserBasicInfo
 from .responses import *
 
 # Create your views here.
+
 
 # @csrf_exempt
 def ai_news(request: WSGIRequest):
@@ -54,7 +55,7 @@ def ai_news(request: WSGIRequest):
             status=status_code,
             headers={'Access-Control-Allow-Origin': '*'}
         )
-    elif request.method == "POST":
+    if request.method == "POST":
         request_data = json.loads(request.body.decode())
         news_list = request_data["data"]
         print(news_list)

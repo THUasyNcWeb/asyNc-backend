@@ -170,13 +170,16 @@ class LocalNewsManager():
         self.none_ai_processed_news_dict = {}
         self.min_batch = 256
 
-    def get_news(self, news_id_list) -> dict:
+    def get_ai_news(self, news_id_list) -> dict:
         """
             get news with summary
         """
+        news_dict = {}
+        for news_id in news_id_list:
+            news_dict[news_id] = {}
         return {}
 
-    def get_none_ai_processed_news(self, num = 1) -> list:
+    def get_none_ai_processed_news(self, num=1) -> list:
         """
             get none ai processed news
         """
@@ -188,7 +191,7 @@ class LocalNewsManager():
                     news = news_object.data
                     if news["id"] not in self.none_ai_processed_news_dict:
                         self.none_ai_processed_news_dict[news["id"]] = news
-        news_list = self.none_ai_processed_news_dict.values[:num]
+        news_list = list(self.none_ai_processed_news_dict.values)[:num]
         for news in self.none_ai_processed_news_dict:
             self.none_ai_processed_news_dict.pop(news["id"])
         return news_list
@@ -229,7 +232,7 @@ class LocalNewsManager():
         """
         self.local_news_list_cache[news["id"]] = news
         if len(self.local_news_list_cache) > MAX_LOCAL_NEWS_LIST_CACHE:
-            news_id = self.local_news_list_cache.keys[0]
+            news_id = list(self.local_news_list_cache.keys)[0]
             self.local_news_list_cache.pop(news_id)
 
     def del_from_cache(self, news_id: int):
@@ -266,17 +269,17 @@ class LocalNewsManager():
         """
         if isinstance(news, dict):
             return self.del_one_local_news(news["id"])
-        elif isinstance(news, list):
+        if isinstance(news, list):
             news_list = news
-            for news in news_list:
-                if isinstance(news, dict):
-                    if not self.del_one_local_news(news["id"]):
+            for _news in news_list:
+                if isinstance(_news, dict):
+                    if not self.del_one_local_news(_news["id"]):
                         return False
-                elif isinstance(news, int):
-                    if not self.del_one_local_news(news):
+                elif isinstance(_news, int):
+                    if not self.del_one_local_news(_news):
                         return False
             return True
-        elif isinstance(news, int):
+        if isinstance(news, int):
             return self.del_one_local_news(news)
         return False
 
@@ -311,10 +314,10 @@ class LocalNewsManager():
         """
         if isinstance(news, dict):
             return self.save_one_local_news(news)
-        elif isinstance(news, list):
+        if isinstance(news, list):
             news_list = news
-            for news in news_list:
-                if not self.save_one_local_news(news):
+            for _news in news_list:
+                if not self.save_one_local_news(_news):
                     return False
             return True
         return False
