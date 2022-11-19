@@ -105,6 +105,9 @@ def get_news_from_db_by_id(news_id: int) -> bool:
             ],
             limit=200
         )
+        # with open("data/news_template.pkl", "wb") as file:
+        #     pickle.dump(db_news_list, file)
+        # print(db_news_list)
     return db_news_list
 
 
@@ -160,24 +163,40 @@ class LocalNewsManager():
         This class manages local news.
     """
     def __init__(self) -> None:
+        """
+            init
+        """
         self.local_news_list_cache = {}
         self.none_ai_processed_news_dict = {}
         self.min_batch = 256
 
+    def get_news(self, news_id_list) -> dict:
+        """
+            get news with summary
+        """
+        return {}
+
     def get_none_ai_processed_news(self, num = 1) -> list:
+        """
+            get none ai processed news
+        """
         if len(self.none_ai_processed_news_dict) < num:
             batch_size = max(num, self.min_batch)
             news_object_list = LocalNews.objects.filter(ai_processed=False)[:batch_size]
-            for news_object in news_object_list:
-                news = news_object.data
-                if news["id"] not in self.none_ai_processed_news_dict:
-                    self.none_ai_processed_news_dict[news["id"]] = news
+            if news_object_list:
+                for news_object in news_object_list:
+                    news = news_object.data
+                    if news["id"] not in self.none_ai_processed_news_dict:
+                        self.none_ai_processed_news_dict[news["id"]] = news
         news_list = self.none_ai_processed_news_dict.values[:num]
         for news in self.none_ai_processed_news_dict:
             self.none_ai_processed_news_dict.pop(news["id"])
         return news_list
 
     def update_ai_processed_news(self, news_list) -> bool:
+        """
+            update ai processed news
+        """
         try:
             for news in news_list:
                 if (
@@ -186,7 +205,7 @@ class LocalNewsManager():
                     )
                 ):
                     self.none_ai_processed_news_dict.pop(news["id"])
-                    local_news = LocalNews.objects.get(news_id=news["id"])
+                    local_news = LocalNews.objects.filter(news_id=news["id"]).first()
                     if local_news:
                         local_news.ai_processed = True
                         local_news.data["summary"] = news["summary"]
@@ -205,24 +224,33 @@ class LocalNewsManager():
         return True
 
     def add_to_cache(self, news: dict):
+        """
+            add a news to cache
+        """
         self.local_news_list_cache[news["id"]] = news
         if len(self.local_news_list_cache) > MAX_LOCAL_NEWS_LIST_CACHE:
             news_id = self.local_news_list_cache.keys[0]
             self.local_news_list_cache.pop(news_id)
 
     def del_from_cache(self, news_id: int):
+        """
+            del a news from cache
+        """
         if news_id in self.local_news_list_cache:
             self.local_news_list_cache.pop(news_id)
 
     def del_one_local_news(self, news_id) -> bool:
+        """
+            del one local news
+        """
         if isinstance(news_id, int):
             try:
                 self.del_from_cache(news_id)
-                local_news = LocalNews.objects.get(news_id=news_id)
+                local_news = LocalNews.objects.filter(news_id=news_id).first()
                 if local_news:
                     local_news.cite_count -= 1
                     if local_news.cite_count <= 0:
-                        LocalNews.objects.get(news_id=news_id).delete()
+                        LocalNews.objects.filter(news_id=news_id).delete()
                         return True
                     local_news.full_clean()
                     local_news.save()
@@ -233,6 +261,9 @@ class LocalNewsManager():
         return False
 
     def del_local_news(self, news) -> bool:
+        """
+            del local news
+        """
         if isinstance(news, dict):
             return self.del_one_local_news(news["id"])
         elif isinstance(news, list):
@@ -249,11 +280,14 @@ class LocalNewsManager():
             return self.del_one_local_news(news)
         return False
 
-    def save_one_local_news(self, news) -> bool:
+    def save_one_local_news(self, news: dict) -> bool:
+        """
+            save one local news
+        """
         if isinstance(news, dict):
             try:
                 self.add_to_cache(news)
-                local_news = LocalNews.objects.get(news_id=news["id"])
+                local_news = LocalNews.objects.filter(news_id=news["id"]).first()
                 if local_news:
                     local_news.cite_count += 1
                     local_news.full_clean()
@@ -272,6 +306,9 @@ class LocalNewsManager():
         return False
 
     def save_local_news(self, news) -> bool:
+        """
+            save local news
+        """
         if isinstance(news, dict):
             return self.save_one_local_news(news)
         elif isinstance(news, list):
@@ -707,8 +744,9 @@ def clear_readlist(user: UserBasicInfo):
     """
         remove all news from user's readlist
     """
-    for news_id in user.favorites:
-        LOCAL_NEWS_MANAGER.del_local_news(int(news_id))
+    if user.favorites:
+        for news_id in user.favorites:
+            LOCAL_NEWS_MANAGER.del_local_news(int(news_id))
     user.readlist = {}
     user.full_clean()
     user.save()
@@ -774,8 +812,9 @@ def clear_favorites(user: UserBasicInfo):
     """
         remove all news from user's favorites
     """
-    for news_id in user.favorites:
-        LOCAL_NEWS_MANAGER.del_local_news(int(news_id))
+    if user.favorites:
+        for news_id in user.favorites:
+            LOCAL_NEWS_MANAGER.del_local_news(int(news_id))
     user.favorites = {}
     user.full_clean()
     user.save()
