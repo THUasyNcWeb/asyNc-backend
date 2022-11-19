@@ -210,19 +210,19 @@ class LocalNewsManager():
             news_id = self.local_news_list_cache.keys[0]
             self.local_news_list_cache.pop(news_id)
 
-    def del_from_cache(self, news: dict):
-        if news["id"] in self.local_news_list_cache:
-            self.local_news_list_cache.pop(news["id"])
+    def del_from_cache(self, news_id: int):
+        if news_id in self.local_news_list_cache:
+            self.local_news_list_cache.pop(news_id)
 
-    def del_one_local_news(self, news) -> bool:
-        if isinstance(news, dict):
+    def del_one_local_news(self, news_id) -> bool:
+        if isinstance(news_id, int):
             try:
-                self.del_from_cache(news)
-                local_news = LocalNews.objects.get(news_id=news["id"])
+                self.del_from_cache(news_id)
+                local_news = LocalNews.objects.get(news_id=news_id)
                 if local_news:
                     local_news.cite_count -= 1
                     if local_news.cite_count <= 0:
-                        LocalNews.objects.get(news_id=news["id"]).delete()
+                        LocalNews.objects.get(news_id=news_id).delete()
                         return True
                     local_news.full_clean()
                     local_news.save()
@@ -234,13 +234,19 @@ class LocalNewsManager():
 
     def del_local_news(self, news) -> bool:
         if isinstance(news, dict):
-            return self.del_one_local_news(news)
+            return self.del_one_local_news(news["id"])
         elif isinstance(news, list):
             news_list = news
             for news in news_list:
-                if not self.del_one_local_news(news):
-                    return False
+                if isinstance(news, dict):
+                    if not self.del_one_local_news(news["id"]):
+                        return False
+                elif isinstance(news, int):
+                    if not self.del_one_local_news(news):
+                        return False
             return True
+        elif isinstance(news, int):
+            return self.del_one_local_news(news)
         return False
 
     def save_one_local_news(self, news) -> bool:
@@ -664,6 +670,9 @@ def add_to_readlist(user: UserBasicInfo, news: dict):
         return
     if not user.readlist:
         user.readlist = {}
+
+    LOCAL_NEWS_MANAGER.save_local_news(news)
+
     user.readlist[str(news["id"])] = news
     user.full_clean()
     user.save()
@@ -686,6 +695,7 @@ def remove_readlist(user: UserBasicInfo, news_id):
         user.readlist = {}
         return False
     if str(news_id) in user.readlist:
+        LOCAL_NEWS_MANAGER.del_local_news(int(news_id))
         user.readlist.pop(str(news_id))
         user.full_clean()
         user.save()
@@ -697,6 +707,8 @@ def clear_readlist(user: UserBasicInfo):
     """
         remove all news from user's readlist
     """
+    for news_id in user.favorites:
+        LOCAL_NEWS_MANAGER.del_local_news(int(news_id))
     user.readlist = {}
     user.full_clean()
     user.save()
@@ -725,6 +737,9 @@ def add_to_favorites(user: UserBasicInfo, news: dict):
         return
     if not user.favorites:
         user.favorites = {}
+
+    LOCAL_NEWS_MANAGER.save_local_news(news)
+
     user.favorites[str(news["id"])] = news
     user.full_clean()
     user.save()
@@ -747,6 +762,7 @@ def remove_favorites(user: UserBasicInfo, news_id):
         user.favorites = {}
         return False
     if str(news_id) in user.favorites:
+        LOCAL_NEWS_MANAGER.del_local_news(int(news_id))
         user.favorites.pop(str(news_id))
         user.full_clean()
         user.save()
@@ -758,6 +774,8 @@ def clear_favorites(user: UserBasicInfo):
     """
         remove all news from user's favorites
     """
+    for news_id in user.favorites:
+        LOCAL_NEWS_MANAGER.del_local_news(int(news_id))
     user.favorites = {}
     user.full_clean()
     user.save()

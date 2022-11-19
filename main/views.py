@@ -59,7 +59,8 @@ def ai_news(request: WSGIRequest):
         news_list = request_data["data"]
         print(news_list)
         for news in news_list:
-            print(news)
+            print(news["summary"])
+        tools.LOCAL_NEWS_MANAGER.update_ai_processed_news(news_list)
         status_code = 200
         response_msg = {
             "code": 0,
@@ -471,6 +472,7 @@ def user_read_history(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
+                        "full_content": news["content"],
                         "is_favorite": bool(
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
@@ -587,6 +589,7 @@ def user_readlater(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
+                        "full_content": news["content"],
                         "is_favorite": bool(
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
@@ -701,6 +704,7 @@ def user_favorites(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
+                        "full_content": news["content"],
                         "is_favorite": bool(
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
