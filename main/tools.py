@@ -18,7 +18,7 @@ import jwt
 import psycopg2
 from PIL import Image
 from django.http import JsonResponse
-from .models import UserBasicInfo
+from .models import UserBasicInfo, LocalNews
 from .responses import internal_error_response
 
 TESTING_MODE = False
@@ -82,6 +82,8 @@ MAX_USER_SEARCH_HISTORY = 256
 CACHE_NEWSPOOL_MAX = len(CATEGORY_LIST) * FRONT_PAGE_NEWS_NUM * 8
 
 DB_NEWS_LOOK_BACK = 65536
+
+MAX_LOCAL_NEWS_LIST_CACHE = 1024
 
 
 def get_news_from_db_by_id(news_id: int) -> bool:
@@ -158,8 +160,41 @@ class LocalNewsManager():
         This class manages local news.
     """
     def __init__(self) -> None:
-        self.local_news_list = []
+        self.local_news_list_cache = {}
 
+    def add_to_cache(self, news: dict):
+        self.local_news_list_cache[news["id"]] = news
+        if len(self.local_news_list_cache) > MAX_LOCAL_NEWS_LIST_CACHE:
+            key = self.local_news_list_cache.keys[0]
+            self.local_news_list_cache.pop(key)
+
+    def save_to_local_news(self, news):
+        if isinstance(news, dict):
+            try:
+                self.add_to_cache(news)
+                local_news = LocalNews(news)
+                local_news.full_clean()
+                local_news.save()
+            except Exception as error:
+                print(error)
+                return False
+            return True
+        elif isinstance(news, list):
+            news_list = news
+            for news in news_list:
+                if isinstance(news, dict):
+                    try:
+                        self.add_to_cache(news)
+                        local_news = LocalNews(news)
+                        local_news.full_clean()
+                        local_news.save()
+                    except Exception as error:
+                        print(error)
+                        return False
+                else:
+                    return False
+            return True
+        return False
 
 class NewsCache():
     """

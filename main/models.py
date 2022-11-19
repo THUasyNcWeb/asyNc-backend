@@ -4,6 +4,7 @@ Models for db.
 from django.db import models
 from django.db.models import AutoField, CharField, URLField, DateTimeField
 from django.db.models import TextField, ForeignKey, IntegerField, JSONField
+from django.db.models import BooleanField
 from django.contrib.postgres.fields import ArrayField
 
 # Create your models here.
@@ -36,6 +37,8 @@ class LocalNews(models.Model):
         model for news
     """
     id = AutoField(primary_key=True, db_index=True)
+    news_id = IntegerField(default=0)
+    ai_processed = BooleanField(default=False)
     data = JSONField(null=True, blank=True, default=dict)
 
     class Meta:
