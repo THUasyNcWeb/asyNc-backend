@@ -172,6 +172,9 @@ REST_FRAMEWORK = {
 
 # Try to deal with domain name distrust problem, by Zheng YouJie
 
+CSRF_COOKIE_NAME = "csrf_token"
+CSRF_HEADER_NAME = "CSRF_COOKIE"
+
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8080',
     'http://127.0.0.1:8000',
@@ -195,16 +198,4 @@ CORS_ALLOW_METHODS = (
     'VIEW',
 )
 
-CORS_ALLOW_HEADERS = (
-    'XMLHttpRequest',
-    'X_FILENAME',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-    'Pragma',
-)
+CORS_ALLOW_HEADERS = ('*')

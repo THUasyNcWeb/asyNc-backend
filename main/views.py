@@ -6,6 +6,8 @@ import re
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
+from django.core.handlers.wsgi import WSGIRequest
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Document, Date, Keyword, Text, connections, Completion
 
@@ -14,6 +16,64 @@ from .models import UserBasicInfo
 from .responses import *
 
 # Create your views here.
+
+
+# @csrf_exempt
+def ai_news(request: WSGIRequest):
+    """
+        ai news summary
+        news_list_format
+        [
+            {
+                "id": 114,
+                "title": "为亚太和世界发展繁荣贡献正能量",
+                "media": "Foobar News",
+                "url": "https://baijiahao.baidu.com/s?id=1749782470764021746",
+                "pub_time": "2022-10-21T19:02:16.305Z",
+                "first_img_url": "",
+                "full_content": "11月17日下午，国家主席习近平在泰国曼谷举行的亚太经合组织(APEC)工商领导人峰会上，
+                发表题为《坚守初心 共促发展 开启亚太合作新篇章》的书面演讲。习近平主席的书面演讲备受瞩目。接受采访的与会人士表示，
+                习近平主席从亚太和世界前途命运出发，为亚太合作把舵领航，为世界发展再开良方，推动构建亚太命运共同体走深走实。",
+            }
+        ],
+    """
+    try:
+        if request.method == "GET":
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": tools.LOCAL_NEWS_MANAGER.get_none_ai_processed_news(num=4),
+                "csrf_token": get_token(request=request)
+            }
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+        if request.method == "POST":
+            request_data = json.loads(request.body.decode())
+            news_list = request_data["data"]
+            print(news_list)
+            for news in news_list:
+                print(news["summary"])
+            tools.LOCAL_NEWS_MANAGER.update_ai_processed_news(news_list)
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": {}
+            }
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+    except Exception as error:
+        print("[Error in ai news]:")
+        print(error)
+        return internal_error_response(error="[Error in ai news]:" + str(error))
+    return not_found_response()
 
 
 # This funtion is for testing only, please delete this funcion before deploying.
@@ -174,7 +234,7 @@ def user_register(request):
             else:
                 user = UserBasicInfo.objects.filter(user_name=user_name).first()
                 if not user:  # user name not existed yet.
-                    user = UserBasicInfo(user_name=user_name, password=tools.md5(password))
+                    user = UserBasicInfo(user_name=user_name, password=tools.md5(password), tags={})
                     try:
                         user.full_clean()
                         user.save()
@@ -413,11 +473,12 @@ def user_read_history(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
+                        "full_content": news["content"],
                         "is_favorite": bool(
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
                         "is_readlater": bool(
-                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                            tools.in_readlist_check(user_readlist_dict, int(news["id"]))
                         ),
                     }
                 )
@@ -529,11 +590,12 @@ def user_readlater(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
+                        "full_content": news["content"],
                         "is_favorite": bool(
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
                         "is_readlater": bool(
-                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                            tools.in_readlist_check(user_readlist_dict, int(news["id"]))
                         ),
                     }
                 )
@@ -620,6 +682,7 @@ def user_favorites(request):
         return unauthorized_response()
     # try:
     if request.method == "POST":
+        # print("Recieve POST", time.time())
         try:
             news_id = int(request.GET.get("id"))
         except Exception as error:
@@ -627,10 +690,13 @@ def user_favorites(request):
             return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
         try:
             db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
+            # print("get db_news_list", time.time())
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
             user_favorites_dict = tools.get_user_favorites_dict(user=user)
             user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
+            print(db_news_list)
 
             for news in db_news_list:
                 tools.add_to_favorites(
@@ -642,14 +708,17 @@ def user_favorites(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
+                        "full_content": news["content"],
                         "is_favorite": bool(
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
                         "is_readlater": bool(
-                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                            tools.in_readlist_check(user_readlist_dict, int(news["id"]))
                         ),
                     }
                 )
+                print("news:")
+                print(news)
 
             favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(
@@ -765,6 +834,7 @@ def news_response(request):
             try:
                 db_news_list = tools.NEWS_CACHE.get_cache(category)
             except Exception as error:
+                print("can't get cache")
                 print(error)
                 db_news_list = tools.get_data_from_db(
                     connection=connection,
@@ -792,7 +862,7 @@ def news_response(request):
                                 tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                             ),
                             "is_readlater": bool(
-                                tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                                tools.in_readlist_check(user_readlist_dict, int(news["id"]))
                             ),
                         }
                     )
@@ -1403,7 +1473,7 @@ def keyword_essearch(request):
                     tools.in_favorite_check(user_favorites_dict, int(data["id"]))
                 ),
                 "is_readlater": bool(
-                    tools.in_favorite_check(user_readlist_dict, int(data["id"]))
+                    tools.in_readlist_check(user_readlist_dict, int(data["id"]))
                 ),
             }
             news += [piece_new]
@@ -1559,7 +1629,7 @@ def keyword_search(request):
                     tools.in_favorite_check(user_favorites_dict, int(data["id"]))
                 ),
                 "is_readlater": bool(
-                    tools.in_favorite_check(user_readlist_dict, int(data["id"]))
+                    tools.in_readlist_check(user_readlist_dict, int(data["id"]))
                 ),
             }
             # if len(include) != 0 or len(exclude) != 0:
