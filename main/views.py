@@ -744,7 +744,6 @@ def news_response(request):
 
     user = tools.get_user_from_request(request)
 
-
     if request.method == "GET":
         try:
             news_category = request.GET.get("category")
