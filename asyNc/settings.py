@@ -198,16 +198,4 @@ CORS_ALLOW_METHODS = (
     'VIEW',
 )
 
-CORS_ALLOW_HEADERS = (
-    'XMLHttpRequest',
-    'X_FILENAME',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-    'Pragma',
-)
+CORS_ALLOW_HEADERS = ('*')

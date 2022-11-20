@@ -42,37 +42,42 @@ def ai_news(request: WSGIRequest):
             }
         ],
     """
-    if request.method == "GET":
-        status_code = 200
-        response_msg = {
-            "code": 0,
-            "message": "SUCCESS",
-            "data": tools.LOCAL_NEWS_MANAGER.get_none_ai_processed_news(num=4),
-            "csrf_token": get_token(request=request)
-        }
-        return JsonResponse(
-            response_msg,
-            status=status_code,
-            headers={'Access-Control-Allow-Origin': '*'}
-        )
-    if request.method == "POST":
-        request_data = json.loads(request.body.decode())
-        news_list = request_data["data"]
-        print(news_list)
-        for news in news_list:
-            print(news["summary"])
-        tools.LOCAL_NEWS_MANAGER.update_ai_processed_news(news_list)
-        status_code = 200
-        response_msg = {
-            "code": 0,
-            "message": "SUCCESS",
-            "data": {}
-        }
-        return JsonResponse(
-            response_msg,
-            status=status_code,
-            headers={'Access-Control-Allow-Origin': '*'}
-        )
+    try:
+        if request.method == "GET":
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": tools.LOCAL_NEWS_MANAGER.get_none_ai_processed_news(num=4),
+                "csrf_token": get_token(request=request)
+            }
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+        if request.method == "POST":
+            request_data = json.loads(request.body.decode())
+            news_list = request_data["data"]
+            print(news_list)
+            for news in news_list:
+                print(news["summary"])
+            tools.LOCAL_NEWS_MANAGER.update_ai_processed_news(news_list)
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": {}
+            }
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+    except Exception as error:
+        print("[Error in ai news]:")
+        print(error)
+        return internal_error_response(error="[Error in ai news]:" + str(error))
     return not_found_response()
 
 
@@ -234,7 +239,7 @@ def user_register(request):
             else:
                 user = UserBasicInfo.objects.filter(user_name=user_name).first()
                 if not user:  # user name not existed yet.
-                    user = UserBasicInfo(user_name=user_name, password=tools.md5(password))
+                    user = UserBasicInfo(user_name=user_name, password=tools.md5(password), tags={})
                     try:
                         user.full_clean()
                         user.save()

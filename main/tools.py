@@ -157,6 +157,36 @@ def clear_search_history(user: UserBasicInfo):
     user.save()
 
 
+def news_formator(news) -> dict:
+    """
+        transform crawler format to frontend format
+    """
+    format_news = {}
+    if "id" in news:
+        format_news["id"] = news["id"]
+    if "title" in news:
+        format_news["title"] = news["title"]
+    if "media" in news:
+        format_news["media"] = news["media"]
+    if "url" in news:
+        format_news["url"] = news["url"]
+    elif "news_url" in news:
+        format_news["url"] = news["news_url"]
+    if "pub_time" in news:
+        format_news["pub_time"] = news["pub_time"]
+    if "picture_url" in news:
+        format_news["picture_url"] = news["picture_url"]
+    elif "first_img_url" in news:
+        format_news["picture_url"] = news["first_img_url"]
+    if "full_content" in news:
+        format_news["full_content"] = news["full_content"]
+    elif "content" in news:
+        format_news["full_content"] = news["content"]
+    if "summary" in news:
+        format_news["summary"] = news["summary"]
+    return format_news
+
+
 class LocalNewsManager():
     """
         News favorited by users will be storaged to local.
@@ -220,7 +250,8 @@ class LocalNewsManager():
                 for news_object in news_object_list:
                     news = news_object.data
                     if news["id"] not in self.none_ai_processed_news_dict:
-                        self.none_ai_processed_news_dict[news["id"]] = news
+                        if "full_content" in news and news["full_content"]:
+                            self.none_ai_processed_news_dict[news["id"]] = news
         news_list = list(self.none_ai_processed_news_dict.values())[:num]
         for news in news_list:
             self.none_ai_processed_news_dict.pop(news["id"])
@@ -243,7 +274,7 @@ class LocalNewsManager():
                         local_news.save()
                     else:
                         local_news = LocalNews(
-                            data=self.news_formator(news),
+                            data=news_formator(news),
                             news_id=int(news["id"]),
                             ai_processed=True, cite_count=1
                         )
@@ -311,35 +342,6 @@ class LocalNewsManager():
             return self.del_one_local_news(news)
         return False
 
-    def news_formator(self, news) -> dict:
-        """
-            transform crawler format to frontend format
-        """
-        format_news = {}
-        if "id" in news:
-            format_news["id"] = news["id"]
-        if "title" in news:
-            format_news["title"] = news["title"]
-        if "media" in news:
-            format_news["media"] = news["media"]
-        if "url" in news:
-            format_news["url"] = news["url"]
-        elif "news_url" in news:
-            format_news["url"] = news["news_url"]
-        if "pub_time" in news:
-            format_news["pub_time"] = news["pub_time"]
-        if "picture_url" in news:
-            format_news["picture_url"] = news["picture_url"]
-        elif "first_img_url" in news:
-            format_news["picture_url"] = news["first_img_url"]
-        if "full_content" in news:
-            format_news["full_content"] = news["full_content"]
-        elif "content" in news:
-            format_news["full_content"] = news["content"]
-        if "summary" in news:
-            format_news["summary"] = news["summary"]
-        return format_news
-
     def save_one_local_news(self, news: dict) -> bool:
         """
             save one local news
@@ -354,7 +356,7 @@ class LocalNewsManager():
                     local_news.save()
                     return True
                 local_news = LocalNews(
-                    data=self.news_formator(news),
+                    data=news_formator(news),
                     news_id=int(news["id"]),
                     ai_processed=False, cite_count=1
                 )
