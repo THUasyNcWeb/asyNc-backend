@@ -878,6 +878,7 @@ class FavoritesTests(TestCase):
                 self.assertEqual(len(response_data["news"]), min(10, len(news_id_list)))
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
+                    self.assertEqual(news["is_favorite"], True)
 
     def test_get_favorites(self):
         """
@@ -912,6 +913,7 @@ class FavoritesTests(TestCase):
                         bool(begin <= news["id"] <= end),
                         True
                     )
+                    self.assertEqual(news["is_favorite"], True)
 
     def test_delete_favorites(self):
         """
@@ -1028,6 +1030,7 @@ class ReadlistTests(TestCase):
                 self.assertEqual(len(response_data["news"]), min(10, len(news_id_list)))
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
+                    self.assertEqual(news["is_readlater"], True)
 
     def test_get_readlist(self):
         """
@@ -1062,6 +1065,7 @@ class ReadlistTests(TestCase):
                         bool(begin <= news["id"] <= end),
                         True
                     )
+                    self.assertEqual(news["is_readlater"], True)
 
     def test_delete_readlist(self):
         """

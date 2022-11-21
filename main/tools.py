@@ -103,7 +103,6 @@ def get_news_from_db_by_id(news_id: int) -> bool:
     elif news_id in NEWS_CACHE.newspool:
         db_news_list = [NEWS_CACHE.newspool[news_id]]
     else:
-
         db_news_list = get_data_from_db(
             connection=CRAWLER_DB_CONNECTION,
             filter_command="id = {id}".format(id=news_id),
@@ -118,7 +117,7 @@ def get_news_from_db_by_id(news_id: int) -> bool:
         #         print(type(news[key]))
         # with open("data/news_template.pkl", "wb") as file:
         #     pickle.dump(db_news_list, file)
-        print(db_news_list)
+        # print(db_news_list)
     return db_news_list
 
 
@@ -682,7 +681,7 @@ def in_favorite_check(favorites: dict, news_id: int):
     """
     if not favorites:
         return False
-    if news_id in favorites:
+    if str(news_id) in favorites or news_id in favorites:
         return True
     return False
 
@@ -692,8 +691,9 @@ def get_user_favorites_dict(user: UserBasicInfo):
         get user favorites dict
     """
     if not user:
+        print("[Error] user not exist.")
         return {}
-    return dict(user.readlist)
+    return dict(user.favorites)
 
 
 def in_readlist_check(readlist: dict, news_id: int):
@@ -702,7 +702,7 @@ def in_readlist_check(readlist: dict, news_id: int):
     """
     if not readlist:
         return False
-    if news_id in readlist:
+    if str(news_id) in readlist or news_id in readlist:
         return True
     return False
 
@@ -712,6 +712,7 @@ def get_user_readlist_dict(user: UserBasicInfo):
         get user readlist dict
     """
     if not user:
+        print("[Error] user not exist.")
         return {}
     return dict(user.readlist)
 
@@ -921,12 +922,12 @@ def user_readlist_pages(user: UserBasicInfo, page: int):
                 news["summary"] = ai_news["summary"]
             else:
                 news["summary"] = ""
-
-            news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
-            news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
-
         except Exception as error:
             print(error)
+
+    for news in readlist_page:
+        news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+        news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
 
     return readlist_page, len(readlist_list)
 
@@ -936,6 +937,7 @@ def add_to_favorites(user: UserBasicInfo, news: dict):
         add a news to user's favorites
     """
     if "id" not in news:
+        print("[Error] no id in news.")
         return
     if not user.favorites:
         user.favorites = {}
@@ -1018,12 +1020,12 @@ def user_favorites_pages(user: UserBasicInfo, page: int):
                 news["summary"] = ai_news["summary"]
             else:
                 news["summary"] = ""
-
-            news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
-            news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
-
         except Exception as error:
             print(error)
+
+    for news in favorites_page:
+        news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+        news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
 
     return favorites_page, len(favorites_list)
 
