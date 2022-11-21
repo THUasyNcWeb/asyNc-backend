@@ -2,4 +2,4 @@ __pycache__
 .DS_Store
 __MACOSX
 *.pyc
-news_cache.pkl
+data/news_cache.pkl
