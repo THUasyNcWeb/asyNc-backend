@@ -911,11 +911,20 @@ def user_readlist_pages(user: UserBasicInfo, page: int):
     readlist_list = get_readlist(user)
     readlist_page = readlist_list[begin:end]
 
+    user_favorites_dict = get_user_favorites_dict(user=user)
+    user_readlist_dict = get_user_readlist_dict(user=user)
+
     for news in readlist_page:
         try:
             ai_news = LOCAL_NEWS_MANAGER.get_one_ai_news(news["id"])
             if "summary" in ai_news:
                 news["summary"] = ai_news["summary"]
+            else:
+                news["summary"] = ""
+
+            news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+            news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
+
         except Exception as error:
             print(error)
 
@@ -999,11 +1008,20 @@ def user_favorites_pages(user: UserBasicInfo, page: int):
     favorites_list = get_favorites(user)
     favorites_page = favorites_list[begin:end]
 
+    user_favorites_dict = get_user_favorites_dict(user=user)
+    user_readlist_dict = get_user_readlist_dict(user=user)
+
     for news in favorites_page:
         try:
             ai_news = LOCAL_NEWS_MANAGER.get_one_ai_news(news["id"])
             if "summary" in ai_news:
                 news["summary"] = ai_news["summary"]
+            else:
+                news["summary"] = ""
+
+            news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+            news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
+
         except Exception as error:
             print(error)
 
