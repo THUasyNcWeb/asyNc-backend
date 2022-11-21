@@ -76,7 +76,7 @@ class UserBasicInfo(models.Model):
         model for user
     """
     id = AutoField(primary_key=True)
-    tags = JSONField(null=True, blank=True)
+    tags = JSONField(null=True, blank=True, default=dict)
     user_name = CharField(max_length=12, unique=True)
     password = CharField(max_length=40)
     signature = CharField(max_length=200, blank=True)

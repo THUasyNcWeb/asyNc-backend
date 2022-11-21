@@ -460,8 +460,9 @@ def user_read_history(request):
 
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
-            user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
+            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
+            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
 
             for news in db_news_list:
                 tools.add_to_read_history(
@@ -474,12 +475,7 @@ def user_read_history(request):
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
                         "full_content": news["content"],
-                        "is_favorite": bool(
-                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
-                        ),
-                        "is_readlater": bool(
-                            tools.in_readlist_check(user_readlist_dict, int(news["id"]))
-                        ),
+                        "tags": news["tags"]
                     }
                 )
 
@@ -577,8 +573,8 @@ def user_readlater(request):
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            user_readlist_dict = tools.get_user_readlist_dict(user=user)
+            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
+            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
 
             for news in db_news_list:
                 tools.add_to_readlist(
@@ -591,12 +587,7 @@ def user_readlater(request):
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
                         "full_content": news["content"],
-                        "is_favorite": bool(
-                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
-                        ),
-                        "is_readlater": bool(
-                            tools.in_readlist_check(user_readlist_dict, int(news["id"]))
-                        ),
+                        "tags": news["tags"]
                     }
                 )
 
@@ -693,8 +684,9 @@ def user_favorites(request):
             # print("get db_news_list", time.time())
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
-            user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
+            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
+            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
 
             print(db_news_list)
 
@@ -709,17 +701,12 @@ def user_favorites(request):
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
                         "full_content": news["content"],
-                        "is_favorite": bool(
-                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
-                        ),
-                        "is_readlater": bool(
-                            tools.in_readlist_check(user_readlist_dict, int(news["id"]))
-                        ),
+                        "tags": news["tags"]
                     }
                 )
-                print("news:")
-                print(news)
-
+                # print("news:")
+                # print(news)
+            # print(user.favorites)
             favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {

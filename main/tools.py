@@ -11,6 +11,7 @@ import json
 import re
 import pickle
 import copy
+import datetime
 from io import BytesIO
 
 from tinyrpc import RPCClient
@@ -97,20 +98,26 @@ def get_news_from_db_by_id(news_id: int) -> bool:
         with open("data/news_template.pkl", "rb") as file:
             db_news_list = [pickle.load(file)[0]]
         db_news_list[0]["id"] = news_id
+        db_news_list[0]["tags"] = []
         # print(db_news_list)
+    elif news_id in NEWS_CACHE.newspool:
+        db_news_list = [NEWS_CACHE.newspool[news_id]]
     else:
         db_news_list = get_data_from_db(
             connection=CRAWLER_DB_CONNECTION,
             filter_command="id = {id}".format(id=news_id),
             select=[
                 "title","news_url","first_img_url","media",
-                "pub_time","id","category","content","description"
+                "pub_time","id","category","content","tags"
             ],
             limit=1
         )
+        # for news in db_news_list:
+        #     for key in news:
+        #         print(type(news[key]))
         # with open("data/news_template.pkl", "wb") as file:
         #     pickle.dump(db_news_list, file)
-        print(db_news_list)
+        # print(db_news_list)
     return db_news_list
 
 
@@ -187,12 +194,14 @@ def news_formator(news) -> dict:
         format_news["full_content"] = news["content"]
     if "summary" in news:
         format_news["summary"] = news["summary"]
+    if "tags" in news:
+        format_news["tags"] = news["tags"]
     return format_news
 
 
 class LocalNewsManager():
     """
-        News favorited by users will be storaged to local.
+        Favorited or in reading list news will be storaged to local.
         This class manages local news.
     """
     def __init__(self) -> None:
@@ -395,8 +404,8 @@ class NewsCache():
             init
         """
         self.db_connection = db_connection
-        self.cache = {}
-        self.newspool = []  # pool of cached news
+        self.cache = {}  # cache for news home page only
+        self.newspool = {}  # pool of cached ori format news, for all news
         self.last_update_time = 0
         self.last_check_time = 0
         self.last_change_time = time.time()
@@ -405,6 +414,52 @@ class NewsCache():
         for category in CATEGORY_LIST:
             self.cache[category] = []
             self.category_last_update_time[category] = 0
+
+        self.ori_news_format = {
+            "title": str,
+            "news_url": str,
+            "first_img_url": str,
+            "media": str,
+            "pub_time": datetime.datetime,
+            "id": int,
+            "category": str,
+            "content": str,
+            "tags": list
+        }
+
+    def check_ori_news_format(self, news: dict) -> bool:
+        """
+            check_ori_news_format
+        """
+        if news:
+            for (key, instance) in self.ori_news_format.items():
+                if key not in news:
+                    return False
+                if not isinstance(news[key], instance):
+                    return False
+            return True
+        return False
+
+    def add_to_news_cache_pool(self, news_list: list) -> bool:
+        """
+            add to news cache pool
+        """
+        for news in news_list:
+            if self.check_ori_news_format(news):
+                self.newspool[int(news["id"])] = news
+            else:
+                print("news format error")
+                return False
+        try:
+            if len(self.newspool) > CACHE_NEWSPOOL_MAX:  # del outdate news
+                for key in list(self.newspool.keys())[: CACHE_NEWSPOOL_MAX // 2]:
+                    self.newspool.pop(key)
+        except Exception as error:
+            print("[Error when cleaning self.newspool]")
+            print(error)
+            return False
+
+        return True
 
     def save_local_cache(self):
         """
@@ -426,8 +481,7 @@ class NewsCache():
             self.sort_cache_ascend()
             self.update_max_news_id()
             for category in CATEGORY_LIST:
-                self.newspool += self.cache[category]
-            self.newspool.sort(key=lambda x:x["id"])
+                self.add_to_news_cache_pool(self.cache[category])
             print("local cache loaded")
         else:
             print("load cache not found")
@@ -464,7 +518,9 @@ class NewsCache():
         """
         self.last_update_time = time.time()
         db_news_list.sort(key=lambda x:x["id"])
-        self.newspool += db_news_list
+
+        self.add_to_news_cache_pool(db_news_list)
+
         for news in db_news_list:
             if news["category"] in CATEGORY_LIST:
                 self.cache[news["category"]].append(news)
@@ -473,9 +529,6 @@ class NewsCache():
             self.cache[category] = self.cache[category][-200:]
 
         self.update_max_news_id()
-
-        if len(self.newspool) > CACHE_NEWSPOOL_MAX:  # del outdate news
-            self.newspool = self.newspool[- CACHE_NEWSPOOL_MAX // 2:]
 
     def get_cache(self, category):
         """
@@ -540,7 +593,7 @@ class DBScanner():
             filter_command="id > {id}".format(id=self.news_cache.max_news_id),
             select=[
                 "title","news_url","first_img_url","media",
-                "pub_time","id","category","content"
+                "pub_time","id","category","content","tags"
             ],
             order_command="ORDER BY pub_time DESC",
             limit=65536  # protection
@@ -575,7 +628,7 @@ class DBScanner():
                         ),
                         select=[
                             "title","news_url","first_img_url","media",
-                            "pub_time","id","category","content"
+                            "pub_time","id","category","content","tags"
                         ],
                         order_command="ORDER BY pub_time DESC",
                         limit=FRONT_PAGE_NEWS_NUM
@@ -628,7 +681,7 @@ def in_favorite_check(favorites: dict, news_id: int):
     """
     if not favorites:
         return False
-    if news_id in favorites:
+    if str(news_id) in favorites or news_id in favorites:
         return True
     return False
 
@@ -638,8 +691,9 @@ def get_user_favorites_dict(user: UserBasicInfo):
         get user favorites dict
     """
     if not user:
+        print("[Error] user not exist.")
         return {}
-    return dict(user.readlist)
+    return dict(user.favorites)
 
 
 def in_readlist_check(readlist: dict, news_id: int):
@@ -648,7 +702,7 @@ def in_readlist_check(readlist: dict, news_id: int):
     """
     if not readlist:
         return False
-    if news_id in readlist:
+    if str(news_id) in readlist or news_id in readlist:
         return True
     return False
 
@@ -658,6 +712,7 @@ def get_user_readlist_dict(user: UserBasicInfo):
         get user readlist dict
     """
     if not user:
+        print("[Error] user not exist.")
         return {}
     return dict(user.readlist)
 
@@ -704,6 +759,21 @@ def user_password_checker(password: str):
     return True
 
 
+def update_to_user_tags(user: UserBasicInfo, tags: list):
+    """
+        update user tags
+    """
+    if not user.tags:
+        user.tags = {}
+    for tag in tags:
+        if tag in user.tags:
+            user.tags[tag] += 1
+        else:
+            user.tags[tag] = 1
+    user.full_clean()
+    user.save()
+
+
 def add_to_read_history(user: UserBasicInfo, news: dict):
     """
         add a news to user's read history
@@ -712,6 +782,8 @@ def add_to_read_history(user: UserBasicInfo, news: dict):
         return
     if not user.read_history:
         user.read_history = {}
+    if news["tags"]:
+        update_to_user_tags(user=user, tags=news["tags"])
     user.read_history[str(news["id"])] = news
     user.full_clean()
     user.save()
@@ -840,13 +912,22 @@ def user_readlist_pages(user: UserBasicInfo, page: int):
     readlist_list = get_readlist(user)
     readlist_page = readlist_list[begin:end]
 
+    user_favorites_dict = get_user_favorites_dict(user=user)
+    user_readlist_dict = get_user_readlist_dict(user=user)
+
     for news in readlist_page:
         try:
             ai_news = LOCAL_NEWS_MANAGER.get_one_ai_news(news["id"])
             if "summary" in ai_news:
                 news["summary"] = ai_news["summary"]
+            else:
+                news["summary"] = ""
         except Exception as error:
             print(error)
+
+    for news in readlist_page:
+        news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+        news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
 
     return readlist_page, len(readlist_list)
 
@@ -856,6 +937,7 @@ def add_to_favorites(user: UserBasicInfo, news: dict):
         add a news to user's favorites
     """
     if "id" not in news:
+        print("[Error] no id in news.")
         return
     if not user.favorites:
         user.favorites = {}
@@ -928,13 +1010,22 @@ def user_favorites_pages(user: UserBasicInfo, page: int):
     favorites_list = get_favorites(user)
     favorites_page = favorites_list[begin:end]
 
+    user_favorites_dict = get_user_favorites_dict(user=user)
+    user_readlist_dict = get_user_readlist_dict(user=user)
+
     for news in favorites_page:
         try:
             ai_news = LOCAL_NEWS_MANAGER.get_one_ai_news(news["id"])
             if "summary" in ai_news:
                 news["summary"] = ai_news["summary"]
+            else:
+                news["summary"] = ""
         except Exception as error:
             print(error)
+
+    for news in favorites_page:
+        news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+        news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
 
     return favorites_page, len(favorites_list)
 
@@ -992,6 +1083,10 @@ def return_user_info(user: UserBasicInfo, user_token=""):
                 reverse=True
             )[:MAX_RETURN_USER_TAG]:
                 user_tags[key_value[0]] = key_value[1]
+        else:
+            user.tags = {}
+            user.full_clean()
+            user.save()
 
         user_avatar = user.avatar
         if not user_avatar:
