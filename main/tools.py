@@ -11,6 +11,7 @@ import json
 import re
 import pickle
 import copy
+import datetime
 from io import BytesIO
 
 from tinyrpc import RPCClient
@@ -98,7 +99,10 @@ def get_news_from_db_by_id(news_id: int) -> bool:
             db_news_list = [pickle.load(file)[0]]
         db_news_list[0]["id"] = news_id
         # print(db_news_list)
+    elif news_id in NEWS_CACHE.newspool:
+        db_news_list = [NEWS_CACHE.newspool[news_id]]
     else:
+
         db_news_list = get_data_from_db(
             connection=CRAWLER_DB_CONNECTION,
             filter_command="id = {id}".format(id=news_id),
@@ -108,6 +112,9 @@ def get_news_from_db_by_id(news_id: int) -> bool:
             ],
             limit=1
         )
+        # for news in db_news_list:
+        #     for key in news:
+        #         print(type(news[key]))
         # with open("data/news_template.pkl", "wb") as file:
         #     pickle.dump(db_news_list, file)
         print(db_news_list)
@@ -194,7 +201,7 @@ def news_formator(news) -> dict:
 
 class LocalNewsManager():
     """
-        News favorited by users will be storaged to local.
+        Favorited or in reading list news will be storaged to local.
         This class manages local news.
     """
     def __init__(self) -> None:
@@ -397,8 +404,8 @@ class NewsCache():
             init
         """
         self.db_connection = db_connection
-        self.cache = {}
-        self.newspool = []  # pool of cached news
+        self.cache = {}  # cache for news home page only
+        self.newspool = {}  # pool of cached ori format news, for all news
         self.last_update_time = 0
         self.last_check_time = 0
         self.last_change_time = time.time()
@@ -407,6 +414,53 @@ class NewsCache():
         for category in CATEGORY_LIST:
             self.cache[category] = []
             self.category_last_update_time[category] = 0
+        
+        self.ori_news_format = {
+            "title": str,
+            "news_url": str,
+            "first_img_url": str,
+            "media": str,
+            "pub_time": datetime.datetime,
+            "id": int,
+            "category": str,
+            "content": str,
+            "tags": list
+        }
+
+    def check_ori_news_format(self, news: dict) -> bool:
+        """
+            check_ori_news_format
+        """
+        if news:
+            for key in self.ori_news_format:
+                if key not in news:
+                    return False
+                instance = self.ori_news_format[key]
+                if not isinstance(news[key], instance):
+                    return False
+            return True
+        return False
+
+    def add_to_news_cache_pool(self, news_list: list) -> bool:
+        """
+            add to news cache pool
+        """
+        for news in news_list:
+            if self.check_ori_news_format(news):
+                self.newspool[int(news["id"])] = news
+            else:
+                print("news format error")
+                return False
+        try:
+            if len(self.newspool) > CACHE_NEWSPOOL_MAX:  # del outdate news
+                for key in list(self.newspool.keys())[: CACHE_NEWSPOOL_MAX // 2]:
+                    self.newspool.pop(key)
+        except Exception as error:
+            print("[Error when cleaning self.newspool]")
+            print(error)
+            return False
+
+        return True
 
     def save_local_cache(self):
         """
@@ -428,8 +482,7 @@ class NewsCache():
             self.sort_cache_ascend()
             self.update_max_news_id()
             for category in CATEGORY_LIST:
-                self.newspool += self.cache[category]
-            self.newspool.sort(key=lambda x:x["id"])
+                self.add_to_news_cache_pool(self.cache[category])
             print("local cache loaded")
         else:
             print("load cache not found")
@@ -466,7 +519,9 @@ class NewsCache():
         """
         self.last_update_time = time.time()
         db_news_list.sort(key=lambda x:x["id"])
-        self.newspool += db_news_list
+
+        self.add_to_news_cache_pool(db_news_list)
+
         for news in db_news_list:
             if news["category"] in CATEGORY_LIST:
                 self.cache[news["category"]].append(news)
@@ -475,9 +530,6 @@ class NewsCache():
             self.cache[category] = self.cache[category][-200:]
 
         self.update_max_news_id()
-
-        if len(self.newspool) > CACHE_NEWSPOOL_MAX:  # del outdate news
-            self.newspool = self.newspool[- CACHE_NEWSPOOL_MAX // 2:]
 
     def get_cache(self, category):
         """
