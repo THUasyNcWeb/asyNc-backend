@@ -104,7 +104,7 @@ def get_news_from_db_by_id(news_id: int) -> bool:
             filter_command="id = {id}".format(id=news_id),
             select=[
                 "title","news_url","first_img_url","media",
-                "pub_time","id","category","content","description"
+                "pub_time","id","category","content","tags"
             ],
             limit=1
         )
@@ -187,6 +187,8 @@ def news_formator(news) -> dict:
         format_news["full_content"] = news["content"]
     if "summary" in news:
         format_news["summary"] = news["summary"]
+    if "tags" in news:
+        format_news["tags"] = news["tags"]
     return format_news
 
 
@@ -540,7 +542,7 @@ class DBScanner():
             filter_command="id > {id}".format(id=self.news_cache.max_news_id),
             select=[
                 "title","news_url","first_img_url","media",
-                "pub_time","id","category","content"
+                "pub_time","id","category","content","tags"
             ],
             order_command="ORDER BY pub_time DESC",
             limit=65536  # protection
@@ -575,7 +577,7 @@ class DBScanner():
                         ),
                         select=[
                             "title","news_url","first_img_url","media",
-                            "pub_time","id","category","content"
+                            "pub_time","id","category","content","tags"
                         ],
                         order_command="ORDER BY pub_time DESC",
                         limit=FRONT_PAGE_NEWS_NUM
@@ -704,6 +706,21 @@ def user_password_checker(password: str):
     return True
 
 
+def update_to_user_tags(user: UserBasicInfo, tags: list):
+    """
+        update user tags
+    """
+    if not user.tags:
+        user.tags = {}
+    for tag in tags:
+        if tag in user.tags:
+            user.tags[tag] += 1
+        else:
+            user.tags[tag] = 1
+    user.full_clean()
+    user.save()
+
+
 def add_to_read_history(user: UserBasicInfo, news: dict):
     """
         add a news to user's read history
@@ -712,6 +729,8 @@ def add_to_read_history(user: UserBasicInfo, news: dict):
         return
     if not user.read_history:
         user.read_history = {}
+    if news["tags"]:
+        update_to_user_tags(user=user, tags=news["tags"])
     user.read_history[str(news["id"])] = news
     user.full_clean()
     user.save()
@@ -992,6 +1011,10 @@ def return_user_info(user: UserBasicInfo, user_token=""):
                 reverse=True
             )[:MAX_RETURN_USER_TAG]:
                 user_tags[key_value[0]] = key_value[1]
+        else:
+            user.tags = {}
+            user.full_clean()
+            user.save()
 
         user_avatar = user.avatar
         if not user_avatar:

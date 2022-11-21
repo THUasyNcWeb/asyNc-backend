@@ -474,6 +474,7 @@ def user_read_history(request):
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
                         "full_content": news["content"],
+                        "tags": news["tags"],
                         "is_favorite": bool(
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
@@ -591,6 +592,7 @@ def user_readlater(request):
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
                         "full_content": news["content"],
+                        "tags": news["tags"],
                         "is_favorite": bool(
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
@@ -709,6 +711,7 @@ def user_favorites(request):
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
                         "full_content": news["content"],
+                        "tags": news["tags"],
                         "is_favorite": bool(
                             tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                         ),
