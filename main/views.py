@@ -1578,6 +1578,7 @@ def keyword_search(request):
         total_num = ceil(all_news['total'] / 10)
         all_news_list = all_news_list[(start_page % 10) * 10: min((start_page % 10) * 10 + 10,
                                                                   all_news['total'])]
+        all_news_list = all_news_list[0:min(10,len(all_news_list))]
         if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
@@ -1615,6 +1616,7 @@ def keyword_search(request):
                 "picture_url": data['picture_url'],
                 "title_keywords": title_keywords,
                 "keywords": keywords,
+                "id": data['news_id'],
                 "is_favorite": bool(
                     tools.in_favorite_check(user_favorites_dict, int(data["news_id"]))
                 ),
@@ -1630,9 +1632,14 @@ def keyword_search(request):
                 total_num = ceil(len(news) / 10)
             else:
                 news += [piece_new]
+            print("tags: ")
+            data['tags'] = data['tags'].replace('[','') .replace(']','').replace('"','')\
+                                       .replace("'",'').replace(' ','').split(',')
+            # print(data['tags'])
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
                     and data['tags'] != [""]:
                 tags += data['tags']
+            print(list(set(tags)))
         if len(include) != 0 or len(exclude) != 0:
             start_num = start_page * 10
             end_num = min(start_num + 10, len(news))
