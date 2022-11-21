@@ -98,6 +98,7 @@ def get_news_from_db_by_id(news_id: int) -> bool:
         with open("data/news_template.pkl", "rb") as file:
             db_news_list = [pickle.load(file)[0]]
         db_news_list[0]["id"] = news_id
+        db_news_list[0]["tags"] = []
         # print(db_news_list)
     elif news_id in NEWS_CACHE.newspool:
         db_news_list = [NEWS_CACHE.newspool[news_id]]
@@ -414,7 +415,7 @@ class NewsCache():
         for category in CATEGORY_LIST:
             self.cache[category] = []
             self.category_last_update_time[category] = 0
-        
+
         self.ori_news_format = {
             "title": str,
             "news_url": str,
@@ -432,10 +433,9 @@ class NewsCache():
             check_ori_news_format
         """
         if news:
-            for key in self.ori_news_format:
+            for (key, instance) in self.ori_news_format.items():
                 if key not in news:
                     return False
-                instance = self.ori_news_format[key]
                 if not isinstance(news[key], instance):
                     return False
             return True

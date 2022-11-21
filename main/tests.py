@@ -3,6 +3,7 @@
 """
 import time
 import json
+import copy
 from urllib import request
 from django.test import TestCase, Client
 from . import tools
@@ -22,8 +23,26 @@ class ToolsTests(TestCase):
             set up a test set
         """
         tools.TESTING_MODE = True
-        self.user_num = 5
+        self.user_num = 4
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
+        self.news_template = {
+            "id": 0,
+            "title": "Breaking News",
+            "media": "Foobar News",
+            "url": "https://breaking.news",
+            "pub_time": "2022-10-21T19:02:16.305Z",
+            "picture_url": "https://breaking.news/picture.png",
+            "content": "",
+            "tags": []
+        }
+
+    def generate_news(self, news_id=0):
+        """
+            generate news
+        """
+        news = copy.deepcopy(self.news_template)
+        news["id"] = news_id
+        return news
 
     def test_add_to_read_history_and_get_read_history(self):
         """
@@ -34,28 +53,12 @@ class ToolsTests(TestCase):
             for i in range(5):
                 add_to_read_history(
                     user=user,
-                    news={
-                        "id": i,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=i)
                 )
             for i in range(5):
                 add_to_read_history(
                     user=user,
-                    news={
-                        "id": i,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=i)
                 )
             read_history = get_read_history(user)
             self.assertEqual(len(read_history),5)
@@ -71,15 +74,7 @@ class ToolsTests(TestCase):
             for i in range(5):
                 add_to_read_history(
                     user=user,
-                    news={
-                        "id": i,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=i)
                 )
             read_history = get_read_history(user)
             self.assertEqual(len(read_history),5)
@@ -99,28 +94,12 @@ class ToolsTests(TestCase):
             for i in range(5):
                 add_to_readlist(
                     user=user,
-                    news={
-                        "id": i,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=i)
                 )
             for i in range(5):
                 add_to_readlist(
                     user=user,
-                    news={
-                        "id": i,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=i)
                 )
             readlist = get_readlist(user)
             self.assertEqual(len(readlist),5)
@@ -136,15 +115,7 @@ class ToolsTests(TestCase):
             for i in range(5):
                 add_to_readlist(
                     user=user,
-                    news={
-                        "id": i,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=i)
                 )
             readlist = get_readlist(user)
             self.assertEqual(len(readlist),5)
@@ -164,28 +135,12 @@ class ToolsTests(TestCase):
             for i in range(5):
                 add_to_favorites(
                     user=user,
-                    news={
-                        "id": i,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=i)
                 )
             for i in range(5):
                 add_to_favorites(
                     user=user,
-                    news={
-                        "id": i,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=i)
                 )
             favorites = get_favorites(user)
             self.assertEqual(len(favorites),5)
@@ -201,15 +156,7 @@ class ToolsTests(TestCase):
             for i in range(5):
                 add_to_favorites(
                     user=user,
-                    news={
-                        "id": i,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=i)
                 )
             favorites = get_favorites(user)
             self.assertEqual(len(favorites),5)
@@ -881,6 +828,25 @@ class FavoritesTests(TestCase):
             user.save()
             self.user_id.append(user.id)
 
+        self.news_template = {
+            "id": 0,
+            "title": "Breaking News",
+            "media": "Foobar News",
+            "url": "https://breaking.news",
+            "pub_time": "2022-10-21T19:02:16.305Z",
+            "picture_url": "https://breaking.news/picture.png",
+            "content": "",
+            "tags": []
+        }
+
+    def generate_news(self, news_id=0):
+        """
+            generate news
+        """
+        news = copy.deepcopy(self.news_template)
+        news["id"] = news_id
+        return news
+
     def test_post_favorites(self):
         """
             test post favorites
@@ -926,15 +892,7 @@ class FavoritesTests(TestCase):
             for news_id in range(1, 50 + 1):
                 add_to_favorites(
                     user=user,
-                    news={
-                        "id": news_id,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=news_id)
                 )
             for page in range(5):
                 response = self.client.get(
@@ -970,15 +928,7 @@ class FavoritesTests(TestCase):
             for news_id in range(1, 10 + 1):
                 add_to_favorites(
                     user=user,
-                    news={
-                        "id": news_id,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=news_id)
                 )
             favorites = get_favorites(user)
             self.assertEqual(len(favorites),10)
@@ -1028,6 +978,24 @@ class ReadlistTests(TestCase):
             user.full_clean()
             user.save()
             self.user_id.append(user.id)
+        self.news_template = {
+            "id": 0,
+            "title": "Breaking News",
+            "media": "Foobar News",
+            "url": "https://breaking.news",
+            "pub_time": "2022-10-21T19:02:16.305Z",
+            "picture_url": "https://breaking.news/picture.png",
+            "content": "",
+            "tags": []
+        }
+
+    def generate_news(self, news_id=0):
+        """
+            generate news
+        """
+        news = copy.deepcopy(self.news_template)
+        news["id"] = news_id
+        return news
 
     def test_post_readlist(self):
         """
@@ -1074,15 +1042,7 @@ class ReadlistTests(TestCase):
             for news_id in range(1, 50 + 1):
                 add_to_readlist(
                     user=user,
-                    news={
-                        "id": news_id,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=news_id)
                 )
             for page in range(5):
                 response = self.client.get(
@@ -1118,15 +1078,7 @@ class ReadlistTests(TestCase):
             for news_id in range(1, 10 + 1):
                 add_to_readlist(
                     user=user,
-                    news={
-                        "id": news_id,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=news_id)
                 )
             readlist = get_readlist(user)
             self.assertEqual(len(readlist),10)
@@ -1176,6 +1128,24 @@ class ReadHistoryTests(TestCase):
             user.full_clean()
             user.save()
             self.user_id.append(user.id)
+        self.news_template = {
+            "id": 0,
+            "title": "Breaking News",
+            "media": "Foobar News",
+            "url": "https://breaking.news",
+            "pub_time": "2022-10-21T19:02:16.305Z",
+            "picture_url": "https://breaking.news/picture.png",
+            "content": "",
+            "tags": []
+        }
+
+    def generate_news(self, news_id=0):
+        """
+            generate news
+        """
+        news = copy.deepcopy(self.news_template)
+        news["id"] = news_id
+        return news
 
     def test_post_read_history(self):
         """
@@ -1222,15 +1192,7 @@ class ReadHistoryTests(TestCase):
             for news_id in range(1, 50 + 1):
                 add_to_read_history(
                     user=user,
-                    news={
-                        "id": news_id,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=news_id)
                 )
             for page in range(5):
                 response = self.client.get(
@@ -1266,15 +1228,7 @@ class ReadHistoryTests(TestCase):
             for news_id in range(1, 10 + 1):
                 add_to_read_history(
                     user=user,
-                    news={
-                        "id": news_id,
-                        "title": "Breaking News",
-                        "media": "Foobar News",
-                        "url": "https://breaking.news",
-                        "pub_time": "2022-10-21T19:02:16.305Z",
-                        "picture_url": "https://breaking.news/picture.png",
-                        "content": ""
-                    }
+                    news=self.generate_news(news_id=news_id)
                 )
             read_history = get_read_history(user)
             self.assertEqual(len(read_history),10)
