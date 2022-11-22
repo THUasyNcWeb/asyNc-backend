@@ -15,7 +15,7 @@ build:
     - deployer build
 
 unit-test:
-  image: python:3.9
+  image: songxxzp/async-backend:latest
   stage: test
   # TODO: For testing deployment; remove this line later
   allow_failure: true
@@ -35,7 +35,7 @@ unit-test:
     - /opt/sonar-scanner/bin/sonar-scanner
 
 style-test:
-  image: python:3.9
+  image: songxxzp/async-backend:latest
   stage: test
   allow_failure: true
 

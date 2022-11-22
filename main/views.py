@@ -3,22 +3,81 @@
 """
 import json
 import re
+import time
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
+from django.core.handlers.wsgi import WSGIRequest
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Document, Date, Keyword, Text, connections, Completion
-import jieba
-
-from tinyrpc import RPCClient
-from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
-from tinyrpc.transports.http import HttpPostClientTransport
 
 from . import tools
 from .models import UserBasicInfo
 from .responses import *
 
 # Create your views here.
+
+
+# @csrf_exempt
+def ai_news(request: WSGIRequest):
+    """
+        ai news summary
+        news_list_format
+        [
+            {
+                "id": 114,
+                "title": "为亚太和世界发展繁荣贡献正能量",
+                "media": "Foobar News",
+                "url": "https://baijiahao.baidu.com/s?id=1749782470764021746",
+                "pub_time": "2022-10-21T19:02:16.305Z",
+                "first_img_url": "",
+                "full_content": "11月17日下午，国家主席习近平在泰国曼谷举行的亚太经合组织(APEC)工商领导人峰会上，
+                发表题为《坚守初心 共促发展 开启亚太合作新篇章》的书面演讲。习近平主席的书面演讲备受瞩目。接受采访的与会人士表示，
+                习近平主席从亚太和世界前途命运出发，为亚太合作把舵领航，为世界发展再开良方，推动构建亚太命运共同体走深走实。",
+            }
+        ],
+    """
+    start_time = time.time()
+    try:
+        if request.method == "GET":
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": tools.LOCAL_NEWS_MANAGER.get_none_ai_processed_news(num=4),
+                "csrf_token": get_token(request=request)
+            }
+            response_msg["time"] = time.time() - start_time
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+        if request.method == "POST":
+            request_data = json.loads(request.body.decode())
+            news_list = request_data["data"]
+            print(news_list)
+            for news in news_list:
+                print(news["summary"])
+            tools.LOCAL_NEWS_MANAGER.update_ai_processed_news(news_list)
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": {}
+            }
+            response_msg["time"] = time.time() - start_time
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+    except Exception as error:
+        print("[Error in ai news]:")
+        print(error)
+        return internal_error_response(error="[Error in ai news]:" + str(error))
+    return not_found_response()
 
 
 # This funtion is for testing only, please delete this funcion before deploying.
@@ -28,6 +87,7 @@ def index(request):
     This funtion is for testing only, please delete this funcion before deploying.
     Always return code 200
     """
+    start_time = time.time()
     try:
         if request.method == "GET":
             pass
@@ -38,7 +98,8 @@ def index(request):
         return JsonResponse(
             {
                 "code": 200,
-                "data": "Hello World"
+                "data": "Hello World",
+                "time": time.time() - start_time
             },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
@@ -68,6 +129,7 @@ def user_login(request):
         }
     }
     """
+    start_time = time.time()
     try:
         if request.method == "POST":
             try:
@@ -81,6 +143,7 @@ def user_login(request):
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
+                    response_msg["time"] = time.time() - start_time
                     return JsonResponse(
                         response_msg,
                         status=status_code,
@@ -119,6 +182,7 @@ def user_login(request):
                             "message": "WRONG_PASSWORD",
                             "data": {}
                         }
+                response_msg["time"] = time.time() - start_time
                 return JsonResponse(
                     response_msg,
                     status=status_code,
@@ -153,6 +217,7 @@ def user_register(request):
         }
     }
     """
+    start_time = time.time()
     try:
         if request.method == "POST":
             try:
@@ -179,7 +244,7 @@ def user_register(request):
             else:
                 user = UserBasicInfo.objects.filter(user_name=user_name).first()
                 if not user:  # user name not existed yet.
-                    user = UserBasicInfo(user_name=user_name, password=tools.md5(password))
+                    user = UserBasicInfo(user_name=user_name, password=tools.md5(password), tags={})
                     try:
                         user.full_clean()
                         user.save()
@@ -205,6 +270,7 @@ def user_register(request):
                         "message": "USER_NAME_CONFLICT",
                         "data": {}
                     }
+            response_msg["time"] = time.time() - start_time
             return JsonResponse(
                 response_msg,
                 status=status_code,
@@ -230,6 +296,7 @@ def modify_user_info(request):
         "mail": "waifu@diffusion.com"
     }
     """
+    start_time = time.time()
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
         user_token = encoded_token
@@ -269,6 +336,7 @@ def modify_user_info(request):
                                 "message": "WRONG_USERNAME",
                                 "data": {}
                             }
+                            response_msg["time"] = time.time() - start_time
                             return JsonResponse(
                                 response_msg,
                                 status=status_code,
@@ -281,6 +349,7 @@ def modify_user_info(request):
                                 "message": "INVALID_USERNAME_FORMAT",
                                 "data": {}
                             }
+                            response_msg["time"] = time.time() - start_time
                             return JsonResponse(
                                 response_msg,
                                 status=status_code,
@@ -308,7 +377,7 @@ def modify_user_info(request):
             except Exception as error:
                 print(error)
                 return post_data_format_error_response(error)
-            return tools.return_user_info(user=user, user_token=user_token)
+            return tools.return_user_info(user=user, user_token=user_token, start_time=start_time)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
@@ -344,6 +413,7 @@ def user_info(request):
         }
     }
     """
+    start_time = time.time()
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
         token = tools.decode_token(encoded_token)
@@ -359,7 +429,7 @@ def user_info(request):
 
     try:
         if request.method == "GET":
-            return tools.return_user_info(user=user)
+            return tools.return_user_info(user=user, start_time=start_time)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
@@ -381,6 +451,7 @@ def user_read_history(request):
             "picture_url": "https://breaking.news/picture.png"
         }
     """
+    start_time = time.time()
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
         token = tools.decode_token(encoded_token)
@@ -402,11 +473,12 @@ def user_read_history(request):
             return news_not_found(error="[URL FORMAT ERROR IN READ HISTORY]:\n" + str(error))
         try:
             db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
+
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            user_readlist_dict = tools.get_user_readlist_dict(user=user)
+            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
+            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
 
             for news in db_news_list:
                 tools.add_to_read_history(
@@ -418,21 +490,22 @@ def user_read_history(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
-                        "is_favorite": bool(
-                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
-                        ),
-                        "is_readlater": bool(
-                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
-                        ),
+                        "full_content": news["content"],
+                        "tags": news["tags"],
+                        "time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
                     }
                 )
 
             read_history_list, pages = tools.user_read_history_pages(user, 0)
             return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": {
-                    "page_count": pages,
-                    "news": read_history_list
-                }},
+                {
+                    "code": 0, "message": "SUCCESS",
+                    "data": {
+                        "page_count": pages,
+                        "news": read_history_list
+                    },
+                    "time": time.time() - start_time
+                },
                 status=200,
                 headers={'Access-Control-Allow-Origin': '*'}
             )
@@ -453,7 +526,8 @@ def user_read_history(request):
                 "data": {
                     "page_count": pages,
                     "news": read_history_list
-                }
+                },
+                "time": time.time() - start_time
             },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
@@ -472,10 +546,14 @@ def user_read_history(request):
             return news_not_found(error="[id not found in user's read history list]:\n")
         read_history_list, pages = tools.user_read_history_pages(user, 0)
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": {
-                "page_count": pages,
-                "news": read_history_list
-            }},
+            {
+                "code": 0, "message": "SUCCESS",
+                "data": {
+                    "page_count": pages,
+                    "news": read_history_list
+                },
+                "time": time.time() - start_time
+            },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
@@ -497,6 +575,7 @@ def user_readlater(request):
             "picture_url": "https://breaking.news/picture.png"
         }
     """
+    start_time = time.time()
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
         token = tools.decode_token(encoded_token)
@@ -521,8 +600,8 @@ def user_readlater(request):
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            user_readlist_dict = tools.get_user_readlist_dict(user=user)
+            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
+            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
 
             for news in db_news_list:
                 tools.add_to_readlist(
@@ -534,21 +613,21 @@ def user_readlater(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
-                        "is_favorite": bool(
-                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
-                        ),
-                        "is_readlater": bool(
-                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
-                        ),
+                        "full_content": news["content"],
+                        "tags": news["tags"]
                     }
                 )
 
             readlist_list, pages = tools.user_readlist_pages(user, 0)
             return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": {
-                    "page_count": pages,
-                    "news": readlist_list
-                }},
+                {
+                    "code": 0, "message": "SUCCESS",
+                    "data": {
+                        "page_count": pages,
+                        "news": readlist_list
+                    },
+                    "time": time.time() - start_time
+                },
                 status=200,
                 headers={'Access-Control-Allow-Origin': '*'}
             )
@@ -569,7 +648,8 @@ def user_readlater(request):
                 "data": {
                     "page_count": pages,
                     "news": readlist_list
-                }
+                },
+                "time": time.time() - start_time
             },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
@@ -586,10 +666,14 @@ def user_readlater(request):
             return news_not_found(error="[id not found in user's readlist list]:\n")
         readlist_list, pages = tools.user_readlist_pages(user, 0)
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": {
-                "page_count": pages,
-                "news": readlist_list
-            }},
+            {
+                "code": 0, "message": "SUCCESS",
+                "data": {
+                    "page_count": pages,
+                    "news": readlist_list
+                },
+                "time": time.time() - start_time
+            },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
@@ -611,6 +695,7 @@ def user_favorites(request):
             "picture_url": "https://breaking.news/picture.png"
         }
     """
+    start_time = time.time()
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
         token = tools.decode_token(encoded_token)
@@ -625,6 +710,7 @@ def user_favorites(request):
         return unauthorized_response()
     # try:
     if request.method == "POST":
+        # print("Recieve POST", time.time())
         try:
             news_id = int(request.GET.get("id"))
         except Exception as error:
@@ -632,11 +718,14 @@ def user_favorites(request):
             return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
         try:
             db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
+            # print("get db_news_list", time.time())
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            user_readlist_dict = tools.get_user_readlist_dict(user=user)
+            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
+            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
+            print(db_news_list)
 
             for news in db_news_list:
                 tools.add_to_favorites(
@@ -648,21 +737,23 @@ def user_favorites(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
-                        "is_favorite": bool(
-                            tools.in_favorite_check(user_favorites_dict, int(news["id"]))
-                        ),
-                        "is_readlater": bool(
-                            tools.in_favorite_check(user_readlist_dict, int(news["id"]))
-                        ),
+                        "full_content": news["content"],
+                        "tags": news["tags"]
                     }
                 )
-
+                # print("news:")
+                # print(news)
+            # print(user.favorites)
             favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": {
-                    "page_count": pages,
-                    "news": favorites_list
-                }},
+                {
+                    "code": 0, "message": "SUCCESS",
+                    "data": {
+                        "page_count": pages,
+                        "news": favorites_list
+                    },
+                    "time": time.time() - start_time
+                },
                 status=200,
                 headers={'Access-Control-Allow-Origin': '*'}
             )
@@ -682,7 +773,8 @@ def user_favorites(request):
                 "data": {
                     "page_count": pages,
                     "news": favorites_list
-                }
+                },
+                "time": time.time() - start_time
             },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
@@ -698,10 +790,14 @@ def user_favorites(request):
             return news_not_found(error="[id not found in user's favorites list]:\n")
         favorites_list, pages = tools.user_favorites_pages(user, 0)
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": {
-                "page_count": pages,
-                "news": favorites_list
-            }},
+            {
+                "code": 0, "message": "SUCCESS",
+                "data": {
+                    "page_count": pages,
+                    "news": favorites_list
+                },
+                "time": time.time() - start_time
+            },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
@@ -725,11 +821,16 @@ def news_response(request):
         "message": "SUCCESS",
         "data": [
             {
+                category:"科技",
+                news:[
+                    {
                 "title": "Breaking News",
                 "url": "https://breaking.news",
                 "picture_url": "https://breaking.news/picture.png",
                 "media": "Foobar News",
                 "pub_time": "2022-10-21T19:02:16.305Z",
+            }
+                ]
             }
         ]
     }
@@ -742,6 +843,7 @@ def news_response(request):
         "pub_time": "2022-10-21T19:02:16.305Z"
     }
     """
+    start_time = time.time()
 
     user = tools.get_user_from_request(request)
 
@@ -766,6 +868,7 @@ def news_response(request):
             try:
                 db_news_list = tools.NEWS_CACHE.get_cache(category)
             except Exception as error:
+                print("can't get cache")
                 print(error)
                 db_news_list = tools.get_data_from_db(
                     connection=connection,
@@ -793,7 +896,7 @@ def news_response(request):
                                 tools.in_favorite_check(user_favorites_dict, int(news["id"]))
                             ),
                             "is_readlater": bool(
-                                tools.in_favorite_check(user_readlist_dict, int(news["id"]))
+                                tools.in_readlist_check(user_readlist_dict, int(news["id"]))
                             ),
                         }
                     )
@@ -811,7 +914,11 @@ def news_response(request):
             )
 
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": news_list},
+            {
+                "code": 0, "message": "SUCCESS",
+                "data": news_list,
+                "time": time.time() - start_time
+            },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
@@ -829,6 +936,7 @@ def user_modify_password(request):
         "new_password": "Carol48271"
     }
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
@@ -885,6 +993,7 @@ def user_modify_password(request):
                         "SUCCESS",
                         "data": {}
                     }
+            response_msg["time"] = time.time() - start_time
             return JsonResponse(
                 response_msg,
                 status=status_code,
@@ -904,6 +1013,7 @@ def modify_avatar(request):
             form:
                 avatar: bin
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
@@ -931,7 +1041,7 @@ def modify_avatar(request):
                 print(error)
                 return post_data_format_error_response(str(error))
             break
-        return tools.return_user_info(user=user)
+        return tools.return_user_info(user=user, start_time=start_time)
     return not_found_response()
 
 
@@ -955,6 +1065,7 @@ def user_modify_username(request):
         }
     }
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
@@ -1010,6 +1121,7 @@ def user_modify_username(request):
                             "token": user_token
                         }
                     }
+            response_msg["time"] = time.time() - start_time
             return JsonResponse(
                 response_msg,
                 status=status_code,
@@ -1029,6 +1141,7 @@ def check_login_state(request):
     request:
     token in 'HTTP_AUTHORIZATION'.
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
@@ -1039,6 +1152,7 @@ def check_login_state(request):
                     "message": "SUCCESS",
                     "data": {}
                 }
+                response_msg["time"] = time.time() - start_time
                 return JsonResponse(
                     response_msg,
                     status=status_code,
@@ -1058,6 +1172,7 @@ def user_logout(request):
     request:
     token in 'HTTP_AUTHORIZATION'.
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
@@ -1070,6 +1185,7 @@ def user_logout(request):
                         "message": "SUCCESS",
                         "data": {}
                     }
+                    response_msg["time"] = time.time() - start_time
                     return JsonResponse(
                         response_msg,
                         status=status_code,
@@ -1364,7 +1480,6 @@ def keyword_essearch(request):
             )
         news = []
         tags = []
-
         # get user favorites dict
         user = tools.get_user_from_request(request)
         user_favorites_dict = tools.get_user_favorites_dict(user=user)
@@ -1392,7 +1507,6 @@ def keyword_essearch(request):
 
             if "id" not in data:  # 0 stands for no news id
                 data["id"] = 0
-
             piece_new = {
                 "title": data['title'],
                 "url": data['news_url'],
@@ -1406,7 +1520,7 @@ def keyword_essearch(request):
                     tools.in_favorite_check(user_favorites_dict, int(data["id"]))
                 ),
                 "is_readlater": bool(
-                    tools.in_favorite_check(user_readlist_dict, int(data["id"]))
+                    tools.in_readlist_check(user_readlist_dict, int(data["id"]))
                 ),
             }
             news += [piece_new]
@@ -1498,30 +1612,20 @@ def keyword_search(request):
                 status=400,
                 headers={'Access-Control-Allow-Origin':'*'}
             )
-        with open("config/lucene.json","r",encoding="utf-8") as config_file:
-            config = json.load(config_file)
-        rpc_client = RPCClient(
-            JSONRPCProtocol(),
-            HttpPostClientTransport('http://' + config['url'] + ':' + str(config['port']))
-        )
-        str_server = rpc_client.get_proxy()
-        str_server = rpc_client.get_proxy()
+        str_server = tools.SEARCH_CONNECTION
         if len(include) != 0 or len(exclude) != 0:
-            keyword_list = list(jieba.cut_for_search(key_word))
-            include_list = []
-            exclude_list = []
-            for must in include:
-                include_list += jieba.cut_for_search(must)
-            for must_not in exclude:
-                exclude_list += jieba.cut_for_search(must_not)
-            include_list = list(set(include_list))
-            exclude_list = list(set(exclude_list))
-            all_news = str_server.search_keywords(keyword_list,
-                                                  list(include_list),
-                                                  list(exclude_list),0)
+            all_news = str_server.search_keywords(key_word,
+                                                  list(include),
+                                                  list(exclude),0)
+
         else:
-            all_news = str_server.search_news(key_word,start_page)
+            all_news = str_server.search_news(key_word, start_page)
+        all_news_list = all_news['news_list']
+        all_news_list = sorted(all_news_list, key=lambda x: x['score'], reverse=True)
         total_num = ceil(all_news['total'] / 10)
+        all_news_list = all_news_list[(start_page % 10) * 10: min((start_page % 10) * 10 + 10,
+                                                                  all_news['total'])]
+        all_news_list = all_news_list[0:min(10,len(all_news_list))]
         if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
@@ -1530,14 +1634,13 @@ def keyword_search(request):
             )
         news = []
         tags = []
-
         # get user favorites dict
         user = tools.get_user_from_request(request)
         user_favorites_dict = {}
         user_favorites_dict = tools.get_user_favorites_dict(user=user)
         user_readlist_dict = tools.get_user_readlist_dict(user=user)
 
-        for new in all_news["news_list"]:
+        for new in all_news_list:
             data = new
             title_keywords = []
             keywords = []
@@ -1549,8 +1652,8 @@ def keyword_search(request):
                 content = ""
             if title is None:
                 title = ""
-            if "id" not in data:  # 0 stands for no news id
-                data["id"] = 0
+            if "news_id" not in data:  # 0 stands for no news id
+                data["news_id"] = 0
             piece_new = {
                 "title": title.replace('<span class="szz-type">','').replace('</span>',''),
                 "url": data['url'],
@@ -1560,24 +1663,34 @@ def keyword_search(request):
                 "picture_url": data['picture_url'],
                 "title_keywords": title_keywords,
                 "keywords": keywords,
+                "id": data['news_id'],
                 "is_favorite": bool(
-                    tools.in_favorite_check(user_favorites_dict, int(data["id"]))
+                    tools.in_favorite_check(user_favorites_dict, int(data["news_id"]))
                 ),
                 "is_readlater": bool(
-                    tools.in_favorite_check(user_readlist_dict, int(data["id"]))
+                    tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
                 ),
             }
             if len(include) != 0 or len(exclude) != 0:
                 if check_contain(piece_new['title'], piece_new['content'],
                                  piece_new['title_keywords'], piece_new['keywords'],
-                                 list(include_list), list(exclude_list)) is True:
+                                 list(include), list(exclude)) is True:
                     news += [piece_new]
                 total_num = ceil(len(news) / 10)
             else:
                 news += [piece_new]
+            print("tags: ")
+            data['tags'] = data['tags'].replace('[','') .replace(']','').replace('"','')\
+                                       .replace("'",'').replace(' ','').split(',')
+            # print(data['tags'])
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
                     and data['tags'] != [""]:
                 tags += data['tags']
+            print(list(set(tags)))
+        if len(include) != 0 or len(exclude) != 0:
+            start_num = start_page * 10
+            end_num = min(start_num + 10, len(news))
+            news = news[start_num:end_num]
         data = {
             "page_count": total_num,
             "news": news
