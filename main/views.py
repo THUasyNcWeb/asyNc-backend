@@ -3,6 +3,7 @@
 """
 import json
 import re
+import time
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -37,6 +38,7 @@ def ai_news(request: WSGIRequest):
             }
         ],
     """
+    start_time = time.time()
     try:
         if request.method == "GET":
             status_code = 200
@@ -46,6 +48,7 @@ def ai_news(request: WSGIRequest):
                 "data": tools.LOCAL_NEWS_MANAGER.get_none_ai_processed_news(num=4),
                 "csrf_token": get_token(request=request)
             }
+            response_msg["time"] = time.time() - start_time
             return JsonResponse(
                 response_msg,
                 status=status_code,
@@ -64,6 +67,7 @@ def ai_news(request: WSGIRequest):
                 "message": "SUCCESS",
                 "data": {}
             }
+            response_msg["time"] = time.time() - start_time
             return JsonResponse(
                 response_msg,
                 status=status_code,
@@ -83,6 +87,7 @@ def index(request):
     This funtion is for testing only, please delete this funcion before deploying.
     Always return code 200
     """
+    start_time = time.time()
     try:
         if request.method == "GET":
             pass
@@ -93,7 +98,8 @@ def index(request):
         return JsonResponse(
             {
                 "code": 200,
-                "data": "Hello World"
+                "data": "Hello World",
+                "time": time.time() - start_time
             },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
@@ -123,6 +129,7 @@ def user_login(request):
         }
     }
     """
+    start_time = time.time()
     try:
         if request.method == "POST":
             try:
@@ -136,6 +143,7 @@ def user_login(request):
                         "message": "WRONG_PASSWORD",
                         "data": {}
                     }
+                    response_msg["time"] = time.time() - start_time
                     return JsonResponse(
                         response_msg,
                         status=status_code,
@@ -174,6 +182,7 @@ def user_login(request):
                             "message": "WRONG_PASSWORD",
                             "data": {}
                         }
+                response_msg["time"] = time.time() - start_time
                 return JsonResponse(
                     response_msg,
                     status=status_code,
@@ -208,6 +217,7 @@ def user_register(request):
         }
     }
     """
+    start_time = time.time()
     try:
         if request.method == "POST":
             try:
@@ -260,6 +270,7 @@ def user_register(request):
                         "message": "USER_NAME_CONFLICT",
                         "data": {}
                     }
+            response_msg["time"] = time.time() - start_time
             return JsonResponse(
                 response_msg,
                 status=status_code,
@@ -285,6 +296,7 @@ def modify_user_info(request):
         "mail": "waifu@diffusion.com"
     }
     """
+    start_time = time.time()
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
         user_token = encoded_token
@@ -324,6 +336,7 @@ def modify_user_info(request):
                                 "message": "WRONG_USERNAME",
                                 "data": {}
                             }
+                            response_msg["time"] = time.time() - start_time
                             return JsonResponse(
                                 response_msg,
                                 status=status_code,
@@ -336,6 +349,7 @@ def modify_user_info(request):
                                 "message": "INVALID_USERNAME_FORMAT",
                                 "data": {}
                             }
+                            response_msg["time"] = time.time() - start_time
                             return JsonResponse(
                                 response_msg,
                                 status=status_code,
@@ -363,7 +377,7 @@ def modify_user_info(request):
             except Exception as error:
                 print(error)
                 return post_data_format_error_response(error)
-            return tools.return_user_info(user=user, user_token=user_token)
+            return tools.return_user_info(user=user, user_token=user_token, start_time=start_time)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
@@ -399,6 +413,7 @@ def user_info(request):
         }
     }
     """
+    start_time = time.time()
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
         token = tools.decode_token(encoded_token)
@@ -414,7 +429,7 @@ def user_info(request):
 
     try:
         if request.method == "GET":
-            return tools.return_user_info(user=user)
+            return tools.return_user_info(user=user, start_time=start_time)
     except Exception as error:
         print(error)
         return internal_error_response(error=str(error))
@@ -436,6 +451,7 @@ def user_read_history(request):
             "picture_url": "https://breaking.news/picture.png"
         }
     """
+    start_time = time.time()
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
         token = tools.decode_token(encoded_token)
@@ -481,10 +497,14 @@ def user_read_history(request):
 
             read_history_list, pages = tools.user_read_history_pages(user, 0)
             return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": {
-                    "page_count": pages,
-                    "news": read_history_list
-                }},
+                {
+                    "code": 0, "message": "SUCCESS",
+                    "data": {
+                        "page_count": pages,
+                        "news": read_history_list
+                    },
+                    "time": time.time() - start_time
+                },
                 status=200,
                 headers={'Access-Control-Allow-Origin': '*'}
             )
@@ -505,7 +525,8 @@ def user_read_history(request):
                 "data": {
                     "page_count": pages,
                     "news": read_history_list
-                }
+                },
+                "time": time.time() - start_time
             },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
@@ -524,10 +545,14 @@ def user_read_history(request):
             return news_not_found(error="[id not found in user's read history list]:\n")
         read_history_list, pages = tools.user_read_history_pages(user, 0)
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": {
-                "page_count": pages,
-                "news": read_history_list
-            }},
+            {
+                "code": 0, "message": "SUCCESS",
+                "data": {
+                    "page_count": pages,
+                    "news": read_history_list
+                },
+                "time": time.time() - start_time
+            },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
@@ -549,6 +574,7 @@ def user_readlater(request):
             "picture_url": "https://breaking.news/picture.png"
         }
     """
+    start_time = time.time()
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
         token = tools.decode_token(encoded_token)
@@ -593,10 +619,14 @@ def user_readlater(request):
 
             readlist_list, pages = tools.user_readlist_pages(user, 0)
             return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": {
-                    "page_count": pages,
-                    "news": readlist_list
-                }},
+                {
+                    "code": 0, "message": "SUCCESS",
+                    "data": {
+                        "page_count": pages,
+                        "news": readlist_list
+                    },
+                    "time": time.time() - start_time
+                },
                 status=200,
                 headers={'Access-Control-Allow-Origin': '*'}
             )
@@ -617,7 +647,8 @@ def user_readlater(request):
                 "data": {
                     "page_count": pages,
                     "news": readlist_list
-                }
+                },
+                "time": time.time() - start_time
             },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
@@ -634,10 +665,14 @@ def user_readlater(request):
             return news_not_found(error="[id not found in user's readlist list]:\n")
         readlist_list, pages = tools.user_readlist_pages(user, 0)
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": {
-                "page_count": pages,
-                "news": readlist_list
-            }},
+            {
+                "code": 0, "message": "SUCCESS",
+                "data": {
+                    "page_count": pages,
+                    "news": readlist_list
+                },
+                "time": time.time() - start_time
+            },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
@@ -659,6 +694,7 @@ def user_favorites(request):
             "picture_url": "https://breaking.news/picture.png"
         }
     """
+    start_time = time.time()
     try:
         encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
         token = tools.decode_token(encoded_token)
@@ -709,10 +745,14 @@ def user_favorites(request):
             # print(user.favorites)
             favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": {
-                    "page_count": pages,
-                    "news": favorites_list
-                }},
+                {
+                    "code": 0, "message": "SUCCESS",
+                    "data": {
+                        "page_count": pages,
+                        "news": favorites_list
+                    },
+                    "time": time.time() - start_time
+                },
                 status=200,
                 headers={'Access-Control-Allow-Origin': '*'}
             )
@@ -732,7 +772,8 @@ def user_favorites(request):
                 "data": {
                     "page_count": pages,
                     "news": favorites_list
-                }
+                },
+                "time": time.time() - start_time
             },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
@@ -748,10 +789,14 @@ def user_favorites(request):
             return news_not_found(error="[id not found in user's favorites list]:\n")
         favorites_list, pages = tools.user_favorites_pages(user, 0)
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": {
-                "page_count": pages,
-                "news": favorites_list
-            }},
+            {
+                "code": 0, "message": "SUCCESS",
+                "data": {
+                    "page_count": pages,
+                    "news": favorites_list
+                },
+                "time": time.time() - start_time
+            },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
@@ -797,6 +842,7 @@ def news_response(request):
         "pub_time": "2022-10-21T19:02:16.305Z"
     }
     """
+    start_time = time.time()
 
     user = tools.get_user_from_request(request)
 
@@ -867,7 +913,11 @@ def news_response(request):
             )
 
         return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": news_list},
+            {
+                "code": 0, "message": "SUCCESS",
+                "data": news_list,
+                "time": time.time() - start_time
+            },
             status=200,
             headers={'Access-Control-Allow-Origin': '*'}
         )
@@ -885,6 +935,7 @@ def user_modify_password(request):
         "new_password": "Carol48271"
     }
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
@@ -941,6 +992,7 @@ def user_modify_password(request):
                         "SUCCESS",
                         "data": {}
                     }
+            response_msg["time"] = time.time() - start_time
             return JsonResponse(
                 response_msg,
                 status=status_code,
@@ -960,6 +1012,7 @@ def modify_avatar(request):
             form:
                 avatar: bin
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
@@ -987,7 +1040,7 @@ def modify_avatar(request):
                 print(error)
                 return post_data_format_error_response(str(error))
             break
-        return tools.return_user_info(user=user)
+        return tools.return_user_info(user=user, start_time=start_time)
     return not_found_response()
 
 
@@ -1011,6 +1064,7 @@ def user_modify_username(request):
         }
     }
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
@@ -1066,6 +1120,7 @@ def user_modify_username(request):
                             "token": user_token
                         }
                     }
+            response_msg["time"] = time.time() - start_time
             return JsonResponse(
                 response_msg,
                 status=status_code,
@@ -1085,6 +1140,7 @@ def check_login_state(request):
     request:
     token in 'HTTP_AUTHORIZATION'.
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
@@ -1095,6 +1151,7 @@ def check_login_state(request):
                     "message": "SUCCESS",
                     "data": {}
                 }
+                response_msg["time"] = time.time() - start_time
                 return JsonResponse(
                     response_msg,
                     status=status_code,
@@ -1114,6 +1171,7 @@ def user_logout(request):
     request:
     token in 'HTTP_AUTHORIZATION'.
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
@@ -1126,6 +1184,7 @@ def user_logout(request):
                         "message": "SUCCESS",
                         "data": {}
                     }
+                    response_msg["time"] = time.time() - start_time
                     return JsonResponse(
                         response_msg,
                         status=status_code,
