@@ -1,5 +1,5 @@
 [pycodestyle]
 
 exclude = main/migrations
-max-line-length = 100
+max-line-length = 120
 ignore = E231
