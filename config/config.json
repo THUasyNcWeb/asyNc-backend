@@ -1,10 +1,15 @@
 {
     "backend-db": {
-        "hostname": "121.37.105.47",
+        "hostname": "116.204.104.227",
         "port": 5432,
         "username": "django",
-        "password": "SUPER_SECRET_PASSWORD",
-        "database": "django"
+        "password": "SUPER_SECRET_password",
+        "database": "django",
+        "OPTIONS": {
+            "ssl":  {
+                "key": "ssl/ca.pem"
+            }
+        }
     },
     "crawler-db": {
         "hostname": "43.143.201.186",
