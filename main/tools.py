@@ -4,6 +4,7 @@ This .py file contains most commenly used tools in views.py
 Created by sxx
 """
 import os
+import math
 import hashlib
 import time
 import base64
@@ -834,7 +835,7 @@ def user_read_history_pages(user: UserBasicInfo, page: int):
     end = (page + 1) * FAVORITES_PRE_PAGE
     read_history_list = get_read_history(user)
     read_history_page = read_history_list[begin:end]
-    return read_history_page, len(read_history_list)
+    return read_history_page, math.ceil(len(read_history_list) / FAVORITES_PRE_PAGE)
 
 
 def add_to_readlist(user: UserBasicInfo, news: dict):
@@ -929,7 +930,7 @@ def user_readlist_pages(user: UserBasicInfo, page: int):
         news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
         news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
 
-    return readlist_page, len(readlist_list)
+    return readlist_page, math.ceil(len(readlist_list) / FAVORITES_PRE_PAGE)
 
 
 def add_to_favorites(user: UserBasicInfo, news: dict):
@@ -1027,7 +1028,7 @@ def user_favorites_pages(user: UserBasicInfo, page: int):
         news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
         news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
 
-    return favorites_page, len(favorites_list)
+    return favorites_page, math.ceil(len(favorites_list) / FAVORITES_PRE_PAGE)
 
 
 def resize_image(image, size=(512, 512)):

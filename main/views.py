@@ -492,7 +492,7 @@ def user_read_history(request):
                         "picture_url": news["first_img_url"],
                         "full_content": news["content"],
                         "tags": news["tags"],
-                        "time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
                     }
                 )
 
@@ -1388,33 +1388,41 @@ class ElasticSearch():
         return re_data
 
 
-@csrf_exempt
-def get_location(info_str,start_tag='<span class="szz-type">',end_tag='</span>'):
+def get_location(info_str,sort=False,keywords=[""],start_tag='<span class="szz-type">',end_tag='</span>'):
     """
     summary: pass in str
     Returns:
         location_list
     """
-    start = len(start_tag)
-    end = len(end_tag)
-    location_infos = []
-    pattern = start_tag + '(.+?)' + end_tag
-    try:
-        for idx,m_res in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
-            location_info = []
+    if sort is False:
+        start = len(start_tag)
+        end = len(end_tag)
+        location_infos = []
+        pattern = start_tag + '(.+?)' + end_tag
+        try:
+            for idx,m_res in enumerate(re.finditer(r'{i}'.format(i=pattern), info_str)):
+                location_info = []
 
-            if idx == 0:
-                location_info.append(m_res.span()[0])
-                location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
-            else:
-                location_info.append(m_res.span()[0] - idx * (start + end))
-                location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
+                if idx == 0:
+                    location_info.append(m_res.span()[0])
+                    location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
+                else:
+                    location_info.append(m_res.span()[0] - idx * (start + end))
+                    location_info.append(m_res.span()[1] - (idx + 1) * (start + end))
 
-            location_infos.append(location_info)
+                location_infos.append(location_info)
 
-        return location_infos
-    except Exception as error:
-        print(error)
+            return location_infos
+        except Exception as error:
+            print(error)
+            return location_infos
+    else:
+        location_infos = []
+        for keyword in keywords:
+            loc = info_str.find(keyword)
+            if loc != -1:
+                location_info = [loc, loc + 1]
+                location_infos += [location_info]
         return location_infos
 
 
@@ -1597,6 +1605,10 @@ def keyword_search(request):
             key_word = body["query"]
             include = body["include"]
             exclude = body["exclude"]
+            try:
+                sort = body['sort']
+            except Exception:
+                sort = False
             start_page = int(body["page"]) - 1
             start_page = min(max(start_page, 0),5000)
             if isinstance(start_page,int) is False:
@@ -1619,13 +1631,18 @@ def keyword_search(request):
                                                   list(exclude),0)
 
         else:
-            all_news = str_server.search_news(key_word, start_page)
-        all_news_list = all_news['news_list']
-        all_news_list = sorted(all_news_list, key=lambda x: x['score'], reverse=True)
-        total_num = ceil(all_news['total'] / 10)
-        all_news_list = all_news_list[(start_page % 10) * 10: min((start_page % 10) * 10 + 10,
-                                                                  all_news['total'])]
-        all_news_list = all_news_list[0:min(10,len(all_news_list))]
+            all_news = str_server.search_news(key_word, start_page, sort)
+        if sort is False:
+            all_news_list = all_news['news_list']
+            all_news_list = sorted(all_news_list, key=lambda x: x['score'], reverse=True)
+            total_num = ceil(all_news['total'] / 10)
+            all_news_list = all_news_list[(start_page % 10) * 10: min((start_page % 10) * 10 + 10, all_news['total'])]
+            all_news_list = all_news_list[0:min(10,len(all_news_list))]
+        else:
+            all_news_list = all_news['news_list']
+            all_news_list = sorted(all_news_list, key=lambda x: x['pub_time'], reverse=True)
+            all_news_list = all_news_list[start_page * 10: min(start_page * 10 + 10,all_news['total'])]
+            total_num = ceil(all_news['total'] / 10)
         if start_page > total_num:
             return JsonResponse(
                 {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
@@ -1646,8 +1663,8 @@ def keyword_search(request):
             keywords = []
             title = data['title']
             content = data['content']
-            title_keywords = get_location(title)
-            keywords = get_location(content)
+            title_keywords = get_location(title,sort,list(key_word))
+            keywords = get_location(content,sort,list(key_word))
             if content is None:
                 content = ""
             if title is None:
