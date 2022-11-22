@@ -492,7 +492,7 @@ def user_read_history(request):
                         "picture_url": news["first_img_url"],
                         "full_content": news["content"],
                         "tags": news["tags"],
-                        "time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
                     }
                 )
 

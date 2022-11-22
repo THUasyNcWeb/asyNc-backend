@@ -85,18 +85,24 @@ WSGI_APPLICATION = 'asyNc.wsgi.application'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 with open("config/config.json","r",encoding="utf-8") as f:
     config = json.load(f)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': config["backend-db"]['database'],
-        'USER': config["backend-db"]['username'],
-        'PASSWORD': config["backend-db"]['password'],
-        'HOST': config["backend-db"]['hostname'],
-        'PORT': config["backend-db"]['port'],
-        'TEST': {
-            'NAME': 'backend_test_db',
-        },
+
+DEFUALT_DATABASE = {
+    'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    'NAME': config["backend-db"]['database'],
+    'USER': config["backend-db"]['username'],
+    'PASSWORD': config["backend-db"]['password'],
+    'HOST': config["backend-db"]['hostname'],
+    'PORT': config["backend-db"]['port'],
+    'TEST': {
+        'NAME': 'backend_test_db',
     },
+}
+
+if "OPTIONS" in config:
+    DEFUALT_DATABASE["OPTIONS"] = config["OPTIONS"]
+
+DATABASES = {
+    'default': DEFUALT_DATABASE,
     # 'news':
     # {
     #     'ENGINE': 'django.db.backends.postgresql_psycopg2',
