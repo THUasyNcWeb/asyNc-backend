@@ -1069,12 +1069,12 @@ def connect_to_db(configure):
     return connection
 
 
-def return_user_info(user: UserBasicInfo, user_token=""):
+def return_user_info(user: UserBasicInfo, user_token="", start_time=None):
     """
         return user info
     """
     try:
-        user_tags = {}
+        user_tags = []
         if user.tags:
             user_tags_dict = user.tags
             for key_value in sorted(
@@ -1082,7 +1082,8 @@ def return_user_info(user: UserBasicInfo, user_token=""):
                 key=lambda kv:(kv[1], kv[0]),
                 reverse=True
             )[:MAX_RETURN_USER_TAG]:
-                user_tags[key_value[0]] = key_value[1]
+                user_tags.append({"key": key_value[0], "value": key_value[1]})
+                # user_tags[key_value[0]] = key_value[1]
         else:
             user.tags = {}
             user.full_clean()
@@ -1109,7 +1110,8 @@ def return_user_info(user: UserBasicInfo, user_token=""):
         }
         if user_token:
             response_msg["data"]["token"] = user_token
-
+        if start_time:
+            response_msg["time"] = time.time() - start_time
         return JsonResponse(
             data=response_msg,
             status=status_code,
