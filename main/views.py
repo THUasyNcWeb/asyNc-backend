@@ -4,6 +4,7 @@
 import json
 import re
 import time
+import datetime
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -1652,6 +1653,7 @@ def keyword_search(request):
                 headers={'Access-Control-Allow-Origin':'*'}
             )
         news = []
+        cache_news = []
         tags = []
         # get user favorites dict
         user = tools.get_user_from_request(request)
@@ -1690,22 +1692,35 @@ def keyword_search(request):
                     tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
                 ),
             }
+            dt_datetime = datetime.datetime.strptime(piece_new['pub_time'].split('+')[0], '%Y-%m-%d %H:%M:%S')
+            data_tags = data['tags'].replace('[','') .replace(']','').replace('"','')
+            data_tags = data_tags.replace("'",'').replace(' ','').split(',')
+            cache_new = {
+                "title": piece_new['title'],
+                "news_url": piece_new['url'],
+                "first_img_url": piece_new['picture_url'],
+                "media": piece_new['media'],
+                "pub_time": dt_datetime,
+                "id": int(piece_new['id']),
+                "category": "",
+                "content": piece_new['content'],
+                "tags": data_tags
+            }
             if len(include) != 0 or len(exclude) != 0:
                 if check_contain(piece_new['title'], piece_new['content'],
                                  piece_new['title_keywords'], piece_new['keywords'],
                                  list(include), list(exclude)) is True:
                     news += [piece_new]
+                    cache_news += [cache_new]
                 total_num = ceil(len(news) / 10)
             else:
                 news += [piece_new]
-            print("tags: ")
+                cache_news += [cache_new]
             data['tags'] = data['tags'].replace('[','') .replace(']','').replace('"','')\
                                        .replace("'",'').replace(' ','').split(',')
-            # print(data['tags'])
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
                     and data['tags'] != [""]:
                 tags += data['tags']
-            print(list(set(tags)))
         if len(include) != 0 or len(exclude) != 0:
             start_num = start_page * 10
             end_num = min(start_num + 10, len(news))
@@ -1714,6 +1729,9 @@ def keyword_search(request):
             "page_count": total_num,
             "news": news
         }
+        flag = tools.NEWS_CACHE.add_to_news_cache_pool(cache_news)
+        if flag is True:
+            print("Cache added successfully")
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
             token = tools.decode_token(encoded_token)
