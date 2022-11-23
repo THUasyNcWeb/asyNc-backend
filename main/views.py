@@ -1726,7 +1726,8 @@ def keyword_search(request):
             end_num = min(start_num + 10, len(news))
             news = news[start_num:end_num]
         data = {
-            "page_count": total_num,
+            "page_count": min(total_num, 100),
+            "total": all_news['total'],
             "news": news
         }
         flag = tools.NEWS_CACHE.add_to_news_cache_pool(cache_news)
@@ -1790,3 +1791,68 @@ def search_suggest(request):
         status=200,
         headers={'Access-Control-Allow-Origin':'*'}
     )
+@csrf_exempt
+def personalize(request):
+    """
+        personalize_search
+    """
+    if request.method == "GET":
+
+        try:
+            body = json.loads(request.body)
+            key_word = body["query"]
+        except Exception as error:
+            print(error)
+            return JsonResponse(
+                {"code": 1005, "message": "INVALID_FORMAT", "data": {"page_count": 0, "news": []}},
+                status=400,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+        str_server = tools.SEARCH_CONNECTION
+        all_news = str_server.search_news(key_word, 0, True)
+        all_news_list = all_news['news_list']
+        all_news_list = all_news_list[0: min(200,all_news['total'])]
+        total_num = ceil(all_news['total'] / 10)
+        news = []
+        user = tools.get_user_from_request(request)
+        user_favorites_dict = {}
+        user_favorites_dict = tools.get_user_favorites_dict(user=user)
+        user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
+        for new in all_news_list:
+            data = new
+            title = data['title']
+            content = data['content']
+            if content is None:
+                content = ""
+            if title is None:
+                title = ""
+            if "news_id" not in data:  # 0 stands for no news id
+                data["news_id"] = 0
+            piece_new = {
+                "title": title.replace('<span class="szz-type">','').replace('</span>',''),
+                "url": data['url'],
+                "media": data['media'],
+                "pub_time": data['pub_time'],
+                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                "picture_url": data['picture_url'],
+                "id": data['news_id'],
+                "is_favorite": bool(
+                    tools.in_favorite_check(user_favorites_dict, int(data["news_id"]))
+                ),
+                "is_readlater": bool(
+                    tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
+                ),
+            }
+            news += [piece_new]
+        data = {
+            "total": all_news['total'],
+            "page_count": min(total_num, 100),
+            "news": news
+        }
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": data},
+            status=200,
+            headers={'Access-Control-Allow-Origin':'*'}
+        )
+    return internal_error_response()
