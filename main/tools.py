@@ -265,6 +265,11 @@ class LocalNewsManager():
                     if news["id"] not in self.none_ai_processed_news_dict:
                         if "full_content" in news and news["full_content"]:
                             self.none_ai_processed_news_dict[news["id"]] = news
+                        else:
+                            news_object.ai_processed = True
+                            news_object.full_clean()
+                            news_object.save()
+
         news_list = list(self.none_ai_processed_news_dict.values())[:num]
         for news in news_list:
             self.none_ai_processed_news_dict.pop(news["id"])
@@ -373,6 +378,9 @@ class LocalNewsManager():
                     news_id=int(news["id"]),
                     ai_processed=False, cite_count=1
                 )
+                local_news_dict = news_formator(news)
+                if not ("full_content" in local_news_dict and local_news_dict["full_content"]):
+                    local_news.ai_processed = True
                 local_news.full_clean()
                 local_news.save()
             except Exception as error:
