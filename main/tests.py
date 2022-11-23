@@ -819,6 +819,11 @@ class FavoritesTests(TestCase):
         """
         tools.TESTING_MODE = True
 
+        self.key_list = [
+            "visit_time", "id", "title", "media", "url",
+            "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"
+        ]
+
         self.test_user_num = 1
 
         self.user_name_list = ["AliceFTester", "BobFTester"]
@@ -972,6 +977,11 @@ class ReadlistTests(TestCase):
         """
         tools.TESTING_MODE = True
 
+        self.key_list = [
+            "visit_time", "id", "title", "media", "url",
+            "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"
+        ]
+
         self.test_user_num = 1
 
         self.user_name_list = ["AliceRTester", "BobRTester"]
@@ -1124,7 +1134,10 @@ class ReadHistoryTests(TestCase):
         """
         tools.TESTING_MODE = True
 
-        self.key_list = ["visit_time", "id", "title", "media", "url", "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"]
+        self.key_list = [
+            "visit_time", "id", "title", "media", "url",
+            "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"
+        ]
 
         self.test_user_num = 1
 
