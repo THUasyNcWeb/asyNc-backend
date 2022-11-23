@@ -490,7 +490,7 @@ def user_read_history(request):
                         "url": news["news_url"],
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
-                        "full_content": news["content"],
+                        "full_content": "",  # news["content"],
                         "tags": news["tags"],
                         "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
                     }
@@ -614,7 +614,8 @@ def user_readlater(request):
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
                         "full_content": news["content"],
-                        "tags": news["tags"]
+                        "tags": news["tags"],
+                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
                     }
                 )
 
@@ -738,7 +739,8 @@ def user_favorites(request):
                         "pub_time": str(news["pub_time"]),
                         "picture_url": news["first_img_url"],
                         "full_content": news["content"],
-                        "tags": news["tags"]
+                        "tags": news["tags"],
+                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
                     }
                 )
                 # print("news:")

@@ -796,7 +796,12 @@ def get_read_history(user: UserBasicInfo):
     """
     if not user.read_history:
         user.read_history = {}
-    return list(user.read_history.values())
+    read_history_list = list(user.read_history.values())
+
+    def key_func(news):
+        return news["visit_time"] if "visit_time" in news else "1970-01-01T08:00:00Z"
+    read_history_list.sort(key=key_func, reverse=True)
+    return read_history_list
 
 
 def remove_read_history(user: UserBasicInfo, news_id):
@@ -863,7 +868,12 @@ def get_readlist(user: UserBasicInfo):
     """
     if not user.readlist:
         user.readlist = {}
-    return list(user.readlist.values())
+    readlist = list(user.readlist.values())
+
+    def key_func(news):
+        return news["visit_time"] if "visit_time" in news else "1970-01-01T08:00:00Z"
+    readlist.sort(key=key_func, reverse=True)
+    return readlist
 
 
 def remove_readlist(user: UserBasicInfo, news_id):
@@ -959,7 +969,12 @@ def get_favorites(user: UserBasicInfo):
     """
     if not user.favorites:
         user.favorites = {}
-    return list(user.favorites.values())
+    favorites_list = list(user.favorites.values())
+
+    def key_func(news):
+        return news["visit_time"] if "visit_time" in news else "1970-01-01T08:00:00Z"
+    favorites_list.sort(key=key_func, reverse=True)
+    return favorites_list
 
 
 def remove_favorites(user: UserBasicInfo, news_id):

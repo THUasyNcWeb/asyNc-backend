@@ -23,7 +23,7 @@ class ToolsTests(TestCase):
             set up a test set
         """
         tools.TESTING_MODE = True
-        self.user_num = 4
+        self.user_num = 2
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
         self.news_template = {
             "id": 0,
@@ -43,6 +43,16 @@ class ToolsTests(TestCase):
         news = copy.deepcopy(self.news_template)
         news["id"] = news_id
         return news
+
+    def test_news_formator(self):
+        """
+            test news_formator()
+        """
+        key_list = ["id", "title", "media", "url", "pub_time", "picture_url", "full_content", "summary", "tags"]
+        news = self.generate_news(news_id=145)
+        formated_news = news_formator(news)
+        for key in formated_news:
+            self.assertEqual(key in key_list, True)
 
     def test_add_to_read_history_and_get_read_history(self):
         """
@@ -325,8 +335,8 @@ class ViewsTests(TestCase):
         """
         tools.TESTING_MODE = True
 
-        self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "uユーザー名"]
-        self.user_password = ["Alice123", "password", "pass123456", "123456_-", "Alic_-e12"]
+        self.user_name_list = ["Alice", "Bob", "用户名", "uユーザー名"]
+        self.user_password = ["Alice123", "password", "123456_-", "Alic_-e12"]
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []
