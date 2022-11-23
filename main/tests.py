@@ -335,8 +335,8 @@ class ViewsTests(TestCase):
         """
         tools.TESTING_MODE = True
 
-        self.user_name_list = ["Alice", "Bob", "用户名", "uユーザー名"]
-        self.user_password = ["Alice123", "password", "123456_-", "Alic_-e12"]
+        self.user_name_list = ["Alice", "用户名", "uユーザー名"]
+        self.user_password = ["Alice123", "123456_-", "Alic_-e12"]
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []
@@ -900,12 +900,12 @@ class FavoritesTests(TestCase):
             add_token_to_white_list(encoded_token)
             user = UserBasicInfo.objects.get(user_name=user_name)
             tools.clear_favorites(user)
-            for news_id in range(1, 50 + 1):
+            for news_id in range(1, 20 + 1):
                 add_to_favorites(
                     user=user,
                     news=self.generate_news(news_id=news_id)
                 )
-            for page in range(5):
+            for page in range(2):
                 response = self.client.get(
                     '/favorites?page={page}'.format(page=page + 1),
                     data={},
@@ -1052,12 +1052,12 @@ class ReadlistTests(TestCase):
             add_token_to_white_list(encoded_token)
             user = UserBasicInfo.objects.get(user_name=user_name)
             tools.clear_readlist(user)
-            for news_id in range(1, 50 + 1):
+            for news_id in range(1, 20 + 1):
                 add_to_readlist(
                     user=user,
                     news=self.generate_news(news_id=news_id)
                 )
-            for page in range(5):
+            for page in range(2):
                 response = self.client.get(
                     '/readlater?page={page}'.format(page=page + 1),
                     data={},
@@ -1123,6 +1123,8 @@ class ReadHistoryTests(TestCase):
             set up a test set
         """
         tools.TESTING_MODE = True
+
+        self.key_list = ["visit_time", "id", "title", "media", "url", "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"]
 
         self.test_user_num = 1
 
@@ -1192,6 +1194,8 @@ class ReadHistoryTests(TestCase):
                 self.assertEqual(len(response_data["news"]), min(10, len(news_id_list)))
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
+                    for key in self.key_list:
+                        self.assertEqual(key in news, True)
 
     def test_get_read_history(self):
         """
@@ -1203,12 +1207,12 @@ class ReadHistoryTests(TestCase):
             add_token_to_white_list(encoded_token)
             user = UserBasicInfo.objects.get(user_name=user_name)
             tools.clear_read_history(user)
-            for news_id in range(1, 50 + 1):
+            for news_id in range(1, 20 + 1):
                 add_to_read_history(
                     user=user,
                     news=self.generate_news(news_id=news_id)
                 )
-            for page in range(5):
+            for page in range(2):
                 response = self.client.get(
                     '/history?page={page}'.format(page=page + 1),
                     data={},

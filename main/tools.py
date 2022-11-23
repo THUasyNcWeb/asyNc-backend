@@ -840,6 +840,14 @@ def user_read_history_pages(user: UserBasicInfo, page: int):
     end = (page + 1) * FAVORITES_PRE_PAGE
     read_history_list = get_read_history(user)
     read_history_page = read_history_list[begin:end]
+
+    user_favorites_dict = get_user_favorites_dict(user=user)
+    user_readlist_dict = get_user_readlist_dict(user=user)
+
+    for news in read_history_page:
+        news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+        news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
+
     return read_history_page, math.ceil(len(read_history_list) / FAVORITES_PRE_PAGE)
 
 
