@@ -1565,6 +1565,8 @@ def check_contain(title, content, title_keywords, content_keywords, must, must_n
     """
     Check whether satisfy the need
     """
+    if title_keywords or content_keywords:
+        print("")
     try:
         for no_contain in must_not:
             if title.find(no_contain) != -1:
@@ -1573,21 +1575,22 @@ def check_contain(title, content, title_keywords, content_keywords, must, must_n
                 return False
 
         for yes in must:
-            yes_len = len(yes)
             flag = False
-            for title_keyword in title_keywords:
-                start = title_keyword[0]
-                end = start + yes_len
-                target = title[start:end]
-                if target == yes:
-                    flag = True
-            if flag is False:
-                for content_keyword in content_keywords:
-                    start = content_keyword[0]
-                    end = start + yes_len
-                    target = content[start:end]
-                    if target == yes:
-                        flag = True
+            if title.find(yes) != -1 or content.find(yes) != -1:
+                flag = True
+            # for title_keyword in title_keywords:
+            #     start = title_keyword[0]
+            #     end = start + yes_len
+            #     target = title[start:end]
+            #     if target == yes:
+            #         flag = True
+            # if flag is False:
+            #     for content_keyword in content_keywords:
+            #         start = content_keyword[0]
+            #         end = start + yes_len
+            #         target = content[start:end]
+            #         if target == yes:
+            #             flag = True
             if flag is False:
                 return False
         return True
@@ -1602,7 +1605,6 @@ def keyword_search(request):
         keyword_search
     """
     if request.method == "POST":
-
         try:
             body = json.loads(request.body)
             key_word = body["query"]
@@ -1629,10 +1631,10 @@ def keyword_search(request):
             )
         str_server = tools.SEARCH_CONNECTION
         if len(include) != 0 or len(exclude) != 0:
-            all_news = str_server.search_keywords(key_word,
-                                                  list(include),
-                                                  list(exclude),0)
-
+            all_news = str_server.search_news(key_word, 0, True)
+            # print(all_news)
+            # print("len_raw: ")
+            # print(len(all_news['news_list']))
         else:
             all_news = str_server.search_news(key_word, start_page, sort)
         if sort is False:
@@ -1660,7 +1662,10 @@ def keyword_search(request):
         user_favorites_dict = {}
         user_favorites_dict = tools.get_user_favorites_dict(user=user)
         user_readlist_dict = tools.get_user_readlist_dict(user=user)
-
+        if len(include) != 0 or len(exclude) != 0:
+            all_news_list = all_news['news_list']
+            if sort is True:
+                all_news_list = sorted(all_news_list, key=lambda x: x['pub_time'], reverse=True)
         for new in all_news_list:
             data = new
             title_keywords = []
@@ -1722,14 +1727,21 @@ def keyword_search(request):
                     and data['tags'] != [""]:
                 tags += data['tags']
         if len(include) != 0 or len(exclude) != 0:
+            total = len(news)
             start_num = start_page * 10
             end_num = min(start_num + 10, len(news))
             news = news[start_num:end_num]
-        data = {
-            "page_count": min(total_num, 100),
-            "total": all_news['total'],
-            "news": news
-        }
+            data = {
+                "page_count": min(total_num, 100),
+                "total": total,
+                "news": news[0: 10]
+            }
+        else:
+            data = {
+                "page_count": min(total_num, 100),
+                "total": all_news['total'],
+                "news": news
+            }
         flag = tools.NEWS_CACHE.add_to_news_cache_pool(cache_news)
         if flag is True:
             print("Cache added successfully")
@@ -1791,6 +1803,8 @@ def search_suggest(request):
         status=200,
         headers={'Access-Control-Allow-Origin':'*'}
     )
+
+
 @csrf_exempt
 def personalize(request):
     """
