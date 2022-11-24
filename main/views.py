@@ -1636,6 +1636,7 @@ def keyword_search(request):
     """
         keyword_search
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             body = json.loads(request.body)
@@ -1729,7 +1730,14 @@ def keyword_search(request):
                     tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
                 ),
             }
-            dt_datetime = datetime.datetime.strptime(piece_new['pub_time'], '%Y-%m-%d %H:%M:%S%z')
+            try:
+                dt_datetime = datetime.datetime.strptime(piece_new['pub_time'], '%Y-%m-%d %H:%M:%S%z')
+            except Exception as error:
+                dt_datetime = datetime.datetime.strptime(
+                    piece_new['pub_time'].split('+')[0],
+                    '%Y-%m-%d %H:%M:%S'
+                )
+                print(error)
             data_tags = data['tags'].replace('[','') .replace(']','').replace('"','')
             data_tags = data_tags.replace("'",'').replace(' ','').split(',')
             cache_new = {
@@ -1753,6 +1761,7 @@ def keyword_search(request):
             else:
                 news += [piece_new]
                 cache_news += [cache_new]
+
             data['tags'] = data['tags'].replace('[','') .replace(']','').replace('"','')\
                                        .replace("'",'').replace(' ','').split(',')
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
@@ -1785,6 +1794,10 @@ def keyword_search(request):
             if user:
                 update_tags(user.user_name, tags, user.tags)
 
+        except Exception as error:
+            print(error)
+        try:
+            data["time"] = time.time() - start_time
         except Exception as error:
             print(error)
         return JsonResponse(
@@ -1842,6 +1855,7 @@ def personalize(request):
     """
         personalize_search
     """
+    start_time = time.time()
     if request.method == "POST":
 
         try:
@@ -1882,7 +1896,7 @@ def personalize(request):
                 "url": data['url'],
                 "media": data['media'],
                 "pub_time": data['pub_time'],
-                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                # "content": content.replace('<span class="szz-type">','').replace('</span>',''),
                 "picture_url": data['picture_url'],
                 "id": data['news_id'],
                 "is_favorite": bool(
@@ -1894,7 +1908,17 @@ def personalize(request):
             }
             news += [piece_new]
             try:
-                dt_datetime = datetime.datetime.strptime(piece_new['pub_time'], '%Y-%m-%d %H:%M:%S%z')
+                try:
+                    dt_datetime = datetime.datetime.strptime(
+                        piece_new['pub_time'],
+                        '%Y-%m-%d %H:%M:%S%z'
+                    )
+                except Exception as error:
+                    dt_datetime = datetime.datetime.strptime(
+                        piece_new['pub_time'].split('+')[0],
+                        '%Y-%m-%d %H:%M:%S'
+                    )
+                    print(error)
                 cache_new = {
                     "title": piece_new['title'],
                     "news_url": piece_new['url'],
@@ -1926,6 +1950,10 @@ def personalize(request):
             # "page_count": min(total_num, 100),
             "news": news
         }
+        try:
+            data["time"] = time.time() - start_time
+        except Exception as error:
+            print(error)
         return JsonResponse(
             {"code": 0, "message": "SUCCESS", "data": data},
             status=200,
