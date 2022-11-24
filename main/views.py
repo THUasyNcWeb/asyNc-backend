@@ -1810,7 +1810,7 @@ def personalize(request):
     """
         personalize_search
     """
-    if request.method == "GET":
+    if request.method == "POST":
 
         try:
             body = json.loads(request.body)
