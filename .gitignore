@@ -2,3 +2,6 @@ __pycache__
 .DS_Store
 __MACOSX
 *.pyc
+.coverage
+xunit-reports
+coverage-reports

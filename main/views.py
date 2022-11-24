@@ -4,7 +4,6 @@
 import json
 import re
 import time
-import datetime
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -92,7 +91,7 @@ def ai_news(request: WSGIRequest):
             news_list = request_data["data"]
             # print(news_list)
             for news in news_list:
-                print(news["summary"])
+                print("[summary]", news["summary"])
             tools.LOCAL_NEWS_MANAGER.update_ai_processed_news(news_list)
             status_code = 200
             response_msg = {
@@ -1748,14 +1747,8 @@ def keyword_search(request):
                         tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
                     ),
                 }
-            try:
-                dt_datetime = datetime.datetime.strptime(piece_new['pub_time'], '%Y-%m-%d %H:%M:%S%z')
-            except Exception as error:
-                dt_datetime = datetime.datetime.strptime(
-                    piece_new['pub_time'].split('+')[0],
-                    '%Y-%m-%d %H:%M:%S'
-                )
-                print(error)
+
+            dt_datetime = tools.datetime_converter(piece_new['pub_time'])
             data_tags = data['tags'].replace('[','') .replace(']','').replace('"','')
             data_tags = data_tags.replace("'",'').replace(' ','').split(',')
             cache_new = {
@@ -1926,17 +1919,7 @@ def personalize(request):
             }
             news += [piece_new]
             try:
-                try:
-                    dt_datetime = datetime.datetime.strptime(
-                        piece_new['pub_time'],
-                        '%Y-%m-%d %H:%M:%S%z'
-                    )
-                except Exception as error:
-                    dt_datetime = datetime.datetime.strptime(
-                        piece_new['pub_time'].split('+')[0],
-                        '%Y-%m-%d %H:%M:%S'
-                    )
-                    print(error)
+                dt_datetime = tools.datetime_converter(piece_new['pub_time'])
                 cache_new = {
                     "title": piece_new['title'],
                     "news_url": piece_new['url'],

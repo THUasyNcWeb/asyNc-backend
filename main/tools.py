@@ -3,16 +3,13 @@ This .py file contains most commenly used tools in views.py
 
 Created by sxx
 """
-import os
 import math
-import random
 import hashlib
 import time
 import base64
 import json
 import re
 import pickle
-import copy
 import datetime
 from io import BytesIO
 
@@ -24,72 +21,49 @@ import jwt
 import psycopg2
 from PIL import Image
 from django.http import JsonResponse
-from .models import UserBasicInfo, LocalNews
+from .models import UserBasicInfo
 from .responses import internal_error_response
-
-TESTING_MODE = False
-
-EXPIRE_TIME = 7 * 86400  # 30s for testing. 7 days for deploy.
-SECRET_KEY = "A good coder is all you need."
-
-TOKEN_WHITE_LIST = {}  # storage alive token for each user
-
-CATEGORY_LIST = [
-    "",
-    "ent",
-    "sports",
-    "mil",
-    "politics",
-    "tech",
-    "social",
-    "finance",
-    "auto",
-    "game",
-    "women",
-    "health",
-    "history",
-    "edu"
-]
-
-CATEGORY_FRONT_TO_BACKEND = {
-    "": "",
-    "home": "",
-    "sport": "sports",
-    "fashion": "women",
-    "ent": "ent",
-    "sports": "sports",
-    "mil": "mil",
-    "politics": "politics",
-    "tech": "tech",
-    "social": "social",
-    "finance": "finance",
-    "auto": "auto",
-    "game": "game",
-    "women": "women",
-    "health": "health",
-    "history": "history",
-    "edu": "edu",
-}
-
-FRONT_PAGE_NEWS_NUM = 200
+from .managers.NewsCache import NewsCache
+from .managers.LocalNewsManager import LocalNewsManager
+from .managers.DBScanner import DBScanner
+from .config import *
 
 CRAWLER_DB_CONNECTION = None
+NEWS_CACHE = None
+DB_SCANNER = None
+THREAD_POOL = None
+LOCAL_NEWS_MANAGER = None
+SEARCH_CONNECTION = None
 
-FAVORITES_PRE_PAGE = 10
 
-DB_CHECK_INTERVAL = 1
-
-DB_UPDATE_MINIMUM_INTERVAL = 300
-
-MAX_RETURN_USER_TAG = 128
-
-MAX_USER_SEARCH_HISTORY = 256
-
-CACHE_NEWSPOOL_MAX = len(CATEGORY_LIST) * FRONT_PAGE_NEWS_NUM * 16
-
-DB_NEWS_LOOK_BACK = 65536
-
-MAX_LOCAL_NEWS_LIST_CACHE = 65536
+def datetime_converter(date_str: str) -> datetime.datetime:
+    """
+        convert str into datetime
+    """
+    try:
+        if "+" in date_str:
+            dt_datetime = datetime.datetime.strptime(
+                date_str,
+                '%Y-%m-%d %H:%M:%S%z'
+            )
+        elif "T" in date_str and "Z" in date_str:
+            dt_datetime = datetime.datetime.strptime(
+                date_str,
+                '%Y-%m-%dT%H:%M:%SZ'
+            )
+        else:
+            dt_datetime = datetime.datetime.strptime(
+                date_str,
+                '%Y-%m-%d %H:%M:%S'
+            )
+    except Exception as error:
+        print("[error in datetime_converter]")
+        print(error)
+        dt_datetime = datetime.datetime.strptime(
+            "1970-01-01 08:00:00",
+            '%Y-%m-%d %H:%M:%S'
+        )
+    return dt_datetime
 
 
 def get_news_from_db_by_id(news_id: int) -> bool:
@@ -167,518 +141,6 @@ def clear_search_history(user: UserBasicInfo):
     user.search_history = []
     user.full_clean()
     user.save()
-
-
-def news_formator(news) -> dict:
-    """
-        transform crawler format to frontend format
-    """
-    format_news = {}
-    if "id" in news:
-        format_news["id"] = news["id"]
-    if "title" in news:
-        format_news["title"] = news["title"]
-    if "media" in news:
-        format_news["media"] = news["media"]
-    if "url" in news:
-        format_news["url"] = news["url"]
-    elif "news_url" in news:
-        format_news["url"] = news["news_url"]
-    if "pub_time" in news:
-        format_news["pub_time"] = str(news["pub_time"])
-    if "picture_url" in news:
-        format_news["picture_url"] = news["picture_url"]
-    elif "first_img_url" in news:
-        format_news["picture_url"] = news["first_img_url"]
-    if "full_content" in news:
-        format_news["full_content"] = news["full_content"]
-    elif "content" in news:
-        format_news["full_content"] = news["content"]
-    if "summary" in news:
-        format_news["summary"] = news["summary"]
-    if "tags" in news:
-        format_news["tags"] = news["tags"]
-    return format_news
-
-
-class LocalNewsManager():
-    """
-        Favorited or in reading list news will be storaged to local.
-        This class manages local news.
-    """
-    def __init__(self) -> None:
-        """
-            init
-        """
-        self.local_news_list_cache = {}  # cache summarized news
-        self.none_ai_processed_news_dict = {}
-        self.min_batch = 256
-
-    def get_one_ai_news(self, news_id: int, news=None) -> dict:
-        """
-            get one news with summary
-        """
-        if news_id in self.local_news_list_cache:
-            if "summary" in self.local_news_list_cache[news_id]:
-                return self.local_news_list_cache[news_id]
-        ai_news = {}
-        local_news = LocalNews.objects.filter(news_id=news_id).first()
-        if local_news:
-            # news = local_news.data
-            if local_news.ai_processed:
-                self.add_to_cache(local_news.data)
-            ai_news = {
-                "id": int(local_news.data["id"]),
-                "title": local_news.data["title"],
-                "media": local_news.data["media"],
-                "url": local_news.data["url"],
-                "pub_time": str(local_news.data["pub_time"]),
-                "picture_url": local_news.data["picture_url"],
-                "full_content": local_news.data["full_content"],
-            }
-            if "summary" in local_news.data:
-                ai_news["summary"] = local_news.data["summary"]
-        elif news:  # add news local_news
-            self.save_one_local_news(news)
-        return ai_news
-
-    def get_ai_news(self, news_id_list) -> dict:
-        """
-            get news with summary
-        """
-        news_dict = {}
-        for news_id in news_id_list:
-            ai_news = self.get_one_ai_news(news_id)
-            if ai_news:
-                news_dict[news_id] = ai_news
-        return news_dict
-
-    def get_none_ai_processed_news(self, num=1) -> list:
-        """
-            get none ai processed news
-        """
-        news_list = []
-        if len(self.none_ai_processed_news_dict) < num:
-            batch_size = max(num, self.min_batch)
-            news_object_list = LocalNews.objects.filter(ai_processed=False)
-            news_object_list = list(news_object_list)
-            random.shuffle(news_object_list)
-            news_object_list = news_object_list[:batch_size]
-            if news_object_list:
-                for news_object in news_object_list:
-                    news = news_object.data
-                    # print(news)
-                    # print(news_object.ai_processed)
-                    news["id"] = int(news["id"])
-                    if ("full_content" in news) and news["full_content"]:
-                        if news["id"] not in self.none_ai_processed_news_dict:
-                            self.none_ai_processed_news_dict[news["id"]] = news
-                    else:
-                        print(dict(news_object.data).keys())
-                        print(news_object.ai_processed)
-                        news_object.ai_processed = True
-                        news_object.full_clean()
-                        news_object.save()
-
-        news_list = list(self.none_ai_processed_news_dict.values())[:num]
-        for news in news_list:
-            self.none_ai_processed_news_dict.pop(news["id"])
-        return news_list
-
-    def update_ai_processed_news(self, news_list) -> bool:
-        """
-            update ai processed news
-        """
-        try:
-            for news in news_list:
-                if "summary" in news and news["summary"]:
-                    if news["id"] in self.none_ai_processed_news_dict:
-                        # print("pop from none_ai_processed_news_dict")
-                        self.none_ai_processed_news_dict.pop(news["id"])
-                    local_news = LocalNews.objects.filter(news_id=int(news["id"])).first()
-                    if local_news:
-                        # print("update local_news ai abstract 1")
-                        local_news.ai_processed = True
-                        local_news.data["summary"] = news["summary"]
-                        local_news.full_clean()
-                        local_news.save()
-                    else:
-                        # print("update local_news ai abstract 2")
-                        local_news = LocalNews(
-                            data=news_formator(news),
-                            news_id=int(news["id"]),
-                            ai_processed=True, cite_count=1
-                        )
-                        local_news.full_clean()
-                        local_news.save()
-        except Exception as error:
-            print(error)
-            return False
-        return True
-
-    def add_to_cache(self, news: dict):
-        """
-            add a news to cache
-        """
-        self.local_news_list_cache[news["id"]] = news
-        if len(self.local_news_list_cache) > MAX_LOCAL_NEWS_LIST_CACHE:
-            news_id = list(self.local_news_list_cache.keys())[0]
-            self.local_news_list_cache.pop(news_id)
-
-    def del_from_cache(self, news_id: int):
-        """
-            del a news from cache
-        """
-        if news_id in self.local_news_list_cache:
-            self.local_news_list_cache.pop(news_id)
-
-    def del_one_local_news(self, news_id: int) -> bool:
-        """
-            del one local news
-        """
-        if isinstance(news_id, int):
-            try:
-                self.del_from_cache(news_id)
-                local_news = LocalNews.objects.filter(news_id=news_id).first()
-                if local_news:
-                    local_news.cite_count -= 1
-                    if local_news.cite_count <= 0:
-                        LocalNews.objects.filter(news_id=news_id).delete()
-                        return True
-                    local_news.full_clean()
-                    local_news.save()
-            except Exception as error:
-                print(error)
-                return False
-            return True
-        return False
-
-    def del_local_news(self, news) -> bool:
-        """
-            del local news
-        """
-        if isinstance(news, dict):
-            return self.del_one_local_news(news["id"])
-        if isinstance(news, list):
-            news_list = news
-            for _news in news_list:
-                if isinstance(_news, dict):
-                    if not self.del_one_local_news(_news["id"]):
-                        return False
-                elif isinstance(_news, int):
-                    if not self.del_one_local_news(_news):
-                        return False
-            return True
-        if isinstance(news, int):
-            return self.del_one_local_news(news)
-        return False
-
-    def save_one_local_news(self, news: dict) -> bool:
-        """
-            save one local news
-        """
-        if isinstance(news, dict):
-            try:
-                self.add_to_cache(news)
-                local_news = LocalNews.objects.filter(news_id=int(news["id"])).first()
-                if local_news:
-                    local_news.cite_count += 1
-                    local_news.full_clean()
-                    local_news.save()
-                    return True
-                local_news = LocalNews(
-                    data=news_formator(news),
-                    news_id=int(news["id"]),
-                    ai_processed=False, cite_count=1
-                )
-                local_news_dict = news_formator(news)
-                if not ("full_content" in local_news_dict and local_news_dict["full_content"]):
-                    print(dict(local_news_dict).keys())
-                    print(local_news.ai_processed)
-                    local_news.ai_processed = True
-                local_news.full_clean()
-                local_news.save()
-            except Exception as error:
-                print(error)
-                return False
-            return True
-        return False
-
-    def save_local_news(self, news) -> bool:
-        """
-            save local news
-        """
-        if isinstance(news, dict):
-            return self.save_one_local_news(news)
-        if isinstance(news, list):
-            news_list = news
-            for _news in news_list:
-                if not self.save_one_local_news(_news):
-                    return False
-            return True
-        return False
-
-
-class NewsCache():
-    """
-        News Cache
-    """
-    def __init__(self, db_connection) -> None:
-        """
-            init
-        """
-        self.db_connection = db_connection
-        self.cache = {}  # cache for news home page only
-        self.newspool = {}  # pool of cached ori format news, for all news
-        self.last_update_time = 0
-        self.last_check_time = 0
-        self.last_change_time = time.time()
-        self.category_last_update_time = {}
-        self.max_news_id = 0
-        for category in CATEGORY_LIST:
-            self.cache[category] = []
-            self.category_last_update_time[category] = 0
-
-        self.ori_news_format = {
-            "title": str,
-            "news_url": str,
-            "first_img_url": str,
-            "media": str,
-            "pub_time": datetime.datetime,
-            "id": int,
-            "category": str,
-            "content": str,
-            "tags": list
-        }
-
-    def check_ori_news_format(self, news: dict) -> bool:
-        """
-            check_ori_news_format
-        """
-        if news:
-            for (key, instance) in self.ori_news_format.items():
-                if key not in news:
-                    return False
-                if not isinstance(news[key], instance):
-                    return False
-            return True
-        return False
-
-    def add_to_news_cache_pool(self, news_list: list) -> bool:
-        """
-            add to news cache pool
-        """
-        for news in news_list:
-            if self.check_ori_news_format(news):
-                self.newspool[int(news["id"])] = news
-            else:
-                print("news format error")
-                return False
-        try:
-            if len(self.newspool) > CACHE_NEWSPOOL_MAX:  # del outdate news
-                for key in list(self.newspool.keys())[: CACHE_NEWSPOOL_MAX // 2]:
-                    self.newspool.pop(key)
-        except Exception as error:
-            print("[Error when cleaning self.newspool]")
-            print(error)
-            return False
-
-        return True
-
-    def save_local_cache(self):
-        """
-            save cache from file
-        """
-        print("Saving cache to dict", time.time())
-        with open("data/news_cache.pkl", "wb") as file:
-            pickle.dump(self.cache, file)
-        print("Saved", time.time())
-
-    def load_local_cache(self):
-        """
-            load cache from file
-        """
-        print("loading local cache file")
-        if os.path.exists("data/news_cache.pkl"):
-            with open("data/news_cache.pkl", "rb") as file:
-                self.cache = pickle.load(file)
-            self.sort_cache_ascend()
-            self.update_max_news_id()
-            for category in CATEGORY_LIST:
-                self.add_to_news_cache_pool(self.cache[category])
-            print("local cache loaded")
-        else:
-            print("load cache not found")
-
-    def sort_cache_ascend(self):
-        """
-            sort cache in ascend order
-        """
-        for category in CATEGORY_LIST:
-            self.cache[category].sort(key=lambda x:x["id"])
-
-    def sort_cache_descend(self):
-        """
-            sort cache in descend order
-        """
-        for category in CATEGORY_LIST:
-            self.cache[category].sort(key=lambda x:x["id"], reverse=True)
-
-    def update_max_news_id(self) -> None:
-        """
-            update max news id in cache
-        """
-        for category in CATEGORY_LIST:
-            try:
-                news = self.cache[category][-1]
-                if self.max_news_id < news["id"]:
-                    self.max_news_id = news["id"]
-            except Exception as error:
-                print("[error]", error)
-
-    def update_cache(self, db_news_list) -> None:
-        """
-            update news cache of one specific category
-        """
-        self.last_update_time = time.time()
-        db_news_list.sort(key=lambda x:x["id"])
-
-        self.add_to_news_cache_pool(db_news_list)
-
-        for news in db_news_list:
-            if news["category"] in CATEGORY_LIST:
-                self.cache[news["category"]].append(news)
-                self.category_last_update_time[news["category"]] = time.time()
-        for category in CATEGORY_LIST:
-            self.cache[category] = self.cache[category][-200:]
-
-        self.update_max_news_id()
-
-    def get_cache(self, category):
-        """
-            get news cache of one specific category
-        """
-        news_list = copy.deepcopy(self.cache[category])
-        news_list.sort(key=lambda x:x["pub_time"], reverse=True)
-        return news_list[:200]
-
-
-class DBScanner():
-    """
-        news db scanner
-    """
-    def __init__(self, db_connection, news_cache: NewsCache) -> None:
-        """
-            init
-        """
-        self.db_connection = db_connection
-        self.news_cache = news_cache
-        self.news_num = 0
-
-    def get_db_news_num(self) -> int:
-        """
-            get db news num
-        """
-        try:
-            cursor = self.db_connection.cursor()
-            cursor.execute("select count(*) from news")
-            row = cursor.fetchone()
-        except Exception as error:
-            print("[error]", error)
-        return row[0]
-
-    def check_db_update(self) -> bool:
-        """
-            check if db updated
-        """
-        if TESTING_MODE:
-            return False
-        db_news_num = self.get_db_news_num()
-        self.news_cache.last_check_time = time.time()
-        if not self.news_num == db_news_num:
-            self.news_num = db_news_num
-            print("db_news_num:", self.news_num, time.time())
-            self.news_cache.last_change_time = time.time()
-            return True
-        return False
-
-    def update_cache(self) -> None:
-        """
-            update all news cache
-        """
-        print("Updating cache", time.time())
-        if TESTING_MODE:
-            with open("data/news_cache.pkl", "rb") as file:
-                self.news_cache.cache = pickle.load(file)
-            self.news_cache.last_update_time = time.time()
-            return
-        db_news_list = get_data_from_db(
-            connection=self.db_connection,
-            filter_command="id > {id}".format(id=self.news_cache.max_news_id),
-            select=[
-                "title","news_url","first_img_url","media",
-                "pub_time","id","category","content","tags"
-            ],
-            order_command="ORDER BY pub_time DESC",
-            limit=65536  # protection
-        )
-        self.news_cache.update_cache(db_news_list=db_news_list)
-        print("cache shape:", [len(x) for x in self.news_cache.cache.values()])
-        self.news_cache.save_local_cache()
-
-    def run(self, _=None) -> None:
-        """
-            run timer
-        """
-        try:
-            print("Starting runner")
-            print("DB_CHECK_INTERVAL =", DB_CHECK_INTERVAL)
-            self.news_cache.load_local_cache()
-            print("cache shape", [len(x) for x in self.news_cache.cache.values()])
-
-            print("Cache initialization:")
-
-            if not TESTING_MODE:
-                self.check_db_update()
-
-                db_news_list = []
-                for category in CATEGORY_LIST:
-                    print("init category", category, "from db...")
-                    db_news_list += get_data_from_db(
-                        connection=self.db_connection,
-                        filter_command="id > {id} AND category='{category}'".format(
-                            id=max(self.news_cache.max_news_id, self.news_num - DB_NEWS_LOOK_BACK),
-                            category=category
-                        ),
-                        select=[
-                            "title","news_url","first_img_url","media",
-                            "pub_time","id","category","content","tags"
-                        ],
-                        order_command="ORDER BY pub_time DESC",
-                        limit=FRONT_PAGE_NEWS_NUM
-                    )
-                self.news_cache.update_cache(db_news_list)
-                print("cache shape:", [len(x) for x in self.news_cache.cache.values()])
-
-            print("Cache initialization completed.")
-
-            self.news_cache.save_local_cache()
-
-            print("cache checker loop begin")
-
-            while True:
-                try:
-                    if self.check_db_update():
-                        self.update_cache()
-                    if time.time() - self.news_cache.last_update_time > DB_UPDATE_MINIMUM_INTERVAL:
-                        self.update_cache()
-                except Exception as error:
-                    print("[error]", error)
-                time.sleep(DB_CHECK_INTERVAL)
-
-        except Exception as error:
-            print("[error]", error)
-        time.sleep(DB_CHECK_INTERVAL)
 
 
 def get_user_from_request(request):
@@ -1316,17 +778,27 @@ def del_all_token_of_an_user(user_id):
         TOKEN_WHITE_LIST[user_id] = []
 
 
-CRAWLER_DB_CONNECTION = None
-NEWS_CACHE = None
-DB_SCANNER = None
-
 with open("config/config.json","r",encoding="utf-8") as config_file:
     config = json.load(config_file)
 CRAWLER_DB_CONNECTION = connect_to_db(config["crawler-db"])
 
-NEWS_CACHE = NewsCache(CRAWLER_DB_CONNECTION)
+NEWS_CACHE = NewsCache(
+    db_connection=CRAWLER_DB_CONNECTION,
+    category_list=CATEGORY_LIST,
+    max_cache_pool=CACHE_NEWSPOOL_MAX
+)
 
-DB_SCANNER = DBScanner(CRAWLER_DB_CONNECTION, NEWS_CACHE)
+DB_SCANNER = DBScanner(
+    db_connection=CRAWLER_DB_CONNECTION,
+    news_cache=NEWS_CACHE,
+    category_list=CATEGORY_LIST,
+    get_data_from_db=get_data_from_db,
+    testing_mode=TESTING_MODE,
+    front_page_news_num=FRONT_PAGE_NEWS_NUM,
+    db_check_interval=DB_CHECK_INTERVAL,
+    db_news_look_back=DB_NEWS_LOOK_BACK,
+    db_update_minimum_interval=DB_UPDATE_MINIMUM_INTERVAL
+)
 
 THREAD_POOL = threadpool.ThreadPool(1)
 
