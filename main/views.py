@@ -1748,14 +1748,8 @@ def keyword_search(request):
                         tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
                     ),
                 }
-            try:
-                dt_datetime = datetime.datetime.strptime(piece_new['pub_time'], '%Y-%m-%d %H:%M:%S%z')
-            except Exception as error:
-                dt_datetime = datetime.datetime.strptime(
-                    piece_new['pub_time'].split('+')[0],
-                    '%Y-%m-%d %H:%M:%S'
-                )
-                print(error)
+
+            dt_datetime = tools.datetime_converter(piece_new['pub_time'])
             data_tags = data['tags'].replace('[','') .replace(']','').replace('"','')
             data_tags = data_tags.replace("'",'').replace(' ','').split(',')
             cache_new = {
@@ -1926,17 +1920,7 @@ def personalize(request):
             }
             news += [piece_new]
             try:
-                try:
-                    dt_datetime = datetime.datetime.strptime(
-                        piece_new['pub_time'],
-                        '%Y-%m-%d %H:%M:%S%z'
-                    )
-                except Exception as error:
-                    dt_datetime = datetime.datetime.strptime(
-                        piece_new['pub_time'].split('+')[0],
-                        '%Y-%m-%d %H:%M:%S'
-                    )
-                    print(error)
+                dt_datetime = tools.datetime_converter(piece_new['pub_time'])
                 cache_new = {
                     "title": piece_new['title'],
                     "news_url": piece_new['url'],

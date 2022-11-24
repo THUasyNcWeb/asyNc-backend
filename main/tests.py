@@ -43,6 +43,20 @@ class ToolsTests(TestCase):
         news = copy.deepcopy(self.news_template)
         news["id"] = news_id
         return news
+    
+    def test_datetime_converter(self):
+        """
+            test datetime_converter()
+        """
+        time_strings = ["1970-01-01 08:00:01", "1970-01-01 08:00:01+08:00", "1970-01-01T08:00:01Z"]
+        for time_str in time_strings:
+            dt_datetime = datetime_converter(time_str)
+            self.assertEqual(type(dt_datetime), datetime.datetime)
+            self.assertEqual(dt_datetime.second, 1)
+
+        dt_datetime = datetime_converter("1970/01/01 08:00:01")
+        self.assertEqual(type(dt_datetime), datetime.datetime)
+        self.assertEqual(dt_datetime.second, 0)
 
     def test_news_formator(self):
         """

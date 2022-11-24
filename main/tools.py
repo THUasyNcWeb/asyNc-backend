@@ -92,15 +92,20 @@ DB_NEWS_LOOK_BACK = 65536
 MAX_LOCAL_NEWS_LIST_CACHE = 65536
 
 
-def date_time_converter(date_str: str) -> datetime.datetime:
+def datetime_converter(date_str: str) -> datetime.datetime:
     """
         convert str into datetime
     """    
     try:
-        if "+" in dt_datetime:
+        if "+" in date_str:
             dt_datetime = datetime.datetime.strptime(
                 date_str,
                 '%Y-%m-%d %H:%M:%S%z'
+            )
+        elif "T" in date_str and "Z" in date_str:
+            dt_datetime = datetime.datetime.strptime(
+                date_str,
+                '%Y-%m-%dT%H:%M:%SZ'
             )
         else:
             dt_datetime = datetime.datetime.strptime(
@@ -108,6 +113,8 @@ def date_time_converter(date_str: str) -> datetime.datetime:
                 '%Y-%m-%d %H:%M:%S'
             )
     except Exception as error:
+        print("[error in datetime_converter]")
+        print(error)
         dt_datetime = datetime.datetime.strptime(
             "1970-01-01 08:00:00",
             '%Y-%m-%d %H:%M:%S'
