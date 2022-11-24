@@ -20,7 +20,39 @@ from .responses import *
 # Create your views here.
 
 
-# @csrf_exempt
+@csrf_exempt
+def news_count(request: WSGIRequest):
+    """
+        return news_count
+    """
+    try:
+        start_time = time.time()
+        if tools.DB_SCANNER:
+            news_num = tools.DB_SCANNER.news_num
+        else:
+            news_num = 0
+        if request.method == "GET":
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": news_num,
+                "csrf_token": get_token(request=request)
+            }
+            response_msg["time"] = time.time() - start_time
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+    except Exception as error:
+        print("[Error in news_count]:")
+        print(error)
+        return internal_error_response(error="[Error in news_count]:" + str(error))
+    return not_found_response()
+
+
+@csrf_exempt
 def ai_news(request: WSGIRequest):
     """
         ai news summary
@@ -58,7 +90,7 @@ def ai_news(request: WSGIRequest):
         if request.method == "POST":
             request_data = json.loads(request.body.decode())
             news_list = request_data["data"]
-            print(news_list)
+            # print(news_list)
             for news in news_list:
                 print(news["summary"])
             tools.LOCAL_NEWS_MANAGER.update_ai_processed_news(news_list)
@@ -1604,6 +1636,7 @@ def keyword_search(request):
     """
         keyword_search
     """
+    start_time = time.time()
     if request.method == "POST":
         try:
             body = json.loads(request.body)
@@ -1697,7 +1730,32 @@ def keyword_search(request):
                     tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
                 ),
             }
-            dt_datetime = datetime.datetime.strptime(piece_new['pub_time'].split('+')[0], '%Y-%m-%d %H:%M:%S')
+            if len(include) != 0 or len(exclude) != 0:
+                piece_new = {
+                    "title": title.replace('<span class="szz-type">','').replace('</span>',''),
+                    "url": data['url'],
+                    "media": data['media'],
+                    "pub_time": data['pub_time'],
+                    "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                    "picture_url": data['picture_url'],
+                    "title_keywords": get_location(title,True,list(key_word)),
+                    "keywords": get_location(content,True,list(key_word)),
+                    "id": data['news_id'],
+                    "is_favorite": bool(
+                        tools.in_favorite_check(user_favorites_dict, int(data["news_id"]))
+                    ),
+                    "is_readlater": bool(
+                        tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
+                    ),
+                }
+            try:
+                dt_datetime = datetime.datetime.strptime(piece_new['pub_time'], '%Y-%m-%d %H:%M:%S%z')
+            except Exception as error:
+                dt_datetime = datetime.datetime.strptime(
+                    piece_new['pub_time'].split('+')[0],
+                    '%Y-%m-%d %H:%M:%S'
+                )
+                print(error)
             data_tags = data['tags'].replace('[','') .replace(']','').replace('"','')
             data_tags = data_tags.replace("'",'').replace(' ','').split(',')
             cache_new = {
@@ -1721,6 +1779,7 @@ def keyword_search(request):
             else:
                 news += [piece_new]
                 cache_news += [cache_new]
+
             data['tags'] = data['tags'].replace('[','') .replace(']','').replace('"','')\
                                        .replace("'",'').replace(' ','').split(',')
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
@@ -1753,6 +1812,10 @@ def keyword_search(request):
             if user:
                 update_tags(user.user_name, tags, user.tags)
 
+        except Exception as error:
+            print(error)
+        try:
+            data["time"] = time.time() - start_time
         except Exception as error:
             print(error)
         return JsonResponse(
@@ -1810,6 +1873,7 @@ def personalize(request):
     """
         personalize_search
     """
+    start_time = time.time()
     if request.method == "POST":
 
         try:
@@ -1826,12 +1890,14 @@ def personalize(request):
         all_news = str_server.search_news(key_word, 0, True)
         all_news_list = all_news['news_list']
         all_news_list = all_news_list[0: min(200,all_news['total'])]
-        total_num = ceil(all_news['total'] / 10)
+        # total_num = ceil(all_news['total'] / 10)
         news = []
         user = tools.get_user_from_request(request)
         user_favorites_dict = {}
         user_favorites_dict = tools.get_user_favorites_dict(user=user)
         user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
+        cache_news = []
 
         for new in all_news_list:
             data = new
@@ -1848,7 +1914,7 @@ def personalize(request):
                 "url": data['url'],
                 "media": data['media'],
                 "pub_time": data['pub_time'],
-                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                # "content": content.replace('<span class="szz-type">','').replace('</span>',''),
                 "picture_url": data['picture_url'],
                 "id": data['news_id'],
                 "is_favorite": bool(
@@ -1859,11 +1925,53 @@ def personalize(request):
                 ),
             }
             news += [piece_new]
+            try:
+                try:
+                    dt_datetime = datetime.datetime.strptime(
+                        piece_new['pub_time'],
+                        '%Y-%m-%d %H:%M:%S%z'
+                    )
+                except Exception as error:
+                    dt_datetime = datetime.datetime.strptime(
+                        piece_new['pub_time'].split('+')[0],
+                        '%Y-%m-%d %H:%M:%S'
+                    )
+                    print(error)
+                cache_new = {
+                    "title": piece_new['title'],
+                    "news_url": piece_new['url'],
+                    "first_img_url": piece_new['picture_url'],
+                    "media": piece_new['media'],
+                    "pub_time": dt_datetime,
+                    "id": int(piece_new['id']),
+                    "category": "",
+                    "content": piece_new['content'],
+                    "tags": []
+                }
+                try:
+                    data_tags = data['tags'].replace('[','') .replace(']','').replace('"','')
+                    data_tags = data_tags.replace("'",'').replace(' ','').split(',')
+                    cache_new["tags"] = data_tags
+                except Exception as error:
+                    print(error)
+                cache_news.append(cache_new)
+            except Exception as error:
+                print(error)
+
+        try:
+            tools.NEWS_CACHE.add_to_news_cache_pool(cache_news)
+        except Exception as error:
+            print(error)
+
         data = {
-            "total": all_news['total'],
-            "page_count": min(total_num, 100),
+            # "total": all_news['total'],
+            # "page_count": min(total_num, 100),
             "news": news
         }
+        try:
+            data["time"] = time.time() - start_time
+        except Exception as error:
+            print(error)
         return JsonResponse(
             {"code": 0, "message": "SUCCESS", "data": data},
             status=200,
