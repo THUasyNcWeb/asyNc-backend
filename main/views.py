@@ -52,7 +52,7 @@ def news_count(request: WSGIRequest):
     return not_found_response()
 
 
-# @csrf_exempt
+@csrf_exempt
 def ai_news(request: WSGIRequest):
     """
         ai news summary
@@ -1730,6 +1730,24 @@ def keyword_search(request):
                     tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
                 ),
             }
+            if len(include) != 0 or len(exclude) != 0:
+                piece_new = {
+                    "title": title.replace('<span class="szz-type">','').replace('</span>',''),
+                    "url": data['url'],
+                    "media": data['media'],
+                    "pub_time": data['pub_time'],
+                    "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                    "picture_url": data['picture_url'],
+                    "title_keywords": get_location(title,True,list(key_word)),
+                    "keywords": get_location(content,True,list(key_word)),
+                    "id": data['news_id'],
+                    "is_favorite": bool(
+                        tools.in_favorite_check(user_favorites_dict, int(data["news_id"]))
+                    ),
+                    "is_readlater": bool(
+                        tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
+                    ),
+                }
             try:
                 dt_datetime = datetime.datetime.strptime(piece_new['pub_time'], '%Y-%m-%d %H:%M:%S%z')
             except Exception as error:

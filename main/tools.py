@@ -261,6 +261,7 @@ class LocalNewsManager():
         if len(self.none_ai_processed_news_dict) < num:
             batch_size = max(num, self.min_batch)
             news_object_list = LocalNews.objects.filter(ai_processed=False)
+            news_object_list = list(news_object_list)
             random.shuffle(news_object_list)
             news_object_list = news_object_list[:batch_size]
             if news_object_list:
