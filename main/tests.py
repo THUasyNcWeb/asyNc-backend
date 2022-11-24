@@ -335,8 +335,8 @@ class ViewsTests(TestCase):
         """
         tools.TESTING_MODE = True
 
-        self.user_name_list = ["Alice", "用户名", "uユーザー名"]
-        self.user_password = ["Alice123", "123456_-", "Alic_-e12"]
+        self.user_name_list = ["Alice", "uユーザー名"]
+        self.user_password = ["Alice123", "Alic_-e12"]
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []
@@ -362,6 +362,15 @@ class ViewsTests(TestCase):
 
         response = self.client.post('/index', data=None, content_type="application/json")
         self.assertEqual(response.status_code, 200)
+
+    def test_news_count(self):
+        """
+            test news count
+        """
+        response = self.client.get('/newscount', data=None, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        response_data = response.json()["data"]
+        self.assertEqual(type(response_data), int)
 
     def test_login_with_wrong_response_method(self):
         """
