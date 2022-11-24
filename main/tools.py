@@ -92,6 +92,29 @@ DB_NEWS_LOOK_BACK = 65536
 MAX_LOCAL_NEWS_LIST_CACHE = 65536
 
 
+def date_time_converter(date_str: str) -> datetime.datetime:
+    """
+        convert str into datetime
+    """    
+    try:
+        if "+" in dt_datetime:
+            dt_datetime = datetime.datetime.strptime(
+                date_str,
+                '%Y-%m-%d %H:%M:%S%z'
+            )
+        else:
+            dt_datetime = datetime.datetime.strptime(
+                date_str,
+                '%Y-%m-%d %H:%M:%S'
+            )
+    except Exception as error:
+        dt_datetime = datetime.datetime.strptime(
+            "1970-01-01 08:00:00",
+            '%Y-%m-%d %H:%M:%S'
+        )
+    return dt_datetime
+
+
 def get_news_from_db_by_id(news_id: int) -> bool:
     """
         get news from db by id
@@ -294,13 +317,11 @@ class LocalNewsManager():
                     self.add_to_cache(news)
                     local_news = LocalNews.objects.filter(news_id=int(news["id"])).first()
                     if local_news:
-                        # print("update local_news ai abstract 1")
                         local_news.ai_processed = True
                         local_news.data["summary"] = news["summary"]
                         local_news.full_clean()
                         local_news.save()
                     else:
-                        # print("update local_news ai abstract 2")
                         local_news = LocalNews(
                             data=news_formator(news),
                             news_id=int(news["id"]),
