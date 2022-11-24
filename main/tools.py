@@ -224,7 +224,6 @@ class LocalNewsManager():
         ai_news = {}
         local_news = LocalNews.objects.filter(news_id=news_id).first()
         if local_news:
-            # news = local_news.data
             if local_news.ai_processed:
                 self.add_to_cache(local_news.data)
             ai_news = {
@@ -267,8 +266,6 @@ class LocalNewsManager():
             if news_object_list:
                 for news_object in news_object_list:
                     news = news_object.data
-                    # print(news)
-                    # print(news_object.ai_processed)
                     news["id"] = int(news["id"])
                     if ("full_content" in news) and news["full_content"]:
                         if news["id"] not in self.none_ai_processed_news_dict:
@@ -293,8 +290,8 @@ class LocalNewsManager():
             for news in news_list:
                 if "summary" in news and news["summary"]:
                     if news["id"] in self.none_ai_processed_news_dict:
-                        # print("pop from none_ai_processed_news_dict")
                         self.none_ai_processed_news_dict.pop(news["id"])
+                    self.add_to_cache(news)
                     local_news = LocalNews.objects.filter(news_id=int(news["id"])).first()
                     if local_news:
                         # print("update local_news ai abstract 1")
@@ -320,7 +317,12 @@ class LocalNewsManager():
         """
             add a news to cache
         """
-        self.local_news_list_cache[news["id"]] = news
+        if news["id"] in self.local_news_list_cache:
+            if "summary" in news and news["summary"]:
+                self.local_news_list_cache[news["id"]] = news
+        else:
+            self.local_news_list_cache[news["id"]] = news
+
         if len(self.local_news_list_cache) > MAX_LOCAL_NEWS_LIST_CACHE:
             news_id = list(self.local_news_list_cache.keys())[0]
             self.local_news_list_cache.pop(news_id)
