@@ -4,7 +4,6 @@
 import json
 import re
 import time
-import datetime
 from math import ceil
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt

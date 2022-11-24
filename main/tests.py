@@ -9,6 +9,7 @@ from django.test import TestCase, Client
 from . import tools
 from .models import *
 from .tools import *
+from .managers.LocalNewsManager import news_formator
 
 # Create your tests here.
 
@@ -43,7 +44,7 @@ class ToolsTests(TestCase):
         news = copy.deepcopy(self.news_template)
         news["id"] = news_id
         return news
-    
+
     def test_datetime_converter(self):
         """
             test datetime_converter()
