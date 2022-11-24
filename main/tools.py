@@ -262,13 +262,13 @@ class LocalNewsManager():
             if news_object_list:
                 for news_object in news_object_list:
                     news = news_object.data
-                    if news["id"] not in self.none_ai_processed_news_dict:
-                        if "full_content" in news and news["full_content"]:
+                    if "full_content" in news and news["full_content"]:
+                        if news["id"] not in self.none_ai_processed_news_dict:
                             self.none_ai_processed_news_dict[news["id"]] = news
-                        else:
-                            news_object.ai_processed = True
-                            news_object.full_clean()
-                            news_object.save()
+                    else:
+                        news_object.ai_processed = True
+                        news_object.full_clean()
+                        news_object.save()
 
         news_list = list(self.none_ai_processed_news_dict.values())[:num]
         for news in news_list:

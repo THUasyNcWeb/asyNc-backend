@@ -20,6 +20,38 @@ from .responses import *
 # Create your views here.
 
 
+@csrf_exempt
+def news_count(request: WSGIRequest):
+    """
+        return news_count
+    """
+    try:
+        start_time = time.time()
+        if tools.DB_SCANNER:
+            news_num = tools.DB_SCANNER.news_num
+        else:
+            news_num = 0
+        if request.method == "GET":
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": news_num,
+                "csrf_token": get_token(request=request)
+            }
+            response_msg["time"] = time.time() - start_time
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+    except Exception as error:
+        print("[Error in news_count]:")
+        print(error)
+        return internal_error_response(error="[Error in news_count]:" + str(error))
+    return not_found_response()
+
+
 # @csrf_exempt
 def ai_news(request: WSGIRequest):
     """

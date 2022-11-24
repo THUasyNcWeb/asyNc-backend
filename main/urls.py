@@ -25,4 +25,5 @@ urlpatterns = [
     path('search/suggest', views.search_suggest),
     path('ai/news', views.ai_news),
     path('personalize', views.personalize),
+    path('newscount', views.news_count),
 ]
