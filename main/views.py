@@ -91,7 +91,7 @@ def ai_news(request: WSGIRequest):
             news_list = request_data["data"]
             # print(news_list)
             for news in news_list:
-                print(news["summary"])
+                print("[summary]", news["summary"])
             tools.LOCAL_NEWS_MANAGER.update_ai_processed_news(news_list)
             status_code = 200
             response_msg = {

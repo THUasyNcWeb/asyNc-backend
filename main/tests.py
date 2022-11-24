@@ -1378,3 +1378,73 @@ class SearchHistoryToolsTests(TestCase):
             user = UserBasicInfo.objects.filter(user_name=user_name).first()
             pop_search_history(user)
             self.assertEqual(len(user.search_history), 0)
+
+
+class AITests(TestCase):
+    """
+        test ai module api
+    """
+    databases = "__all__"
+
+    def setUp(self):
+        """
+            set up
+        """
+        self.test_news_num = 9
+
+        self.news_template = {
+            "id": 0,
+            "title": "Breaking News",
+            "media": "Foobar News",
+            "url": "https://breaking.news",
+            "pub_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "picture_url": "https://breaking.news/picture.png",
+            "content": "为亚太合作把舵领航，为世界发展再开良方，推动构建亚太命运共同体走深走实。",
+            "tags": []
+        }
+
+        for i in range(1, self.test_news_num + 1):
+            news = self.generate_news(news_id=i)
+            tools.LOCAL_NEWS_MANAGER.save_local_news(news)
+
+    def generate_news(self, news_id=0):
+        """
+            generate news
+        """
+        news = copy.deepcopy(self.news_template)
+        news["id"] = news_id
+        return news
+
+    def test_ai_news(self):
+        """
+            test ai module api
+        """
+        for i in range(1, self.test_news_num + 1):
+            response = self.client.get(
+                '/ai/news',
+                content_type="application/json"
+            )
+            response_data = response.json()["data"]
+            if not response_data:
+                break
+            for news in response_data:
+                news["summary"] = "sum"
+
+            post_data = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": response_data,
+            }
+
+            response = self.client.post(
+                '/ai/news',
+                data=post_data,
+                content_type="application/json"
+            )
+
+        response = self.client.get(
+            '/ai/news',
+            content_type="application/json"
+        )
+        response_data = response.json()["data"]
+        self.assertEqual(len(response_data), 0)
