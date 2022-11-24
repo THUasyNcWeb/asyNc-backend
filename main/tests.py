@@ -23,7 +23,7 @@ class ToolsTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
         self.user_num = 2
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
         self.news_template = {
@@ -348,7 +348,7 @@ class ViewsTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
 
         self.user_name_list = ["Alice", "uユーザー名"]
         self.user_password = ["Alice123", "Alic_-e12"]
@@ -841,7 +841,7 @@ class FavoritesTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
 
         self.key_list = [
             "visit_time", "id", "title", "media", "url",
@@ -999,7 +999,7 @@ class ReadlistTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
 
         self.key_list = [
             "visit_time", "id", "title", "media", "url",
@@ -1156,7 +1156,7 @@ class ReadHistoryTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
 
         self.key_list = [
             "visit_time", "id", "title", "media", "url",
@@ -1313,7 +1313,7 @@ class SearchHistoryToolsTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
         tools.MAX_USER_SEARCH_HISTORY = 10
 
         self.test_user_num = 1
