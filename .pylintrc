@@ -17,4 +17,4 @@ ignore=tests.py, main/migrations
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
 
-disable=too-few-public-methods, too-many-arguments, broad-except, too-many-return-statements, no-member, wildcard-import, too-many-locals, consider-using-f-string, consider-using-enumerate, too-many-branches, too-many-lines, too-many-nested-blocks, too-many-statements, too-many-instance-attributes, redefined-outer-name, line-too-long, dangerous-default-value
+disable=too-few-public-methods, too-many-arguments, broad-except, too-many-return-statements, no-member, wildcard-import, too-many-locals, consider-using-f-string, consider-using-enumerate, too-many-branches, too-many-lines, too-many-nested-blocks, too-many-statements, too-many-instance-attributes, redefined-outer-name, line-too-long, dangerous-default-value, unused-wildcard-import
