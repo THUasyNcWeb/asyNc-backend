@@ -5,6 +5,7 @@ Created by sxx
 """
 import os
 import math
+import random
 import hashlib
 import time
 import base64
@@ -84,11 +85,11 @@ MAX_RETURN_USER_TAG = 128
 
 MAX_USER_SEARCH_HISTORY = 256
 
-CACHE_NEWSPOOL_MAX = len(CATEGORY_LIST) * FRONT_PAGE_NEWS_NUM * 8
+CACHE_NEWSPOOL_MAX = len(CATEGORY_LIST) * FRONT_PAGE_NEWS_NUM * 16
 
 DB_NEWS_LOOK_BACK = 65536
 
-MAX_LOCAL_NEWS_LIST_CACHE = 1024
+MAX_LOCAL_NEWS_LIST_CACHE = 65536
 
 
 def get_news_from_db_by_id(news_id: int) -> bool:
@@ -184,7 +185,7 @@ def news_formator(news) -> dict:
     elif "news_url" in news:
         format_news["url"] = news["news_url"]
     if "pub_time" in news:
-        format_news["pub_time"] = news["pub_time"]
+        format_news["pub_time"] = str(news["pub_time"])
     if "picture_url" in news:
         format_news["picture_url"] = news["picture_url"]
     elif "first_img_url" in news:
@@ -218,7 +219,8 @@ class LocalNewsManager():
             get one news with summary
         """
         if news_id in self.local_news_list_cache:
-            return self.local_news_list_cache[news_id]
+            if "summary" in self.local_news_list_cache[news_id]:
+                return self.local_news_list_cache[news_id]
         ai_news = {}
         local_news = LocalNews.objects.filter(news_id=news_id).first()
         if local_news:
@@ -258,14 +260,21 @@ class LocalNewsManager():
         news_list = []
         if len(self.none_ai_processed_news_dict) < num:
             batch_size = max(num, self.min_batch)
-            news_object_list = LocalNews.objects.filter(ai_processed=False)[:batch_size]
+            news_object_list = LocalNews.objects.filter(ai_processed=False)
+            random.shuffle(news_object_list)
+            news_object_list = news_object_list[:batch_size]
             if news_object_list:
                 for news_object in news_object_list:
                     news = news_object.data
-                    if "full_content" in news and news["full_content"]:
+                    # print(news)
+                    # print(news_object.ai_processed)
+                    news["id"] = int(news["id"])
+                    if ("full_content" in news) and news["full_content"]:
                         if news["id"] not in self.none_ai_processed_news_dict:
                             self.none_ai_processed_news_dict[news["id"]] = news
                     else:
+                        print(dict(news_object.data).keys())
+                        print(news_object.ai_processed)
                         news_object.ai_processed = True
                         news_object.full_clean()
                         news_object.save()
@@ -283,14 +292,17 @@ class LocalNewsManager():
             for news in news_list:
                 if "summary" in news and news["summary"]:
                     if news["id"] in self.none_ai_processed_news_dict:
+                        # print("pop from none_ai_processed_news_dict")
                         self.none_ai_processed_news_dict.pop(news["id"])
                     local_news = LocalNews.objects.filter(news_id=int(news["id"])).first()
                     if local_news:
+                        # print("update local_news ai abstract 1")
                         local_news.ai_processed = True
                         local_news.data["summary"] = news["summary"]
                         local_news.full_clean()
                         local_news.save()
                     else:
+                        # print("update local_news ai abstract 2")
                         local_news = LocalNews(
                             data=news_formator(news),
                             news_id=int(news["id"]),
@@ -380,6 +392,8 @@ class LocalNewsManager():
                 )
                 local_news_dict = news_formator(news)
                 if not ("full_content" in local_news_dict and local_news_dict["full_content"]):
+                    print(dict(local_news_dict).keys())
+                    print(local_news.ai_processed)
                     local_news.ai_processed = True
                 local_news.full_clean()
                 local_news.save()

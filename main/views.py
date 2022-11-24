@@ -90,7 +90,7 @@ def ai_news(request: WSGIRequest):
         if request.method == "POST":
             request_data = json.loads(request.body.decode())
             news_list = request_data["data"]
-            print(news_list)
+            # print(news_list)
             for news in news_list:
                 print(news["summary"])
             tools.LOCAL_NEWS_MANAGER.update_ai_processed_news(news_list)
@@ -1729,7 +1729,7 @@ def keyword_search(request):
                     tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
                 ),
             }
-            dt_datetime = datetime.datetime.strptime(piece_new['pub_time'].split('+')[0], '%Y-%m-%d %H:%M:%S')
+            dt_datetime = datetime.datetime.strptime(piece_new['pub_time'], '%Y-%m-%d %H:%M:%S%z')
             data_tags = data['tags'].replace('[','') .replace(']','').replace('"','')
             data_tags = data_tags.replace("'",'').replace(' ','').split(',')
             cache_new = {
@@ -1858,12 +1858,14 @@ def personalize(request):
         all_news = str_server.search_news(key_word, 0, True)
         all_news_list = all_news['news_list']
         all_news_list = all_news_list[0: min(200,all_news['total'])]
-        total_num = ceil(all_news['total'] / 10)
+        # total_num = ceil(all_news['total'] / 10)
         news = []
         user = tools.get_user_from_request(request)
         user_favorites_dict = {}
         user_favorites_dict = tools.get_user_favorites_dict(user=user)
         user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
+        cache_news = []
 
         for new in all_news_list:
             data = new
@@ -1891,9 +1893,37 @@ def personalize(request):
                 ),
             }
             news += [piece_new]
+            try:
+                dt_datetime = datetime.datetime.strptime(piece_new['pub_time'], '%Y-%m-%d %H:%M:%S%z')
+                cache_new = {
+                    "title": piece_new['title'],
+                    "news_url": piece_new['url'],
+                    "first_img_url": piece_new['picture_url'],
+                    "media": piece_new['media'],
+                    "pub_time": dt_datetime,
+                    "id": int(piece_new['id']),
+                    "category": "",
+                    "content": piece_new['content'],
+                    "tags": []
+                }
+                try:
+                    data_tags = data['tags'].replace('[','') .replace(']','').replace('"','')
+                    data_tags = data_tags.replace("'",'').replace(' ','').split(',')
+                    cache_new["tags"] = data_tags
+                except Exception as error:
+                    print(error)
+                cache_news.append(cache_new)
+            except Exception as error:
+                print(error)
+
+        try:
+            tools.NEWS_CACHE.add_to_news_cache_pool(cache_news)
+        except Exception as error:
+            print(error)
+
         data = {
-            "total": all_news['total'],
-            "page_count": min(total_num, 100),
+            # "total": all_news['total'],
+            # "page_count": min(total_num, 100),
             "news": news
         }
         return JsonResponse(
