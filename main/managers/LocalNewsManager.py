@@ -49,7 +49,7 @@ class LocalNewsManager():
         """
             init
         """
-        self.local_news_list_cache = {}  # cache summarized news
+        self.local_news_list_cache = {}  # cache news in db
         self.none_ai_processed_news_dict = {}
         self.min_batch = 256
 
@@ -76,7 +76,7 @@ class LocalNewsManager():
             }
             if "summary" in local_news.data:
                 ai_news["summary"] = local_news.data["summary"]
-        elif news:  # add news local_news
+        elif news:  # add news to local_news
             self.save_one_local_news(news)
         return ai_news
 
@@ -256,3 +256,27 @@ class LocalNewsManager():
                     return False
             return True
         return False
+
+    def get_one_local_news(self, news_id: int) -> dict:
+        """
+            get one local news
+        """
+        try:
+            if news_id in self.local_news_list_cache:
+                return self.local_news_list_cache[news_id]
+            news = {}
+            local_news = LocalNews.objects.filter(news_id=news_id).first()
+            if local_news:
+                if local_news.ai_processed:
+                    self.add_to_cache(local_news.data)
+                news = dict(local_news.data)
+                news["id"] = int(local_news.data["id"])
+                news["pub_time"] = str(local_news.data["pub_time"])
+                if "summary" in local_news.data:
+                    news["summary"] = local_news.data["summary"]
+                self.add_to_cache(news)
+                return news
+        except Exception as error:
+            print(error)
+        print("[Error] Error in get_one_local_news()")
+        return {}

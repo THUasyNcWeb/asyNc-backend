@@ -1159,7 +1159,7 @@ class ReadHistoryTests(TestCase):
         tools.DB_SCANNER.testing_mode = True
 
         self.key_list = [
-            "visit_time", "id", "title", "media", "url",
+            "visit_time", "id", "title", "media", "url", "full_content"
             "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"
         ]
 

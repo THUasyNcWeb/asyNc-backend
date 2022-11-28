@@ -15,6 +15,7 @@ from elasticsearch_dsl import Document, Date, Keyword, Text, connections, Comple
 from . import tools
 from .models import UserBasicInfo
 from .responses import *
+from .managers.LocalNewsManager import news_formator
 
 # Create your views here.
 
@@ -511,17 +512,7 @@ def user_read_history(request):
             for news in db_news_list:
                 tools.add_to_read_history(
                     user=user,
-                    news={
-                        "id": int(news["id"]),
-                        "title": news["title"],
-                        "media": news["media"],
-                        "url": news["news_url"],
-                        "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"],
-                        "full_content": "",  # news["content"],
-                        "tags": news["tags"],
-                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
-                    }
+                    news=news_formator(news)
                 )
 
             read_history_list, pages = tools.user_read_history_pages(user, 0)
@@ -631,17 +622,7 @@ def user_readlater(request):
             for news in db_news_list:
                 tools.add_to_readlist(
                     user=user,
-                    news={
-                        "id": int(news["id"]),
-                        "title": news["title"],
-                        "media": news["media"],
-                        "url": news["news_url"],
-                        "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"],
-                        "full_content": news["content"],
-                        "tags": news["tags"],
-                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
-                    }
+                    news=news_formator(news)
                 )
 
             readlist_list, pages = tools.user_readlist_pages(user, 0)
@@ -747,26 +728,11 @@ def user_favorites(request):
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            print(db_news_list)
-
             for news in db_news_list:
                 tools.add_to_favorites(
                     user=user,
-                    news={
-                        "id": int(news["id"]),
-                        "title": news["title"],
-                        "media": news["media"],
-                        "url": news["news_url"],
-                        "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"],
-                        "full_content": news["content"],
-                        "tags": news["tags"],
-                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
-                    }
+                    news=news_formator(news)
                 )
-                # print("news:")
-                # print(news)
-            # print(user.favorites)
             favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(
                 {
