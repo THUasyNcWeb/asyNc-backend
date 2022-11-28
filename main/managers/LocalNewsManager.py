@@ -37,6 +37,8 @@ def news_formator(news) -> dict:
         format_news["summary"] = news["summary"]
     if "tags" in news:
         format_news["tags"] = news["tags"]
+    if "visit_time" in news:
+        format_news["visit_time"] = news["visit_time"]
     return format_news
 
 

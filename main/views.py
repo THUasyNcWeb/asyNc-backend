@@ -510,6 +510,7 @@ def user_read_history(request):
                 return news_not_found(error="[id not found]:\n")
 
             for news in db_news_list:
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_read_history(
                     user=user,
                     news=news_formator(news)
@@ -620,6 +621,7 @@ def user_readlater(request):
                 return news_not_found(error="[id not found]:\n")
 
             for news in db_news_list:
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_readlist(
                     user=user,
                     news=news_formator(news)
@@ -729,6 +731,7 @@ def user_favorites(request):
                 return news_not_found(error="[id not found]:\n")
 
             for news in db_news_list:
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_favorites(
                     user=user,
                     news=news_formator(news)

@@ -1159,7 +1159,7 @@ class ReadHistoryTests(TestCase):
         tools.DB_SCANNER.testing_mode = True
 
         self.key_list = [
-            "visit_time", "id", "title", "media", "url", "full_content"
+            "visit_time", "id", "title", "media", "url", "full_content",
             "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"
         ]
 
@@ -1231,7 +1231,9 @@ class ReadHistoryTests(TestCase):
                 self.assertEqual(len(response_data["news"]), min(10, len(news_id_list)))
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
+                    print(news)
                     for key in self.key_list:
+                        print(key)
                         self.assertEqual(key in news, True)
 
     def test_get_read_history(self):
