@@ -783,15 +783,12 @@ with open("config/config.json","r",encoding="utf-8") as config_file:
 CRAWLER_DB_CONNECTION = connect_to_db(config["crawler-db"])
 
 NEWS_CACHE = NewsCache(
-    db_connection=CRAWLER_DB_CONNECTION,
-    category_list=CATEGORY_LIST,
-    max_cache_pool=CACHE_NEWSPOOL_MAX
+    db_connection=CRAWLER_DB_CONNECTION
 )
 
 DB_SCANNER = DBScanner(
     db_connection=CRAWLER_DB_CONNECTION,
     news_cache=NEWS_CACHE,
-    category_list=CATEGORY_LIST,
     get_data_from_db=get_data_from_db,
     testing_mode=TESTING_MODE,
     front_page_news_num=FRONT_PAGE_NEWS_NUM,
@@ -815,7 +812,6 @@ def start_db_scanner(thread_id):
 
 for REQUEST in threadpool.makeRequests(start_db_scanner, [0]):
     THREAD_POOL.putRequest(REQUEST)
-# THREAD_POOL.wait()
 
 try:
     with open("config/lucene.json","r",encoding="utf-8") as config_file:

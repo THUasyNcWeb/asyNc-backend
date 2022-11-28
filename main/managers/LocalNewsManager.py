@@ -5,6 +5,7 @@
 
 import random
 from ..models import LocalNews
+from ..config import MAX_LOCAL_NEWS_CACHE
 
 
 def news_formator(news) -> dict:
@@ -44,14 +45,13 @@ class LocalNewsManager():
         Favorited or in reading list news will be storaged to local.
         This class manages local news.
     """
-    def __init__(self, max_cache=65536) -> None:
+    def __init__(self) -> None:
         """
             init
         """
         self.local_news_list_cache = {}  # cache summarized news
         self.none_ai_processed_news_dict = {}
         self.min_batch = 256
-        self.max_cache = max_cache
 
     def get_one_ai_news(self, news_id: int, news=None) -> dict:
         """
@@ -160,7 +160,7 @@ class LocalNewsManager():
         else:
             self.local_news_list_cache[news["id"]] = news
 
-        if len(self.local_news_list_cache) > self.max_cache:
+        if len(self.local_news_list_cache) > MAX_LOCAL_NEWS_CACHE:
             news_id = list(self.local_news_list_cache.keys())[0]
             self.local_news_list_cache.pop(news_id)
 

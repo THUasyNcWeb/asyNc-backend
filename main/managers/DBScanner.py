@@ -5,6 +5,7 @@ import time
 import pickle
 
 from .NewsCache import NewsCache
+from ..config import CATEGORY_LIST
 
 
 class DBScanner():
@@ -12,7 +13,7 @@ class DBScanner():
         news db scanner
     """
     def __init__(
-        self, db_connection, news_cache: NewsCache, category_list: list, get_data_from_db,
+        self, db_connection, news_cache: NewsCache, get_data_from_db,
         testing_mode=False, front_page_news_num=10, db_check_interval=8,
         db_news_look_back=65536, db_update_minimum_interval=8
     ) -> None:
@@ -22,7 +23,6 @@ class DBScanner():
         self.db_connection = db_connection
         self.news_cache = news_cache
         self.news_num = 0
-        self.category_list = category_list
         self.testing_mode = testing_mode
         self.front_page_news_num = front_page_news_num
         self.db_check_interval = db_check_interval
@@ -97,7 +97,7 @@ class DBScanner():
                 self.check_db_update()
 
                 db_news_list = []
-                for category in self.category_list:
+                for category in CATEGORY_LIST:
                     print("init category", category, "from db...")
                     db_news_list += self.get_data_from_db(
                         connection=self.db_connection,

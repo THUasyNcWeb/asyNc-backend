@@ -5,3 +5,4 @@ __MACOSX
 .coverage
 xunit-reports
 coverage-reports
+data/news_cache.pkl
