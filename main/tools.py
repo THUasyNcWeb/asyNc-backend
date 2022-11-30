@@ -75,44 +75,47 @@ def get_news_from_db_by_id(news_id: int) -> bool:
             db_news_list = [pickle.load(file)[0]]
         db_news_list[0]["id"] = news_id
         db_news_list[0]["tags"] = []
-        # print(db_news_list)
-    elif news_id in NEWS_CACHE.newspool:
+        return db_news_list
+    if news_id in NEWS_CACHE.newspool:
         db_news_list = [NEWS_CACHE.newspool[news_id]]
-    elif news_id in LOCAL_NEWS_MANAGER.local_news_list_cache:
+        return db_news_list
+
+    if news_id in LOCAL_NEWS_MANAGER.local_news_list_cache:
         local_news = LOCAL_NEWS_MANAGER.get_one_local_news(int(news_id))
-        news = {
-            "id": local_news["id"],
-            "title": local_news["title"],
-            "media": local_news["media"],
-            "news_url": local_news["url"],
-            "pub_time": datetime_converter(local_news["pub_time"]),
-            "first_img_url": local_news["picture_url"],
-            "content": local_news["full_content"],
-            "tags": local_news["tags"]
-        }
-        if "category" in local_news:
-            news["category"] = local_news["category"]
-        else:
-            news["category"] = ""
-        db_news_list = [news]
-        # NEWS_CACHE.add_to_news_cache_pool(db_news_list)
-    else:
-        db_news_list = get_data_from_db(
-            connection=CRAWLER_DB_CONNECTION,
-            filter_command="id = {id}".format(id=news_id),
-            select=[
-                "title","news_url","first_img_url","media",
-                "pub_time","id","category","content","tags"
-            ],
-            limit=1
-        )
-        NEWS_CACHE.add_to_news_cache_pool(db_news_list)
-        # for news in db_news_list:
-        #     for key in news:
-        #         print(type(news[key]))
-        # with open("data/news_template.pkl", "wb") as file:
-        #     pickle.dump(db_news_list, file)
-        # print(db_news_list)
+        if local_news:
+            news = {
+                "id": local_news["id"],
+                "title": local_news["title"],
+                "media": local_news["media"],
+                "news_url": local_news["url"],
+                "pub_time": datetime_converter(local_news["pub_time"]),
+                "first_img_url": local_news["picture_url"],
+                "content": local_news["full_content"],
+                "tags": local_news["tags"]
+            }
+            if "category" in local_news:
+                news["category"] = local_news["category"]
+            else:
+                news["category"] = ""
+            db_news_list = [news]
+            return db_news_list
+
+    db_news_list = get_data_from_db(
+        connection=CRAWLER_DB_CONNECTION,
+        filter_command="id = {id}".format(id=news_id),
+        select=[
+            "title","news_url","first_img_url","media",
+            "pub_time","id","category","content","tags"
+        ],
+        limit=1
+    )
+    NEWS_CACHE.add_to_news_cache_pool(db_news_list)
+    # for news in db_news_list:
+    #     for key in news:
+    #         print(type(news[key]))
+    # with open("data/news_template.pkl", "wb") as file:
+    #     pickle.dump(db_news_list, file)
+    # print(db_news_list)
     return db_news_list
 
 
@@ -176,7 +179,7 @@ def get_user_from_request(request):
             username = token["user_name"]
             user = UserBasicInfo.objects.filter(user_name=username).first()
     except Exception as error:
-        print("[error]", error)
+        print("[error in get user]", error)
     return user
 
 
