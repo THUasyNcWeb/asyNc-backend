@@ -10,7 +10,7 @@ from . import tools
 from .models import *
 from .tools import *
 from .managers.LocalNewsManager import news_formator
-
+from .views import *
 # Create your tests here.
 
 
@@ -1482,3 +1482,114 @@ class AITests(TestCase):
         )
         response_data = response.json()["data"]
         self.assertEqual(len(response_data), 0)
+
+
+class SearchTests(TestCase):
+    """Test for search modules
+
+    Args:
+        TestCase (_type_): _description_
+    """
+    def test_get_location(self):
+        """
+            test ai module api
+        """
+        text_message = '这是一条<span class="szz-type">测试信息</span>'
+        response = get_location(text_message)
+        self.assertEqual(response, [[4,8]])
+        text_message = '这是一条测试信息'
+        response = get_location(text_message,True,['测试信息'])
+        self.assertEqual(response, [[4,5]])
+
+    def test_update_tags(self):
+        """
+            test ai module api
+        """
+        user = UserBasicInfo(user_name="Test", password=md5("password"))
+        user.save()
+        tags = ["游戏","足球","篮球"]
+        update_tags("Test",tags,{})
+        user = UserBasicInfo.objects.filter(user_name="Test").first()
+        self.assertEqual(user.tags, {'游戏': 1, '篮球': 1, '足球': 1})
+
+    def test_check_contain(self):
+        """
+        test for check_contain
+        """
+        title = "Test"
+        content = "hello"
+        response_first = check_contain(title,content,[],[],must=['Test'],must_not=[])
+        self.assertEqual(response_first, True)
+        response_first = check_contain(title,content,[],[],must=['hello'],must_not=[])
+        self.assertEqual(response_first, True)
+        response_sec = check_contain(title,content,[],[],must=[],must_not=['Test'])
+        self.assertEqual(response_sec, False)
+        response_sec = check_contain(title,content,[],[],must=[],must_not=['hello'])
+        self.assertEqual(response_sec, False)
+
+    def test_search(self):
+        """
+        test for es search
+        """
+        data = {}
+        data['query'] = "篮球"
+        data['page'] = 1
+        data['sort'] = False
+        data['include'] = []
+        data['exclude'] = []
+        data = json.dumps(data)
+        response = self.client.post(
+            '/search',
+            data=data,
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = {}
+        data['query'] = "篮球"
+        data['page'] = 1
+        data['sort'] = True
+        data['include'] = []
+        data['exclude'] = []
+        data = json.dumps(data)
+        response = self.client.post(
+            '/search',
+            data=data,
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = {}
+        data['query'] = "篮球"
+        data['page'] = 1
+        data['sort'] = False
+        data['include'] = ['足球']
+        data['exclude'] = ['比赛']
+        data = json.dumps(data)
+        response = self.client.post(
+            '/search',
+            data=data,
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_search_suggest(self):
+        data = {}
+        data['query'] = "篮球"
+        data['exclude'] = ['足球']
+        data = json.dumps(data)
+        response = self.client.post(
+            '/search/suggest',
+            data=data,
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_personalize(self):
+        data = {}
+        data['query'] = "篮球"
+        data = json.dumps(data)
+        response = self.client.post(
+            '/search/suggest',
+            data=data,
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
