@@ -15,11 +15,44 @@ from elasticsearch_dsl import Document, Date, Keyword, Text, connections, Comple
 from . import tools
 from .models import UserBasicInfo
 from .responses import *
+from .managers.LocalNewsManager import news_formator
 
 # Create your views here.
 
 
-# @csrf_exempt
+@csrf_exempt
+def news_count(request: WSGIRequest):
+    """
+        return news_count
+    """
+    try:
+        start_time = time.time()
+        if tools.DB_SCANNER:
+            news_num = tools.DB_SCANNER.news_num
+        else:
+            news_num = 0
+        if request.method == "GET":
+            status_code = 200
+            response_msg = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": news_num,
+                "csrf_token": get_token(request=request)
+            }
+            response_msg["time"] = time.time() - start_time
+            return JsonResponse(
+                response_msg,
+                status=status_code,
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+    except Exception as error:
+        print("[Error in news_count]:")
+        print(error)
+        return internal_error_response(error="[Error in news_count]:" + str(error))
+    return not_found_response()
+
+
+@csrf_exempt
 def ai_news(request: WSGIRequest):
     """
         ai news summary
@@ -57,9 +90,9 @@ def ai_news(request: WSGIRequest):
         if request.method == "POST":
             request_data = json.loads(request.body.decode())
             news_list = request_data["data"]
-            print(news_list)
+            # print(news_list)
             for news in news_list:
-                print(news["summary"])
+                print("[summary]", news["summary"])
             tools.LOCAL_NEWS_MANAGER.update_ai_processed_news(news_list)
             status_code = 200
             response_msg = {
@@ -473,27 +506,15 @@ def user_read_history(request):
             return news_not_found(error="[URL FORMAT ERROR IN READ HISTORY]:\n" + str(error))
         try:
             db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
-
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
-
             for news in db_news_list:
+                news = news_formator(news)
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_read_history(
                     user=user,
-                    news={
-                        "id": int(news["id"]),
-                        "title": news["title"],
-                        "media": news["media"],
-                        "url": news["news_url"],
-                        "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"],
-                        "full_content": news["content"],
-                        "tags": news["tags"],
-                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
-                    }
+                    news=news
                 )
 
             read_history_list, pages = tools.user_read_history_pages(user, 0)
@@ -600,22 +621,12 @@ def user_readlater(request):
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
-
             for news in db_news_list:
+                news = news_formator(news)
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_readlist(
                     user=user,
-                    news={
-                        "id": int(news["id"]),
-                        "title": news["title"],
-                        "media": news["media"],
-                        "url": news["news_url"],
-                        "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"],
-                        "full_content": news["content"],
-                        "tags": news["tags"]
-                    }
+                    news=news
                 )
 
             readlist_list, pages = tools.user_readlist_pages(user, 0)
@@ -718,32 +729,16 @@ def user_favorites(request):
             return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
         try:
             db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
-            # print("get db_news_list", time.time())
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
-
-            print(db_news_list)
-
             for news in db_news_list:
+                news = news_formator(news)
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_favorites(
                     user=user,
-                    news={
-                        "id": int(news["id"]),
-                        "title": news["title"],
-                        "media": news["media"],
-                        "url": news["news_url"],
-                        "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"],
-                        "full_content": news["content"],
-                        "tags": news["tags"]
-                    }
+                    news=news
                 )
-                # print("news:")
-                # print(news)
-            # print(user.favorites)
             favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(
                 {
@@ -1453,115 +1448,12 @@ def update_tags(username, tags, user_tags_dict):
 
 
 @csrf_exempt
-def keyword_essearch(request):
-    """
-        keyword_search
-    """
-    if request.method == "POST":
-
-        try:
-            body = json.loads(request.body)
-            key_word = body["query"]
-            start_page = int(body["page"]) - 1
-            start_page = min(max(start_page, 0),5000)
-            if isinstance(start_page,int) is False:
-                return JsonResponse(
-                    {"code": 5, "message": "INVALID_PAGE", "data": {"page_count": 0, "news": []}},
-                    status=400,
-                    headers={'Access-Control-Allow-Origin':'*'}
-                )
-        except Exception as error:
-            print(error)
-            return JsonResponse(
-                {"code": 1005, "message": "INVALID_FORMAT", "data": {"page_count": 0, "news": []}},
-                status=400,
-                headers={'Access-Control-Allow-Origin':'*'}
-            )
-        elastic_search = ElasticSearch()
-        all_news = elastic_search.search(key_words=key_word,start=start_page)
-        total_num = ceil(all_news['total']['value'] / 10)
-        if start_page > total_num:
-            return JsonResponse(
-                {"code": 0, "message": "SUCCESS", "data": {"page_count": 0, "news": []}},
-                status=200,
-                headers={'Access-Control-Allow-Origin':'*'}
-            )
-        news = []
-        tags = []
-        # get user favorites dict
-        user = tools.get_user_from_request(request)
-        user_favorites_dict = tools.get_user_favorites_dict(user=user)
-        user_readlist_dict = tools.get_user_readlist_dict(user=user)
-
-        for new in all_news["hits"]:
-            data = new["_source"]
-            highlights = new["highlight"]
-            title_keywords = []
-            keywords = []
-            title = ""
-            content = data['content']
-            if 'title' in highlights:
-                for title in highlights['title']:
-                    loc_offset = data['title'].find(title.replace('<span class="szz-type">','')
-                                                    .replace('</span>',''))
-                    for location_info in get_location(title):
-                        title_keywords += [[index + loc_offset for index in location_info]]
-
-            if 'content' in highlights:
-                content = highlights['content']
-                content = "".join(content)
-
-                keywords = get_location(content)
-
-            if "id" not in data:  # 0 stands for no news id
-                data["id"] = 0
-            piece_new = {
-                "title": data['title'],
-                "url": data['news_url'],
-                "media": data['media'],
-                "pub_time": data['create_date'],
-                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
-                "picture_url": data['first_img_url'],
-                "title_keywords": title_keywords,
-                "keywords": keywords,
-                "is_favorite": bool(
-                    tools.in_favorite_check(user_favorites_dict, int(data["id"]))
-                ),
-                "is_readlater": bool(
-                    tools.in_readlist_check(user_readlist_dict, int(data["id"]))
-                ),
-            }
-            news += [piece_new]
-            if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
-                    and data['tags'] != [""]:
-                tags += data['tags']
-        data = {
-            "page_count": total_num,
-            "news": news
-        }
-        try:
-            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
-            token = tools.decode_token(encoded_token)
-            user_name = token["user_name"]
-            user = UserBasicInfo.objects.filter(user_name=user_name).first()
-            if user:
-                update_tags(user.user_name, tags, user.tags)
-
-        except Exception as error:
-            print(error)
-        return JsonResponse(
-            {"code": 0, "message": "SUCCESS", "data": data},
-            status=200,
-            headers={'Access-Control-Allow-Origin':'*'}
-        )
-    return internal_error_response()
-
-
-@csrf_exempt
 def check_contain(title, content, title_keywords, content_keywords, must, must_not):
     """
     Check whether satisfy the need
     """
+    if title_keywords or content_keywords:
+        print("")
     try:
         for no_contain in must_not:
             if title.find(no_contain) != -1:
@@ -1570,21 +1462,22 @@ def check_contain(title, content, title_keywords, content_keywords, must, must_n
                 return False
 
         for yes in must:
-            yes_len = len(yes)
             flag = False
-            for title_keyword in title_keywords:
-                start = title_keyword[0]
-                end = start + yes_len
-                target = title[start:end]
-                if target == yes:
-                    flag = True
-            if flag is False:
-                for content_keyword in content_keywords:
-                    start = content_keyword[0]
-                    end = start + yes_len
-                    target = content[start:end]
-                    if target == yes:
-                        flag = True
+            if title.find(yes) != -1 or content.find(yes) != -1:
+                flag = True
+            # for title_keyword in title_keywords:
+            #     start = title_keyword[0]
+            #     end = start + yes_len
+            #     target = title[start:end]
+            #     if target == yes:
+            #         flag = True
+            # if flag is False:
+            #     for content_keyword in content_keywords:
+            #         start = content_keyword[0]
+            #         end = start + yes_len
+            #         target = content[start:end]
+            #         if target == yes:
+            #             flag = True
             if flag is False:
                 return False
         return True
@@ -1598,8 +1491,8 @@ def keyword_search(request):
     """
         keyword_search
     """
+    start_time = time.time()
     if request.method == "POST":
-
         try:
             body = json.loads(request.body)
             key_word = body["query"]
@@ -1626,10 +1519,10 @@ def keyword_search(request):
             )
         str_server = tools.SEARCH_CONNECTION
         if len(include) != 0 or len(exclude) != 0:
-            all_news = str_server.search_keywords(key_word,
-                                                  list(include),
-                                                  list(exclude),0)
-
+            all_news = str_server.search_news(key_word, 0, True)
+            # print(all_news)
+            # print("len_raw: ")
+            # print(len(all_news['news_list']))
         else:
             all_news = str_server.search_news(key_word, start_page, sort)
         if sort is False:
@@ -1650,13 +1543,17 @@ def keyword_search(request):
                 headers={'Access-Control-Allow-Origin':'*'}
             )
         news = []
+        cache_news = []
         tags = []
         # get user favorites dict
         user = tools.get_user_from_request(request)
         user_favorites_dict = {}
         user_favorites_dict = tools.get_user_favorites_dict(user=user)
         user_readlist_dict = tools.get_user_readlist_dict(user=user)
-
+        if len(include) != 0 or len(exclude) != 0:
+            all_news_list = all_news['news_list']
+            if sort is True:
+                all_news_list = sorted(all_news_list, key=lambda x: x['pub_time'], reverse=True)
         for new in all_news_list:
             data = new
             title_keywords = []
@@ -1689,29 +1586,73 @@ def keyword_search(request):
                 ),
             }
             if len(include) != 0 or len(exclude) != 0:
+                piece_new = {
+                    "title": title.replace('<span class="szz-type">','').replace('</span>',''),
+                    "url": data['url'],
+                    "media": data['media'],
+                    "pub_time": data['pub_time'],
+                    "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                    "picture_url": data['picture_url'],
+                    "title_keywords": get_location(title,True,list(key_word)),
+                    "keywords": get_location(content,True,list(key_word)),
+                    "id": data['news_id'],
+                    "is_favorite": bool(
+                        tools.in_favorite_check(user_favorites_dict, int(data["news_id"]))
+                    ),
+                    "is_readlater": bool(
+                        tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
+                    ),
+                }
+
+            dt_datetime = tools.datetime_converter(piece_new['pub_time'])
+            data_tags = data['tags'].replace('[','') .replace(']','').replace('"','')
+            data_tags = data_tags.replace("'",'').replace(' ','').split(',')
+            cache_new = {
+                "title": piece_new['title'],
+                "news_url": piece_new['url'],
+                "first_img_url": piece_new['picture_url'],
+                "media": piece_new['media'],
+                "pub_time": dt_datetime,
+                "id": int(piece_new['id']),
+                "category": "",
+                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                "tags": data_tags
+            }
+            if len(include) != 0 or len(exclude) != 0:
                 if check_contain(piece_new['title'], piece_new['content'],
                                  piece_new['title_keywords'], piece_new['keywords'],
                                  list(include), list(exclude)) is True:
                     news += [piece_new]
+                    cache_news += [cache_new]
                 total_num = ceil(len(news) / 10)
             else:
                 news += [piece_new]
-            print("tags: ")
+                cache_news += [cache_new]
+
             data['tags'] = data['tags'].replace('[','') .replace(']','').replace('"','')\
                                        .replace("'",'').replace(' ','').split(',')
-            # print(data['tags'])
             if data['tags'] and isinstance(data['tags'],list) and start_page == 0 \
                     and data['tags'] != [""]:
                 tags += data['tags']
-            print(list(set(tags)))
         if len(include) != 0 or len(exclude) != 0:
+            total = len(news)
             start_num = start_page * 10
             end_num = min(start_num + 10, len(news))
             news = news[start_num:end_num]
-        data = {
-            "page_count": total_num,
-            "news": news
-        }
+            data = {
+                "page_count": min(total_num, 100),
+                "total": total,
+                "news": news[0: 10]
+            }
+        else:
+            data = {
+                "page_count": min(total_num, 100),
+                "total": all_news['total'],
+                "news": news
+            }
+        flag = tools.NEWS_CACHE.add_to_news_cache_pool(cache_news)
+        if flag is True:
+            print("Cache added successfully")
         try:
             encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
             token = tools.decode_token(encoded_token)
@@ -1720,6 +1661,10 @@ def keyword_search(request):
             if user:
                 update_tags(user.user_name, tags, user.tags)
 
+        except Exception as error:
+            print(error)
+        try:
+            data["time"] = time.time() - start_time
         except Exception as error:
             print(error)
         return JsonResponse(
@@ -1770,3 +1715,105 @@ def search_suggest(request):
         status=200,
         headers={'Access-Control-Allow-Origin':'*'}
     )
+
+
+@csrf_exempt
+def personalize(request):
+    """
+        personalize_search
+    """
+    start_time = time.time()
+    if request.method == "POST":
+
+        try:
+            body = json.loads(request.body)
+            key_word = body["query"]
+        except Exception as error:
+            print(error)
+            return JsonResponse(
+                {"code": 1005, "message": "INVALID_FORMAT", "data": {"page_count": 0, "news": []}},
+                status=400,
+                headers={'Access-Control-Allow-Origin':'*'}
+            )
+        str_server = tools.SEARCH_CONNECTION
+        all_news = str_server.search_news(key_word, 0, True)
+        all_news_list = all_news['news_list']
+        all_news_list = all_news_list[0: min(200,all_news['total'])]
+        # total_num = ceil(all_news['total'] / 10)
+        news = []
+        user = tools.get_user_from_request(request)
+        user_favorites_dict = {}
+        user_favorites_dict = tools.get_user_favorites_dict(user=user)
+        user_readlist_dict = tools.get_user_readlist_dict(user=user)
+
+        cache_news = []
+
+        for new in all_news_list:
+            data = new
+            title = data['title']
+            content = data['content']
+            if content is None:
+                content = ""
+            if title is None:
+                title = ""
+            if "news_id" not in data:  # 0 stands for no news id
+                data["news_id"] = 0
+            piece_new = {
+                "title": title.replace('<span class="szz-type">','').replace('</span>',''),
+                "url": data['url'],
+                "media": data['media'],
+                "pub_time": data['pub_time'],
+                # "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                "picture_url": data['picture_url'],
+                "id": data['news_id'],
+                "is_favorite": bool(
+                    tools.in_favorite_check(user_favorites_dict, int(data["news_id"]))
+                ),
+                "is_readlater": bool(
+                    tools.in_favorite_check(user_readlist_dict, int(data["news_id"]))
+                ),
+            }
+            news += [piece_new]
+            try:
+                dt_datetime = tools.datetime_converter(piece_new['pub_time'])
+                cache_new = {
+                    "title": piece_new['title'],
+                    "news_url": piece_new['url'],
+                    "first_img_url": piece_new['picture_url'],
+                    "media": piece_new['media'],
+                    "pub_time": dt_datetime,
+                    "id": int(piece_new['id']),
+                    "category": "",
+                    "content": content.replace('<span class="szz-type">','').replace('</span>',''),
+                    "tags": []
+                }
+                try:
+                    data_tags = data['tags'].replace('[','') .replace(']','').replace('"','')
+                    data_tags = data_tags.replace("'",'').replace(' ','').split(',')
+                    cache_new["tags"] = data_tags
+                except Exception as error:
+                    print(error)
+                cache_news.append(cache_new)
+            except Exception as error:
+                print(error)
+
+        try:
+            tools.NEWS_CACHE.add_to_news_cache_pool(cache_news)
+        except Exception as error:
+            print(error)
+
+        data = {
+            # "total": all_news['total'],
+            # "page_count": min(total_num, 100),
+            "news": news
+        }
+        try:
+            data["time"] = time.time() - start_time
+        except Exception as error:
+            print(error)
+        return JsonResponse(
+            {"code": 0, "message": "SUCCESS", "data": data},
+            status=200,
+            headers={'Access-Control-Allow-Origin':'*'}
+        )
+    return internal_error_response()

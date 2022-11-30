@@ -9,7 +9,8 @@ from django.test import TestCase, Client
 from . import tools
 from .models import *
 from .tools import *
-
+from .managers.LocalNewsManager import news_formator
+from .views import *
 # Create your tests here.
 
 
@@ -22,8 +23,8 @@ class ToolsTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
-        self.user_num = 4
+        tools.DB_SCANNER.testing_mode = True
+        self.user_num = 2
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
         self.news_template = {
             "id": 0,
@@ -44,6 +45,30 @@ class ToolsTests(TestCase):
         news["id"] = news_id
         return news
 
+    def test_datetime_converter(self):
+        """
+            test datetime_converter()
+        """
+        time_strings = ["1970-01-01 08:00:01", "1970-01-01 08:00:01+08:00", "1970-01-01T08:00:01Z"]
+        for time_str in time_strings:
+            dt_datetime = datetime_converter(time_str)
+            self.assertEqual(type(dt_datetime), datetime.datetime)
+            self.assertEqual(dt_datetime.second, 1)
+
+        dt_datetime = datetime_converter("1970/01/01 08:00:01")
+        self.assertEqual(type(dt_datetime), datetime.datetime)
+        self.assertEqual(dt_datetime.second, 0)
+
+    def test_news_formator(self):
+        """
+            test news_formator()
+        """
+        key_list = ["id", "title", "media", "url", "pub_time", "picture_url", "full_content", "summary", "tags"]
+        news = self.generate_news(news_id=145)
+        formated_news = news_formator(news)
+        for key in formated_news:
+            self.assertEqual(key in key_list, True)
+
     def test_add_to_read_history_and_get_read_history(self):
         """
             test add_to_read_history() and get_read_history()
@@ -62,8 +87,12 @@ class ToolsTests(TestCase):
                 )
             read_history = get_read_history(user)
             self.assertEqual(len(read_history),5)
+
+            news_ids = []
             for i in range(5):
-                self.assertEqual(read_history[i]["id"],i)
+                news_ids.append(read_history[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
 
     def test_remove_read_history(self):
         """
@@ -78,8 +107,13 @@ class ToolsTests(TestCase):
                 )
             read_history = get_read_history(user)
             self.assertEqual(len(read_history),5)
+
+            news_ids = []
             for i in range(5):
-                self.assertEqual(read_history[i]["id"],i)
+                news_ids.append(read_history[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
+
             for i in range(5):
                 remove_read_history(user=user, news_id=i)
             read_history = get_read_history(user)
@@ -103,8 +137,12 @@ class ToolsTests(TestCase):
                 )
             readlist = get_readlist(user)
             self.assertEqual(len(readlist),5)
+
+            news_ids = []
             for i in range(5):
-                self.assertEqual(readlist[i]["id"],i)
+                news_ids.append(readlist[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
 
     def test_remove_readlist(self):
         """
@@ -119,8 +157,13 @@ class ToolsTests(TestCase):
                 )
             readlist = get_readlist(user)
             self.assertEqual(len(readlist),5)
+
+            news_ids = []
             for i in range(5):
-                self.assertEqual(readlist[i]["id"],i)
+                news_ids.append(readlist[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
+
             for i in range(5):
                 remove_readlist(user=user, news_id=i)
             readlist = get_readlist(user)
@@ -144,8 +187,11 @@ class ToolsTests(TestCase):
                 )
             favorites = get_favorites(user)
             self.assertEqual(len(favorites),5)
+            news_ids = []
             for i in range(5):
-                self.assertEqual(favorites[i]["id"],i)
+                news_ids.append(favorites[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
 
     def test_remove_favorites(self):
         """
@@ -160,8 +206,13 @@ class ToolsTests(TestCase):
                 )
             favorites = get_favorites(user)
             self.assertEqual(len(favorites),5)
+
+            news_ids = []
             for i in range(5):
-                self.assertEqual(favorites[i]["id"],i)
+                news_ids.append(favorites[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
+
             for i in range(5):
                 remove_favorites(user=user, news_id=i)
             favorites = get_favorites(user)
@@ -323,10 +374,10 @@ class ViewsTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
 
-        self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "uユーザー名"]
-        self.user_password = ["Alice123", "password", "pass123456", "123456_-", "Alic_-e12"]
+        self.user_name_list = ["Alice", "uユーザー名"]
+        self.user_password = ["Alice123", "Alic_-e12"]
         self.user_tags = ["用户", "Tag", "パスワード"]
         self.user_tags_dict = {"用户": 3, "パスワード": 1, "Tag": 2}
         self.user_id = []
@@ -352,6 +403,15 @@ class ViewsTests(TestCase):
 
         response = self.client.post('/index', data=None, content_type="application/json")
         self.assertEqual(response.status_code, 200)
+
+    def test_news_count(self):
+        """
+            test news count
+        """
+        response = self.client.get('/newscount', data=None, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        response_data = response.json()["data"]
+        self.assertEqual(type(response_data), int)
 
     def test_login_with_wrong_response_method(self):
         """
@@ -807,7 +867,12 @@ class FavoritesTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
+
+        self.key_list = [
+            "visit_time", "id", "title", "media", "url",
+            "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"
+        ]
 
         self.test_user_num = 1
 
@@ -879,6 +944,8 @@ class FavoritesTests(TestCase):
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
                     self.assertEqual(news["is_favorite"], True)
+                    for key in self.key_list:
+                        self.assertEqual(key in news, True)
 
     def test_get_favorites(self):
         """
@@ -890,12 +957,14 @@ class FavoritesTests(TestCase):
             add_token_to_white_list(encoded_token)
             user = UserBasicInfo.objects.get(user_name=user_name)
             tools.clear_favorites(user)
-            for news_id in range(1, 50 + 1):
+            for news_id in reversed(range(1, 20 + 1)):
+                news = self.generate_news(news_id=news_id)
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 add_to_favorites(
                     user=user,
-                    news=self.generate_news(news_id=news_id)
+                    news=news
                 )
-            for page in range(5):
+            for page in range(2):
                 response = self.client.get(
                     '/favorites?page={page}'.format(page=page + 1),
                     data={},
@@ -960,7 +1029,12 @@ class ReadlistTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
+
+        self.key_list = [
+            "visit_time", "id", "title", "media", "url",
+            "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"
+        ]
 
         self.test_user_num = 1
 
@@ -1031,6 +1105,8 @@ class ReadlistTests(TestCase):
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
                     self.assertEqual(news["is_readlater"], True)
+                    for key in self.key_list:
+                        self.assertEqual(key in news, True)
 
     def test_get_readlist(self):
         """
@@ -1042,12 +1118,12 @@ class ReadlistTests(TestCase):
             add_token_to_white_list(encoded_token)
             user = UserBasicInfo.objects.get(user_name=user_name)
             tools.clear_readlist(user)
-            for news_id in range(1, 50 + 1):
+            for news_id in reversed(range(1, 20 + 1)):
                 add_to_readlist(
                     user=user,
                     news=self.generate_news(news_id=news_id)
                 )
-            for page in range(5):
+            for page in range(2):
                 response = self.client.get(
                     '/readlater?page={page}'.format(page=page + 1),
                     data={},
@@ -1112,7 +1188,12 @@ class ReadHistoryTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
+
+        self.key_list = [
+            "visit_time", "id", "title", "media", "url",
+            "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"
+        ]
 
         self.test_user_num = 1
 
@@ -1182,6 +1263,10 @@ class ReadHistoryTests(TestCase):
                 self.assertEqual(len(response_data["news"]), min(10, len(news_id_list)))
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
+                    # print(news)
+                    for key in self.key_list:
+                        # print(key)
+                        self.assertEqual(key in news, True)
 
     def test_get_read_history(self):
         """
@@ -1193,12 +1278,12 @@ class ReadHistoryTests(TestCase):
             add_token_to_white_list(encoded_token)
             user = UserBasicInfo.objects.get(user_name=user_name)
             tools.clear_read_history(user)
-            for news_id in range(1, 50 + 1):
+            for news_id in reversed(range(1, 20 + 1)):
                 add_to_read_history(
                     user=user,
                     news=self.generate_news(news_id=news_id)
                 )
-            for page in range(5):
+            for page in range(2):
                 response = self.client.get(
                     '/history?page={page}'.format(page=page + 1),
                     data={},
@@ -1262,7 +1347,7 @@ class SearchHistoryToolsTests(TestCase):
         """
             set up a test set
         """
-        tools.TESTING_MODE = True
+        tools.DB_SCANNER.testing_mode = True
         tools.MAX_USER_SEARCH_HISTORY = 10
 
         self.test_user_num = 1
@@ -1327,3 +1412,184 @@ class SearchHistoryToolsTests(TestCase):
             user = UserBasicInfo.objects.filter(user_name=user_name).first()
             pop_search_history(user)
             self.assertEqual(len(user.search_history), 0)
+
+
+class AITests(TestCase):
+    """
+        test ai module api
+    """
+    databases = "__all__"
+
+    def setUp(self):
+        """
+            set up
+        """
+        self.test_news_num = 9
+
+        self.news_template = {
+            "id": 0,
+            "title": "Breaking News",
+            "media": "Foobar News",
+            "url": "https://breaking.news",
+            "pub_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "picture_url": "https://breaking.news/picture.png",
+            "content": "为亚太合作把舵领航，为世界发展再开良方，推动构建亚太命运共同体走深走实。",
+            "tags": []
+        }
+
+        for i in range(1, self.test_news_num + 1):
+            news = self.generate_news(news_id=i)
+            tools.LOCAL_NEWS_MANAGER.save_one_local_news(news)
+
+    def generate_news(self, news_id=0):
+        """
+            generate news
+        """
+        news = copy.deepcopy(self.news_template)
+        news["id"] = news_id
+        return news
+
+    def test_ai_news(self):
+        """
+            test ai module api
+        """
+        for i in range(1, self.test_news_num + 1):
+            response = self.client.get(
+                '/ai/news',
+                content_type="application/json"
+            )
+            response_data = response.json()["data"]
+            if not response_data:
+                break
+            for news in response_data:
+                news["summary"] = "sum"
+
+            post_data = {
+                "code": 0,
+                "message": "SUCCESS",
+                "data": response_data,
+            }
+
+            response = self.client.post(
+                '/ai/news',
+                data=post_data,
+                content_type="application/json"
+            )
+
+        response = self.client.get(
+            '/ai/news',
+            content_type="application/json"
+        )
+        response_data = response.json()["data"]
+        self.assertEqual(len(response_data), 0)
+
+
+class SearchTests(TestCase):
+    """Test for search modules
+
+    Args:
+        TestCase (_type_): _description_
+    """
+    def test_get_location(self):
+        """
+            test ai module api
+        """
+        text_message = '这是一条<span class="szz-type">测试信息</span>'
+        response = get_location(text_message)
+        self.assertEqual(response, [[4,8]])
+        text_message = '这是一条测试信息'
+        response = get_location(text_message,True,['测试信息'])
+        self.assertEqual(response, [[4,5]])
+
+    def test_update_tags(self):
+        """
+            test ai module api
+        """
+        user = UserBasicInfo(user_name="Test", password=md5("password"))
+        user.save()
+        tags = ["游戏","足球","篮球"]
+        update_tags("Test",tags,{})
+        user = UserBasicInfo.objects.filter(user_name="Test").first()
+        self.assertEqual(user.tags, {'游戏': 1, '篮球': 1, '足球': 1})
+
+    def test_check_contain(self):
+        """
+        test for check_contain
+        """
+        title = "Test"
+        content = "hello"
+        response_first = check_contain(title,content,[],[],must=['Test'],must_not=[])
+        self.assertEqual(response_first, True)
+        response_first = check_contain(title,content,[],[],must=['hello'],must_not=[])
+        self.assertEqual(response_first, True)
+        response_sec = check_contain(title,content,[],[],must=[],must_not=['Test'])
+        self.assertEqual(response_sec, False)
+        response_sec = check_contain(title,content,[],[],must=[],must_not=['hello'])
+        self.assertEqual(response_sec, False)
+
+    def test_search(self):
+        """
+        test for es search
+        """
+        data = {}
+        data['query'] = "篮球"
+        data['page'] = 1
+        data['sort'] = False
+        data['include'] = []
+        data['exclude'] = []
+        data = json.dumps(data)
+        response = self.client.post(
+            '/search',
+            data=data,
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = {}
+        data['query'] = "篮球"
+        data['page'] = 1
+        data['sort'] = True
+        data['include'] = []
+        data['exclude'] = []
+        data = json.dumps(data)
+        response = self.client.post(
+            '/search',
+            data=data,
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = {}
+        data['query'] = "篮球"
+        data['page'] = 1
+        data['sort'] = False
+        data['include'] = ['足球']
+        data['exclude'] = ['比赛']
+        data = json.dumps(data)
+        response = self.client.post(
+            '/search',
+            data=data,
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_search_suggest(self):
+        data = {}
+        data['query'] = "篮球"
+        data['exclude'] = ['足球']
+        data = json.dumps(data)
+        response = self.client.post(
+            '/search/suggest',
+            data=data,
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_personalize(self):
+        data = {}
+        data['query'] = "篮球"
+        data = json.dumps(data)
+        response = self.client.post(
+            '/search/suggest',
+            data=data,
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)

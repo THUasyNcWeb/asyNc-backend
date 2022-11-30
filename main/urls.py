@@ -23,5 +23,7 @@ urlpatterns = [
     path('readlater', views.user_readlater),
     path('history', views.user_read_history),
     path('search/suggest', views.search_suggest),
-    path('ai/news', views.ai_news)
+    path('ai/news', views.ai_news),
+    path('personalize', views.personalize),
+    path('newscount', views.news_count),
 ]
