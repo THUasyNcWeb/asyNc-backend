@@ -4,11 +4,13 @@
 """
 import os
 import time
+import math
 import pickle
 import copy
 import datetime
 
 from ..config import MAX_NEWS_CACHE, CATEGORY_LIST
+from ..config import CATEGORY_FRONT_TO_BACKEND, CATEGORY_LIST
 
 
 class NewsCache():
@@ -154,6 +156,13 @@ class NewsCache():
         """
             get news cache of one specific category
         """
-        news_list = copy.deepcopy(self.cache[category])
+        if category == CATEGORY_FRONT_TO_BACKEND[""]:
+            news_list = []
+            n_category = len(CATEGORY_LIST)
+            n_per_category = math.ceil(200 / n_category)
+            for key in CATEGORY_LIST:
+                news_list += copy.deepcopy(self.cache[key][-n_per_category:])
+        else:
+            news_list = copy.deepcopy(self.cache[category])
         news_list.sort(key=lambda x:x["pub_time"], reverse=True)
         return news_list[:200]
