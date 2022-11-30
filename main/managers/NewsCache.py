@@ -4,16 +4,20 @@
 """
 import os
 import time
+import math
 import pickle
 import copy
 import datetime
+
+from ..config import MAX_NEWS_CACHE, CATEGORY_LIST
+from ..config import CATEGORY_FRONT_TO_BACKEND, CATEGORY_LIST
 
 
 class NewsCache():
     """
         News Cache
     """
-    def __init__(self, db_connection, category_list: list, max_cache_pool=65536) -> None:
+    def __init__(self, db_connection) -> None:
         """
             init
         """
@@ -25,9 +29,7 @@ class NewsCache():
         self.last_change_time = time.time()
         self.category_last_update_time = {}
         self.max_news_id = 0
-        self.category_list = category_list
-        self.max_cache_pool = max_cache_pool
-        for category in self.category_list:
+        for category in CATEGORY_LIST:
             self.cache[category] = []
             self.category_last_update_time[category] = 0
 
@@ -62,13 +64,17 @@ class NewsCache():
         """
         for news in news_list:
             if self.check_ori_news_format(news):
-                self.newspool[int(news["id"])] = news
+                if int(news["id"]) in self.newspool:
+                    if news["tags"]:
+                        self.newspool[int(news["id"])] = news
+                else:
+                    self.newspool[int(news["id"])] = news
             else:
                 print("news format error")
                 return False
         try:
-            if len(self.newspool) > self.max_cache_pool:  # del outdate news
-                for key in list(self.newspool.keys())[: self.max_cache_pool // 2]:
+            if len(self.newspool) > MAX_NEWS_CACHE:  # del outdate news
+                for key in list(self.newspool.keys())[: MAX_NEWS_CACHE // 2]:
                     self.newspool.pop(key)
         except Exception as error:
             print("[Error when cleaning self.newspool]")
@@ -96,7 +102,7 @@ class NewsCache():
                 self.cache = pickle.load(file)
             self.sort_cache_ascend()
             self.update_max_news_id()
-            for category in self.category_list:
+            for category in CATEGORY_LIST:
                 self.add_to_news_cache_pool(self.cache[category])
             print("local cache loaded")
         else:
@@ -106,21 +112,21 @@ class NewsCache():
         """
             sort cache in ascend order
         """
-        for category in self.category_list:
+        for category in CATEGORY_LIST:
             self.cache[category].sort(key=lambda x:x["id"])
 
     def sort_cache_descend(self):
         """
             sort cache in descend order
         """
-        for category in self.category_list:
+        for category in CATEGORY_LIST:
             self.cache[category].sort(key=lambda x:x["id"], reverse=True)
 
     def update_max_news_id(self) -> None:
         """
             update max news id in cache
         """
-        for category in self.category_list:
+        for category in CATEGORY_LIST:
             try:
                 news = self.cache[category][-1]
                 if self.max_news_id < news["id"]:
@@ -138,10 +144,10 @@ class NewsCache():
         self.add_to_news_cache_pool(db_news_list)
 
         for news in db_news_list:
-            if news["category"] in self.category_list:
+            if news["category"] in CATEGORY_LIST:
                 self.cache[news["category"]].append(news)
                 self.category_last_update_time[news["category"]] = time.time()
-        for category in self.category_list:
+        for category in CATEGORY_LIST:
             self.cache[category] = self.cache[category][-200:]
 
         self.update_max_news_id()
@@ -150,6 +156,13 @@ class NewsCache():
         """
             get news cache of one specific category
         """
-        news_list = copy.deepcopy(self.cache[category])
+        if category == CATEGORY_FRONT_TO_BACKEND[""]:
+            news_list = []
+            n_category = len(CATEGORY_LIST)
+            n_per_category = math.ceil(200 / n_category)
+            for key in CATEGORY_LIST:
+                news_list += copy.deepcopy(self.cache[key][-n_per_category:])
+        else:
+            news_list = copy.deepcopy(self.cache[category])
         news_list.sort(key=lambda x:x["pub_time"], reverse=True)
         return news_list[:200]

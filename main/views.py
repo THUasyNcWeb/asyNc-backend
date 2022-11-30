@@ -15,6 +15,7 @@ from elasticsearch_dsl import Document, Date, Keyword, Text, connections, Comple
 from . import tools
 from .models import UserBasicInfo
 from .responses import *
+from .managers.LocalNewsManager import news_formator
 
 # Create your views here.
 
@@ -505,27 +506,15 @@ def user_read_history(request):
             return news_not_found(error="[URL FORMAT ERROR IN READ HISTORY]:\n" + str(error))
         try:
             db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
-
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
-
             for news in db_news_list:
+                news = news_formator(news)
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_read_history(
                     user=user,
-                    news={
-                        "id": int(news["id"]),
-                        "title": news["title"],
-                        "media": news["media"],
-                        "url": news["news_url"],
-                        "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"],
-                        "full_content": "",  # news["content"],
-                        "tags": news["tags"],
-                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
-                    }
+                    news=news
                 )
 
             read_history_list, pages = tools.user_read_history_pages(user, 0)
@@ -632,23 +621,12 @@ def user_readlater(request):
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
-
             for news in db_news_list:
+                news = news_formator(news)
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_readlist(
                     user=user,
-                    news={
-                        "id": int(news["id"]),
-                        "title": news["title"],
-                        "media": news["media"],
-                        "url": news["news_url"],
-                        "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"],
-                        "full_content": news["content"],
-                        "tags": news["tags"],
-                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
-                    }
+                    news=news
                 )
 
             readlist_list, pages = tools.user_readlist_pages(user, 0)
@@ -751,33 +729,16 @@ def user_favorites(request):
             return news_not_found(error="[URL FORMAT ERROR]:\n" + str(error))
         try:
             db_news_list = tools.get_news_from_db_by_id(news_id=news_id)
-            # print("get db_news_list", time.time())
             if len(db_news_list) == 0:
                 return news_not_found(error="[id not found]:\n")
 
-            # user_favorites_dict = tools.get_user_favorites_dict(user=user)
-            # user_readlist_dict = tools.get_user_readlist_dict(user=user)
-
-            print(db_news_list)
-
             for news in db_news_list:
+                news = news_formator(news)
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_favorites(
                     user=user,
-                    news={
-                        "id": int(news["id"]),
-                        "title": news["title"],
-                        "media": news["media"],
-                        "url": news["news_url"],
-                        "pub_time": str(news["pub_time"]),
-                        "picture_url": news["first_img_url"],
-                        "full_content": news["content"],
-                        "tags": news["tags"],
-                        "visit_time": time.strftime("%Y-%m-%dT%H:%M:%SZ")
-                    }
+                    news=news
                 )
-                # print("news:")
-                # print(news)
-            # print(user.favorites)
             favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(
                 {
@@ -1759,7 +1720,7 @@ def keyword_search(request):
                 "pub_time": dt_datetime,
                 "id": int(piece_new['id']),
                 "category": "",
-                "content": piece_new['content'],
+                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
                 "tags": data_tags
             }
             if len(include) != 0 or len(exclude) != 0:
@@ -1928,7 +1889,7 @@ def personalize(request):
                     "pub_time": dt_datetime,
                     "id": int(piece_new['id']),
                     "category": "",
-                    "content": piece_new['content'],
+                    "content": content.replace('<span class="szz-type">','').replace('</span>',''),
                     "tags": []
                 }
                 try:

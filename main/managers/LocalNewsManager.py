@@ -4,7 +4,9 @@
 """
 
 import random
+import copy
 from ..models import LocalNews
+from ..config import MAX_LOCAL_NEWS_CACHE
 
 
 def news_formator(news) -> dict:
@@ -36,6 +38,10 @@ def news_formator(news) -> dict:
         format_news["summary"] = news["summary"]
     if "tags" in news:
         format_news["tags"] = news["tags"]
+    if "category" in news:
+        format_news["category"] = news["category"]
+    # if "visit_time" in news:
+    #     format_news["visit_time"] = news["visit_time"]
     return format_news
 
 
@@ -44,14 +50,13 @@ class LocalNewsManager():
         Favorited or in reading list news will be storaged to local.
         This class manages local news.
     """
-    def __init__(self, max_cache=65536) -> None:
+    def __init__(self) -> None:
         """
             init
         """
-        self.local_news_list_cache = {}  # cache summarized news
+        self.local_news_list_cache = {}  # cache news in db
         self.none_ai_processed_news_dict = {}
         self.min_batch = 256
-        self.max_cache = max_cache
 
     def get_one_ai_news(self, news_id: int, news=None) -> dict:
         """
@@ -76,7 +81,7 @@ class LocalNewsManager():
             }
             if "summary" in local_news.data:
                 ai_news["summary"] = local_news.data["summary"]
-        elif news:  # add news local_news
+        elif news:  # add news to local_news
             self.save_one_local_news(news)
         return ai_news
 
@@ -154,13 +159,15 @@ class LocalNewsManager():
         """
             add a news to cache
         """
+        news = news_formator(news)
         if news["id"] in self.local_news_list_cache:
             if "summary" in news and news["summary"]:
-                self.local_news_list_cache[news["id"]] = news
+                self.local_news_list_cache[news["id"]]["summary"] = news["summary"]
+                # self.local_news_list_cache[news["id"]] = news
         else:
             self.local_news_list_cache[news["id"]] = news
 
-        if len(self.local_news_list_cache) > self.max_cache:
+        if len(self.local_news_list_cache) > MAX_LOCAL_NEWS_CACHE:
             news_id = list(self.local_news_list_cache.keys())[0]
             self.local_news_list_cache.pop(news_id)
 
@@ -243,16 +250,24 @@ class LocalNewsManager():
             return True
         return False
 
-    def save_local_news(self, news) -> bool:
+    def get_one_local_news(self, news_id: int) -> dict:
         """
-            save local news
+            get one local news
         """
-        if isinstance(news, dict):
-            return self.save_one_local_news(news)
-        if isinstance(news, list):
-            news_list = news
-            for _news in news_list:
-                if not self.save_one_local_news(_news):
-                    return False
-            return True
-        return False
+        try:
+            if news_id in self.local_news_list_cache:
+                return self.local_news_list_cache[news_id]
+            news = {}
+            local_news = LocalNews.objects.filter(news_id=news_id).first()
+            if local_news:
+                news = dict(local_news.data)
+                news["id"] = int(local_news.data["id"])
+                news["pub_time"] = str(local_news.data["pub_time"])
+                if "summary" in local_news.data:
+                    news["summary"] = local_news.data["summary"]
+                self.add_to_cache(news)
+                return copy.deepcopy(news)
+        except Exception as error:
+            print(error)
+        print("[Error] Error in get_one_local_news()")
+        return {}
