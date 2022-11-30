@@ -1720,7 +1720,7 @@ def keyword_search(request):
                 "pub_time": dt_datetime,
                 "id": int(piece_new['id']),
                 "category": "",
-                "content": piece_new['content'],
+                "content": content.replace('<span class="szz-type">','').replace('</span>',''),
                 "tags": data_tags
             }
             if len(include) != 0 or len(exclude) != 0:
@@ -1889,7 +1889,7 @@ def personalize(request):
                     "pub_time": dt_datetime,
                     "id": int(piece_new['id']),
                     "category": "",
-                    "content": piece_new['content'],
+                    "content": content.replace('<span class="szz-type">','').replace('</span>',''),
                     "tags": []
                 }
                 try:

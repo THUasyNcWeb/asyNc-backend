@@ -88,6 +88,7 @@ def get_news_from_db_by_id(news_id: int) -> bool:
             ],
             limit=1
         )
+        NEWS_CACHE.add_to_news_cache_pool(db_news_list)
         # for news in db_news_list:
         #     for key in news:
         #         print(type(news[key]))
