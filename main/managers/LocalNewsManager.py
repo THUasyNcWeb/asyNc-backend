@@ -4,6 +4,7 @@
 """
 
 import random
+import copy
 from ..models import LocalNews
 from ..config import MAX_LOCAL_NEWS_CACHE
 
@@ -37,8 +38,8 @@ def news_formator(news) -> dict:
         format_news["summary"] = news["summary"]
     if "tags" in news:
         format_news["tags"] = news["tags"]
-    if "visit_time" in news:
-        format_news["visit_time"] = news["visit_time"]
+    # if "visit_time" in news:
+    #     format_news["visit_time"] = news["visit_time"]
     return format_news
 
 
@@ -156,9 +157,11 @@ class LocalNewsManager():
         """
             add a news to cache
         """
+        news = news_formator(news)
         if news["id"] in self.local_news_list_cache:
             if "summary" in news and news["summary"]:
-                self.local_news_list_cache[news["id"]] = news
+                self.local_news_list_cache[news["id"]]["summary"] = news["summary"]
+                # self.local_news_list_cache[news["id"]] = news
         else:
             self.local_news_list_cache[news["id"]] = news
 
@@ -245,20 +248,6 @@ class LocalNewsManager():
             return True
         return False
 
-    def save_local_news(self, news) -> bool:
-        """
-            save local news
-        """
-        if isinstance(news, dict):
-            return self.save_one_local_news(news)
-        if isinstance(news, list):
-            news_list = news
-            for _news in news_list:
-                if not self.save_one_local_news(_news):
-                    return False
-            return True
-        return False
-
     def get_one_local_news(self, news_id: int) -> dict:
         """
             get one local news
@@ -269,15 +258,13 @@ class LocalNewsManager():
             news = {}
             local_news = LocalNews.objects.filter(news_id=news_id).first()
             if local_news:
-                if local_news.ai_processed:
-                    self.add_to_cache(local_news.data)
                 news = dict(local_news.data)
                 news["id"] = int(local_news.data["id"])
                 news["pub_time"] = str(local_news.data["pub_time"])
                 if "summary" in local_news.data:
                     news["summary"] = local_news.data["summary"]
                 self.add_to_cache(news)
-                return news
+                return copy.deepcopy(news)
         except Exception as error:
             print(error)
         print("[Error] Error in get_one_local_news()")

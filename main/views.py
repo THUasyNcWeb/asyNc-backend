@@ -510,10 +510,11 @@ def user_read_history(request):
                 return news_not_found(error="[id not found]:\n")
 
             for news in db_news_list:
+                news = news_formator(news)
                 news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_read_history(
                     user=user,
-                    news=news_formator(news)
+                    news=news
                 )
 
             read_history_list, pages = tools.user_read_history_pages(user, 0)
@@ -621,10 +622,11 @@ def user_readlater(request):
                 return news_not_found(error="[id not found]:\n")
 
             for news in db_news_list:
+                news = news_formator(news)
                 news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_readlist(
                     user=user,
-                    news=news_formator(news)
+                    news=news
                 )
 
             readlist_list, pages = tools.user_readlist_pages(user, 0)
@@ -731,10 +733,11 @@ def user_favorites(request):
                 return news_not_found(error="[id not found]:\n")
 
             for news in db_news_list:
+                news = news_formator(news)
                 news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 tools.add_to_favorites(
                     user=user,
-                    news=news_formator(news)
+                    news=news
                 )
             favorites_list, pages = tools.user_favorites_pages(user, 0)
             return JsonResponse(

@@ -87,8 +87,12 @@ class ToolsTests(TestCase):
                 )
             read_history = get_read_history(user)
             self.assertEqual(len(read_history),5)
+
+            news_ids = []
             for i in range(5):
-                self.assertEqual(read_history[i]["id"],i)
+                news_ids.append(read_history[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
 
     def test_remove_read_history(self):
         """
@@ -103,8 +107,13 @@ class ToolsTests(TestCase):
                 )
             read_history = get_read_history(user)
             self.assertEqual(len(read_history),5)
+
+            news_ids = []
             for i in range(5):
-                self.assertEqual(read_history[i]["id"],i)
+                news_ids.append(read_history[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
+
             for i in range(5):
                 remove_read_history(user=user, news_id=i)
             read_history = get_read_history(user)
@@ -128,8 +137,12 @@ class ToolsTests(TestCase):
                 )
             readlist = get_readlist(user)
             self.assertEqual(len(readlist),5)
+
+            news_ids = []
             for i in range(5):
-                self.assertEqual(readlist[i]["id"],i)
+                news_ids.append(readlist[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
 
     def test_remove_readlist(self):
         """
@@ -144,8 +157,13 @@ class ToolsTests(TestCase):
                 )
             readlist = get_readlist(user)
             self.assertEqual(len(readlist),5)
+
+            news_ids = []
             for i in range(5):
-                self.assertEqual(readlist[i]["id"],i)
+                news_ids.append(readlist[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
+
             for i in range(5):
                 remove_readlist(user=user, news_id=i)
             readlist = get_readlist(user)
@@ -169,8 +187,11 @@ class ToolsTests(TestCase):
                 )
             favorites = get_favorites(user)
             self.assertEqual(len(favorites),5)
+            news_ids = []
             for i in range(5):
-                self.assertEqual(favorites[i]["id"],i)
+                news_ids.append(favorites[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
 
     def test_remove_favorites(self):
         """
@@ -185,8 +206,13 @@ class ToolsTests(TestCase):
                 )
             favorites = get_favorites(user)
             self.assertEqual(len(favorites),5)
+
+            news_ids = []
             for i in range(5):
-                self.assertEqual(favorites[i]["id"],i)
+                news_ids.append(favorites[i]["id"])
+            for i in range(5):
+                self.assertEqual(i in news_ids, True)
+
             for i in range(5):
                 remove_favorites(user=user, news_id=i)
             favorites = get_favorites(user)
@@ -918,6 +944,8 @@ class FavoritesTests(TestCase):
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
                     self.assertEqual(news["is_favorite"], True)
+                    for key in self.key_list:
+                        self.assertEqual(key in news, True)
 
     def test_get_favorites(self):
         """
@@ -929,10 +957,12 @@ class FavoritesTests(TestCase):
             add_token_to_white_list(encoded_token)
             user = UserBasicInfo.objects.get(user_name=user_name)
             tools.clear_favorites(user)
-            for news_id in range(1, 20 + 1):
+            for news_id in reversed(range(1, 20 + 1)):
+                news = self.generate_news(news_id=news_id)
+                news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 add_to_favorites(
                     user=user,
-                    news=self.generate_news(news_id=news_id)
+                    news=news
                 )
             for page in range(2):
                 response = self.client.get(
@@ -1075,6 +1105,8 @@ class ReadlistTests(TestCase):
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
                     self.assertEqual(news["is_readlater"], True)
+                    for key in self.key_list:
+                        self.assertEqual(key in news, True)
 
     def test_get_readlist(self):
         """
@@ -1086,7 +1118,7 @@ class ReadlistTests(TestCase):
             add_token_to_white_list(encoded_token)
             user = UserBasicInfo.objects.get(user_name=user_name)
             tools.clear_readlist(user)
-            for news_id in range(1, 20 + 1):
+            for news_id in reversed(range(1, 20 + 1)):
                 add_to_readlist(
                     user=user,
                     news=self.generate_news(news_id=news_id)
@@ -1159,7 +1191,7 @@ class ReadHistoryTests(TestCase):
         tools.DB_SCANNER.testing_mode = True
 
         self.key_list = [
-            "visit_time", "id", "title", "media", "url", "full_content",
+            "visit_time", "id", "title", "media", "url",
             "pub_time", "picture_url", "tags", "is_favorite", "is_readlater"
         ]
 
@@ -1231,9 +1263,9 @@ class ReadHistoryTests(TestCase):
                 self.assertEqual(len(response_data["news"]), min(10, len(news_id_list)))
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
-                    print(news)
+                    # print(news)
                     for key in self.key_list:
-                        print(key)
+                        # print(key)
                         self.assertEqual(key in news, True)
 
     def test_get_read_history(self):
@@ -1246,7 +1278,7 @@ class ReadHistoryTests(TestCase):
             add_token_to_white_list(encoded_token)
             user = UserBasicInfo.objects.get(user_name=user_name)
             tools.clear_read_history(user)
-            for news_id in range(1, 20 + 1):
+            for news_id in reversed(range(1, 20 + 1)):
                 add_to_read_history(
                     user=user,
                     news=self.generate_news(news_id=news_id)
@@ -1407,7 +1439,7 @@ class AITests(TestCase):
 
         for i in range(1, self.test_news_num + 1):
             news = self.generate_news(news_id=i)
-            tools.LOCAL_NEWS_MANAGER.save_local_news(news)
+            tools.LOCAL_NEWS_MANAGER.save_one_local_news(news)
 
     def generate_news(self, news_id=0):
         """

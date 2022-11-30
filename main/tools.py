@@ -260,6 +260,20 @@ def update_to_user_tags(user: UserBasicInfo, tags: list):
     user.save()
 
 
+def user_news_formator(news: dict):
+    """
+        convert local news format to user news
+    """
+    formated_news = {
+        "id": int(news["id"])
+    }
+    if "visit_time" in news:
+        formated_news["visit_time"] = news["visit_time"]
+    else:
+        formated_news["visit_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return formated_news
+
+
 def add_to_read_history(user: UserBasicInfo, news: dict):
     """
         add a news to user's read history
@@ -268,9 +282,19 @@ def add_to_read_history(user: UserBasicInfo, news: dict):
         return
     if not user.read_history:
         user.read_history = {}
-    if news["tags"]:
-        update_to_user_tags(user=user, tags=news["tags"])
-    user.read_history[str(news["id"])] = news
+
+    try:
+        if news["tags"]:
+            update_to_user_tags(user=user, tags=news["tags"])
+    except Exception as error:
+        print("[Error] When adding to user tags in history.")
+        print(error)
+
+    try:
+        LOCAL_NEWS_MANAGER.save_one_local_news(news)
+        user.read_history[str(news["id"])] = user_news_formator(news)
+    except Exception as error:
+        print(error)
     user.full_clean()
     user.save()
 
@@ -297,6 +321,10 @@ def remove_read_history(user: UserBasicInfo, news_id):
         user.read_history = {}
         return False
     if str(news_id) in user.read_history:
+        try:
+            LOCAL_NEWS_MANAGER.del_local_news(int(news_id))
+        except Exception as error:
+            print(error)
         user.read_history.pop(str(news_id))
         user.full_clean()
         user.save()
@@ -308,6 +336,12 @@ def clear_read_history(user: UserBasicInfo):
     """
         remove all news from user's read history
     """
+    if user.read_history:
+        for news_id in user.read_history:
+            try:
+                LOCAL_NEWS_MANAGER.del_local_news(int(news_id))
+            except Exception as error:
+                print(error)
     user.read_history = {}
     user.full_clean()
     user.save()
@@ -329,11 +363,15 @@ def user_read_history_pages(user: UserBasicInfo, page: int):
     user_favorites_dict = get_user_favorites_dict(user=user)
     user_readlist_dict = get_user_readlist_dict(user=user)
 
+    new_read_history_page = []
     for news in read_history_page:
-        news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
-        news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
+        local_news = LOCAL_NEWS_MANAGER.get_one_local_news(int(news["id"]))
+        local_news["visit_time"] = news["visit_time"]
+        local_news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+        local_news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
+        new_read_history_page.append(local_news)
 
-    return read_history_page, math.ceil(len(read_history_list) / FAVORITES_PRE_PAGE)
+    return new_read_history_page, math.ceil(len(read_history_list) / FAVORITES_PRE_PAGE)
 
 
 def add_to_readlist(user: UserBasicInfo, news: dict):
@@ -346,11 +384,11 @@ def add_to_readlist(user: UserBasicInfo, news: dict):
         user.readlist = {}
 
     try:
-        LOCAL_NEWS_MANAGER.save_local_news(news)
+        LOCAL_NEWS_MANAGER.save_one_local_news(news)
     except Exception as error:
         print(error)
 
-    user.readlist[str(news["id"])] = news
+    user.readlist[str(news["id"])] = user_news_formator(news)
     user.full_clean()
     user.save()
 
@@ -419,21 +457,15 @@ def user_readlist_pages(user: UserBasicInfo, page: int):
     user_favorites_dict = get_user_favorites_dict(user=user)
     user_readlist_dict = get_user_readlist_dict(user=user)
 
+    new_readlist_page = []
     for news in readlist_page:
-        try:
-            ai_news = LOCAL_NEWS_MANAGER.get_one_ai_news(news["id"])
-            if "summary" in ai_news:
-                news["summary"] = ai_news["summary"]
-            else:
-                news["summary"] = ""
-        except Exception as error:
-            print(error)
+        local_news = LOCAL_NEWS_MANAGER.get_one_local_news(int(news["id"]))
+        local_news["visit_time"] = news["visit_time"]
+        local_news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+        local_news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
+        new_readlist_page.append(local_news)
 
-    for news in readlist_page:
-        news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
-        news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
-
-    return readlist_page, math.ceil(len(readlist_list) / FAVORITES_PRE_PAGE)
+    return new_readlist_page, math.ceil(len(readlist_list) / FAVORITES_PRE_PAGE)
 
 
 def add_to_favorites(user: UserBasicInfo, news: dict):
@@ -447,11 +479,11 @@ def add_to_favorites(user: UserBasicInfo, news: dict):
         user.favorites = {}
 
     try:
-        LOCAL_NEWS_MANAGER.save_local_news(news)
+        LOCAL_NEWS_MANAGER.save_one_local_news(news)
     except Exception as error:
         print(error)
 
-    user.favorites[str(news["id"])] = news
+    user.favorites[str(news["id"])] = user_news_formator(news)
     user.full_clean()
     user.save()
 
@@ -522,21 +554,15 @@ def user_favorites_pages(user: UserBasicInfo, page: int):
     user_favorites_dict = get_user_favorites_dict(user=user)
     user_readlist_dict = get_user_readlist_dict(user=user)
 
+    new_favorites_page = []
     for news in favorites_page:
-        try:
-            ai_news = LOCAL_NEWS_MANAGER.get_one_ai_news(news["id"])
-            if "summary" in ai_news:
-                news["summary"] = ai_news["summary"]
-            else:
-                news["summary"] = ""
-        except Exception as error:
-            print(error)
+        local_news = LOCAL_NEWS_MANAGER.get_one_local_news(int(news["id"]))
+        local_news["visit_time"] = news["visit_time"]
+        local_news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+        local_news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
+        new_favorites_page.append(local_news)
 
-    for news in favorites_page:
-        news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
-        news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
-
-    return favorites_page, math.ceil(len(favorites_list) / FAVORITES_PRE_PAGE)
+    return new_favorites_page, math.ceil(len(favorites_list) / FAVORITES_PRE_PAGE)
 
 
 def resize_image(image, size=(512, 512)):
