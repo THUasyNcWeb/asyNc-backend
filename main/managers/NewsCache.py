@@ -62,7 +62,11 @@ class NewsCache():
         """
         for news in news_list:
             if self.check_ori_news_format(news):
-                self.newspool[int(news["id"])] = news
+                if int(news["id"]) in self.newspool:
+                    if news["tags"]:
+                        self.newspool[int(news["id"])] = news
+                else:
+                    self.newspool[int(news["id"])] = news
             else:
                 print("news format error")
                 return False
