@@ -366,10 +366,11 @@ def user_read_history_pages(user: UserBasicInfo, page: int):
     new_read_history_page = []
     for news in read_history_page:
         local_news = LOCAL_NEWS_MANAGER.get_one_local_news(int(news["id"]))
-        local_news["visit_time"] = news["visit_time"]
-        local_news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
-        local_news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
-        new_read_history_page.append(local_news)
+        if local_news:
+            local_news["visit_time"] = news["visit_time"]
+            local_news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+            local_news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
+            new_read_history_page.append(local_news)
 
     return new_read_history_page, math.ceil(len(read_history_list) / FAVORITES_PRE_PAGE)
 
@@ -460,10 +461,11 @@ def user_readlist_pages(user: UserBasicInfo, page: int):
     new_readlist_page = []
     for news in readlist_page:
         local_news = LOCAL_NEWS_MANAGER.get_one_local_news(int(news["id"]))
-        local_news["visit_time"] = news["visit_time"]
-        local_news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
-        local_news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
-        new_readlist_page.append(local_news)
+        if local_news:
+            local_news["visit_time"] = news["visit_time"]
+            local_news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+            local_news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
+            new_readlist_page.append(local_news)
 
     return new_readlist_page, math.ceil(len(readlist_list) / FAVORITES_PRE_PAGE)
 
@@ -557,10 +559,11 @@ def user_favorites_pages(user: UserBasicInfo, page: int):
     new_favorites_page = []
     for news in favorites_page:
         local_news = LOCAL_NEWS_MANAGER.get_one_local_news(int(news["id"]))
-        local_news["visit_time"] = news["visit_time"]
-        local_news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
-        local_news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
-        new_favorites_page.append(local_news)
+        if local_news:
+            local_news["visit_time"] = news["visit_time"]
+            local_news["is_favorite"] = in_favorite_check(user_favorites_dict, int(news["id"]))
+            local_news["is_readlater"] = in_readlist_check(user_readlist_dict, int(news["id"]))
+            new_favorites_page.append(local_news)
 
     return new_favorites_page, math.ceil(len(favorites_list) / FAVORITES_PRE_PAGE)
 
