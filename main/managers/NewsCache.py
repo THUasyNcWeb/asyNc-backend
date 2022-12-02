@@ -62,6 +62,7 @@ class NewsCache():
         """
             add to news cache pool
         """
+        news_list = copy.deepcopy(news_list)
         for news in news_list:
             if self.check_ori_news_format(news):
                 if int(news["id"]) in self.newspool:
@@ -87,10 +88,13 @@ class NewsCache():
         """
             save cache from file
         """
-        print("Saving cache to dict", time.time())
-        with open("data/news_cache.pkl", "wb") as file:
-            pickle.dump(self.cache, file)
-        print("Saved", time.time())
+        try:
+            print("Saving cache to dict", time.time())
+            with open("data/news_cache.pkl", "wb") as file:
+                pickle.dump(self.cache, file)
+            print("Saved", time.time())
+        except Exception as error:
+            print("[error in save local cache] :", error)
 
     def load_local_cache(self):
         """
@@ -138,6 +142,7 @@ class NewsCache():
         """
             update news cache of one specific category
         """
+        db_news_list = copy.deepcopy(db_news_list)
         self.last_update_time = time.time()
         db_news_list.sort(key=lambda x:x["id"])
 
