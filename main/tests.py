@@ -763,7 +763,6 @@ class ViewsTests(TestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(response.json()["code"], 9)
 
-
     def test_user_info_get_method(self):
         """
             test get method of userinfo api
@@ -878,7 +877,7 @@ class ViewsTests(TestCase):
             self.assertEqual(response_data["signature"], signature)
             self.assertEqual(response_data["avatar"], "data:image/jpeg;base64,")
             self.assertEqual(check_token_in_white_list(response_data['token']), True)
-    
+
     def test_modify_user_avatar(self):
         """
             test modify avatar
@@ -887,16 +886,16 @@ class ViewsTests(TestCase):
             user_name = self.user_name_list[i]
 
             response = self.client.post(
-                    '/modifyavatar', 
-                    HTTP_AUTHORIZATION=""
+                '/modifyavatar',
+                HTTP_AUTHORIZATION=""
             )
             self.assertEqual(response.status_code, 401)
 
             encoded_token = create_token(user_name=user_name, user_id=self.user_id[i])
             add_token_to_white_list(encoded_token)
             response = self.client.post(
-                    '/modifyavatar', 
-                    HTTP_AUTHORIZATION=encoded_token
+                '/modifyavatar',
+                HTTP_AUTHORIZATION=encoded_token
             )
             self.assertEqual(response.status_code, 400)
 
@@ -1634,7 +1633,7 @@ class SearchTests(TestCase):
         data['query'] = "篮球"
         data = json.dumps(data)
         response = self.client.post(
-            '/search/suggest',
+            '/personalize',
             data=data,
             content_type="application/json"
         )
