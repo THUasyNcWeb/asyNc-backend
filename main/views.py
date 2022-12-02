@@ -375,6 +375,7 @@ def modify_user_info(request):
                                 status=status_code,
                                 headers={'Access-Control-Allow-Origin':'*'}
                             )
+
                         if not tools.user_username_checker(new_user_name):
                             status_code = 400
                             response_msg = {
@@ -388,6 +389,21 @@ def modify_user_info(request):
                                 status=status_code,
                                 headers={'Access-Control-Allow-Origin':'*'}
                             )
+
+                        if UserBasicInfo.objects.filter(user_name=new_user_name).first():
+                            status_code = 400
+                            response_msg = {
+                                "code": 9,
+                                "message": "USERNAME_ALREADY_EXISTS",
+                                "data": {}
+                            }
+                            response_msg["time"] = time.time() - start_time
+                            return JsonResponse(
+                                response_msg,
+                                status=status_code,
+                                headers={'Access-Control-Allow-Origin':'*'}
+                            )
+
                         tools.del_all_token_of_an_user(user_id=user.id)
                         user.user_name = new_user_name
                         user.full_clean()
@@ -1040,95 +1056,6 @@ def modify_avatar(request):
     return not_found_response()
 
 
-# modify a user's username
-@csrf_exempt
-def user_modify_username(request):
-    """
-    request:
-    {
-        "old_user_name": "Alice",
-        "new_user_name": "Bob"
-    }
-    response:
-    {
-        "code": 0,
-        "message": "SUCCESS",
-        "data": {
-            "id": 1,
-            "user_name": "Bob",
-            "token": "SECRET_TOKEN"
-        }
-    }
-    """
-    start_time = time.time()
-    if request.method == "POST":
-        try:
-            encoded_token = str(request.META.get("HTTP_AUTHORIZATION"))
-            token = tools.decode_token(encoded_token)
-            if not tools.check_token_in_white_list(encoded_token=encoded_token):
-                return unauthorized_response()
-        except Exception as error:
-            print(error)
-            return unauthorized_response()
-
-        try:
-            request_data = json.loads(request.body.decode())
-            old_user_name = request_data["old_user_name"]
-            new_user_name = request_data["new_user_name"]
-        except Exception as error:
-            print(error)
-            return internal_error_response(error=str(error))
-
-        if not old_user_name == token["user_name"]:
-            return unauthorized_response()
-
-        try:
-            user = UserBasicInfo.objects.filter(user_name=old_user_name).first()
-            if not user:  # user name not existed yet.
-                status_code = 400
-                response_msg = {
-                    "code": 6,
-                    "message": "WRONG_USERNAME",
-                    "data": {}
-                }
-            else:
-                if not tools.user_username_checker(new_user_name):
-                    status_code = 400
-                    response_msg = {
-                        "code": 3,
-                        "message": "INVALID_USERNAME_FORMAT",
-                        "data": {}
-                    }
-                else:
-                    tools.del_all_token_of_an_user(user_id=user.id)
-                    user.user_name = new_user_name
-                    user.full_clean()
-                    user.save()
-                    user_token = tools.create_token(user_id=user.id, user_name=user.user_name)
-                    status_code = 200
-                    response_msg = {
-                        "code": 0,
-                        "message":
-                        "SUCCESS",
-                        "data": {
-                            "id": user.id,
-                            "user_name": user.user_name,
-                            "token": user_token
-                        }
-                    }
-            response_msg["time"] = time.time() - start_time
-            return JsonResponse(
-                response_msg,
-                status=status_code,
-                headers={'Access-Control-Allow-Origin':'*'}
-            )
-        except Exception as error:
-            print(error)
-            return internal_error_response(error=str(error))
-
-    return internal_error_response()
-
-
 # check login state
 @csrf_exempt
 def check_login_state(request):
@@ -1421,7 +1348,6 @@ def get_location(info_str,sort=False,keywords=[""],start_tag='<span class="szz-t
         return location_infos
 
 
-@csrf_exempt
 def update_tags(username, tags, user_tags_dict):
     """
     update user tags when searching
@@ -1447,7 +1373,6 @@ def update_tags(username, tags, user_tags_dict):
         print("Update failed!")
 
 
-@csrf_exempt
 def check_contain(title, content, title_keywords, content_keywords, must, must_not):
     """
     Check whether satisfy the need

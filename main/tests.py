@@ -23,6 +23,7 @@ class ToolsTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
         tools.DB_SCANNER.testing_mode = True
         self.user_num = 2
         self.user_name_list = ["Alice", "Bob", "Carol", "用户名", "ユーザー名"]
@@ -374,6 +375,7 @@ class ViewsTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
         tools.DB_SCANNER.testing_mode = True
 
         self.user_name_list = ["Alice", "uユーザー名"]
@@ -722,7 +724,7 @@ class ViewsTests(TestCase):
 
     def test_modify_username(self):
         """
-            test modifyusername api
+            test modify username
         """
         for i in range(self.user_num):
             user_name = self.user_name_list[i]
@@ -731,15 +733,37 @@ class ViewsTests(TestCase):
             add_token_to_white_list(encoded_token)
 
             requests = {
-                "old_user_name": user_name,
                 "new_user_name": new_user_name
             }
-            response = self.client.post('/modifyusername', data=requests,
+            response = self.client.post('/modifyuserinfo', data=requests,
                                         content_type="application/json",
                                         HTTP_AUTHORIZATION=encoded_token)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["data"]["user_name"], new_user_name)
             self.assertEqual(check_token_in_white_list(encoded_token), False)
+
+            encoded_token = response.json()["data"]["token"]
+            requests = {
+                "new_user_name": new_user_name
+            }
+            response = self.client.post('/modifyuserinfo', data=requests,
+                                        content_type="application/json",
+                                        HTTP_AUTHORIZATION=encoded_token)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["data"]["user_name"], new_user_name)
+
+            if i == 1:  # USERNAME ALREADY EXISTS
+                encoded_token = response.json()["data"]["token"]
+                requests = {
+                    "new_user_name": "new_" + self.user_name_list[0]
+                }
+                response = self.client.post('/modifyuserinfo', data=requests,
+                                            content_type="application/json",
+                                            HTTP_AUTHORIZATION=encoded_token)
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()["code"], 9)
+
+
 
     def test_user_info_get_method(self):
         """
@@ -867,6 +891,7 @@ class FavoritesTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
         tools.DB_SCANNER.testing_mode = True
 
         self.key_list = [
@@ -1029,6 +1054,7 @@ class ReadlistTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
         tools.DB_SCANNER.testing_mode = True
 
         self.key_list = [
@@ -1188,6 +1214,7 @@ class ReadHistoryTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
         tools.DB_SCANNER.testing_mode = True
 
         self.key_list = [
@@ -1263,9 +1290,7 @@ class ReadHistoryTests(TestCase):
                 self.assertEqual(len(response_data["news"]), min(10, len(news_id_list)))
                 for news in response_data["news"]:
                     self.assertEqual(type(news["id"]), int)
-                    # print(news)
                     for key in self.key_list:
-                        # print(key)
                         self.assertEqual(key in news, True)
 
     def test_get_read_history(self):
@@ -1347,6 +1372,7 @@ class SearchHistoryToolsTests(TestCase):
         """
             set up a test set
         """
+        tools.TESTING_MODE = True
         tools.DB_SCANNER.testing_mode = True
         tools.MAX_USER_SEARCH_HISTORY = 10
 
