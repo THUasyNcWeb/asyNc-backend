@@ -23,7 +23,7 @@ from .managers.LocalNewsManager import news_formator
 @csrf_exempt
 def news_count(request: WSGIRequest):
     """
-        return news_count
+        return news count
     """
     try:
         start_time = time.time()
@@ -1018,7 +1018,7 @@ def user_modify_password(request):
 
 # modify a user's avatar
 @csrf_exempt
-def modify_avatar(request):
+def modify_avatar(request: WSGIRequest):
     """
         request:
             form:
@@ -1041,18 +1041,19 @@ def modify_avatar(request):
 
         if not request.FILES.items():
             return post_data_format_error_response("avatar file not found.")
+
         for (_, file) in request.FILES.items():
-            resized_image = tools.resize_image(file.file)
-            user.avatar = "data:image/png;base64," + tools.pil_to_base64(resized_image)
-            # print("user.avatar :", user.avatar)
             try:
+                resized_image = tools.resize_image(file.file)
+                user.avatar = "data:image/png;base64," + tools.pil_to_base64(resized_image)
                 user.full_clean()
                 user.save()
+                return tools.return_user_info(user=user, start_time=start_time)
             except Exception as error:
                 print(error)
                 return post_data_format_error_response(str(error))
-            break
-        return tools.return_user_info(user=user, start_time=start_time)
+
+        return post_data_format_error_response("avatar file not found.")
     return not_found_response()
 
 
